@@ -34,6 +34,9 @@ yarn-error.log*
 .env*
 !.env.local.example
 
+# in-app Jira credentials config (never commit — contains API tokens)
+.jira-config.json
+
 # vercel
 .vercel
 

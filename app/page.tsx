@@ -1,3 +1,4 @@
+import Link from "next/link";
 import EpicPicker from "@/components/EpicPicker";
 
 export default function Home() {
@@ -14,6 +15,33 @@ export default function Home() {
       />
 
       <div className="relative w-full max-w-md">
+        {/* Settings gear — top-right of card area */}
+        <div className="absolute -top-2 right-0">
+          <Link
+            href="/settings"
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 hover:text-slate-600 transition-colors"
+            title="Configure Jira connection"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path
+                d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"
+                stroke="currentColor"
+                strokeWidth="1.75"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"
+                stroke="currentColor"
+                strokeWidth="1.75"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            Settings
+          </Link>
+        </div>
+
         {/* Wordmark */}
         <div className="mb-10 text-center">
           <div className="inline-flex items-center gap-2 mb-4">
@@ -42,6 +70,23 @@ export default function Home() {
           <div className="px-6 pt-6 pb-6">
             <EpicPicker />
           </div>
+        </div>
+
+        {/* Beads link */}
+        <div className="mt-4 text-center">
+          <Link
+            href="/beads"
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-violet-600 hover:text-violet-800 transition-colors"
+          >
+            <span className="w-3.5 h-3.5 rounded bg-violet-600 inline-flex items-center justify-center">
+              <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                <circle cx="2" cy="2" r="1" fill="white" />
+                <circle cx="6" cy="2" r="1" fill="white" fillOpacity="0.6" />
+                <circle cx="4" cy="6" r="1" fill="white" fillOpacity="0.8" />
+              </svg>
+            </span>
+            Visualize beads tasks →
+          </Link>
         </div>
       </div>
     </main>

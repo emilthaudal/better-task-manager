@@ -1,6 +1,4 @@
-const JIRA_BASE_URL = process.env.JIRA_BASE_URL!;
-const JIRA_EMAIL = process.env.JIRA_EMAIL!;
-const JIRA_API_TOKEN = process.env.JIRA_API_TOKEN!;
+import { getCredentials } from "@/lib/config";
 
 /** HTTP status codes that are worth retrying (transient or rate-limit). */
 const RETRYABLE_STATUSES = new Set([429, 503, 504]);
@@ -8,18 +6,22 @@ const RETRYABLE_STATUSES = new Set([429, 503, 504]);
 /** Maximum number of attempts (1 original + 2 retries). */
 const MAX_ATTEMPTS = 3;
 
-function authHeader(): string {
-  return "Basic " + Buffer.from(`${JIRA_EMAIL}:${JIRA_API_TOKEN}`).toString("base64");
-}
-
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export async function jiraFetch<T>(path: string, signal?: AbortSignal): Promise<T> {
-  const url = `${JIRA_BASE_URL}/rest/api/3${path}`;
+  const creds = getCredentials();
+  if (!creds) {
+    throw new Error(
+      "Jira credentials are not configured. Please visit /settings to set up your Jira connection."
+    );
+  }
+
+  const url = `${creds.baseUrl}/rest/api/3${path}`;
   const headers = {
-    Authorization: authHeader(),
+    Authorization:
+      "Basic " + Buffer.from(`${creds.email}:${creds.apiToken}`).toString("base64"),
     Accept: "application/json",
   };
 
