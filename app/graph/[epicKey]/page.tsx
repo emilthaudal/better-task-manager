@@ -1,105 +1,24 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import GraphView from "@/components/GraphView";
 import IssueDetailPanel from "@/components/IssueDetailPanel";
-import type { JiraIssue } from "@/lib/jira";
+import LiveBadge from "@/components/LiveBadge";
+import { useIssuePoller } from "@/hooks/useIssuePoller";
 
-const POLL_INTERVAL_MS = 30_000;
 const JIRA_BASE_URL = process.env.NEXT_PUBLIC_JIRA_BASE_URL ?? "";
-
-function useSecondsTick(enabled: boolean) {
-  const [seconds, setSeconds] = useState(0);
-  useEffect(() => {
-    if (!enabled) return;
-    setSeconds(0);
-    const id = setInterval(() => setSeconds((s) => s + 1), 1000);
-    return () => clearInterval(id);
-  }, [enabled]);
-  return seconds;
-}
-
-function LiveBadge({ seconds }: { seconds: number }) {
-  const label =
-    seconds < 5 ? "just now" : seconds < 60 ? `${seconds}s ago` : `${Math.floor(seconds / 60)}m ago`;
-  return (
-    <span className="ml-auto flex items-center gap-1.5 bg-green-50 border border-green-200 text-green-700 text-[11px] font-medium px-2.5 py-1 rounded-full">
-      <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-      {label}
-    </span>
-  );
-}
 
 export default function GraphPage() {
   const { epicKey } = useParams<{ epicKey: string }>();
   const router = useRouter();
 
-  const [issues, setIssues] = useState<JiraIssue[]>([]);
-  const [latestIssues, setLatestIssues] = useState<JiraIssue[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const { issues, latestIssues, loading, error, lastUpdated } = useIssuePoller(epicKey);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
-  const isMountedRef = useRef(true);
-  const hasLoadedRef = useRef(false);
-
-  const secondsSince = useSecondsTick(lastUpdated !== null);
 
   const handleNodeSelect = useCallback((key: string | null) => {
     setSelectedKey(key);
   }, []);
-
-  const fetchIssues = useCallback(async (epic: string): Promise<JiraIssue[]> => {
-    const r = await fetch(`/api/jira/issues?epic=${encodeURIComponent(epic)}`);
-    if (!r.ok) throw new Error(`Failed to load issues (${r.status})`);
-    return r.json();
-  }, []);
-
-  useEffect(() => {
-    if (!epicKey) return;
-    isMountedRef.current = true;
-    hasLoadedRef.current = false;
-
-    setLoading(true);
-    fetchIssues(epicKey)
-      .then((data) => {
-        if (!isMountedRef.current) return;
-        setIssues(data);
-        setLatestIssues(data);
-        setLastUpdated(new Date());
-        hasLoadedRef.current = true;
-      })
-      .catch((e: Error) => {
-        if (!isMountedRef.current) return;
-        setError(e.message);
-      })
-      .finally(() => {
-        if (isMountedRef.current) setLoading(false);
-      });
-
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, [epicKey, fetchIssues]);
-
-  useEffect(() => {
-    if (!epicKey || error) return;
-
-    const id = setInterval(async () => {
-      if (!hasLoadedRef.current) return;
-      try {
-        const data = await fetchIssues(epicKey);
-        if (!isMountedRef.current) return;
-        setLatestIssues(data);
-        setLastUpdated(new Date());
-      } catch {
-        // Silently swallow polling errors
-      }
-    }, POLL_INTERVAL_MS);
-
-    return () => clearInterval(id);
-  }, [epicKey, error, fetchIssues]);
 
   return (
     <div className="flex flex-col h-screen bg-slate-50">
@@ -150,14 +69,14 @@ export default function GraphPage() {
 
         {/* Live badge */}
         {!loading && !error && issues.length > 0 && (
-          <LiveBadge seconds={secondsSince} />
+          <LiveBadge lastUpdated={lastUpdated} />
         )}
       </header>
 
       {/* Graph + panel */}
       <div className="flex flex-1 min-h-0 relative">
         {/* Graph */}
-        <div className={`relative ${selectedKey ? "w-[75%]" : "w-full"} transition-all duration-200`}>
+        <div className={`relative ${selectedKey ? "w-[75%]" : "w-full"} transition-[width] duration-200`}>
           {loading && (
             <div className="absolute inset-0 flex items-center justify-center bg-slate-50">
               <div className="flex flex-col items-center gap-4">

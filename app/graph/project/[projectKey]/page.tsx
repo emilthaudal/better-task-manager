@@ -167,7 +167,7 @@ export default function ProjectGraphPage() {
       {/* Graph + panel */}
       <div className="flex flex-1 min-h-0 relative">
         {/* Graph */}
-        <div className={`relative ${selectedKey ? "w-[75%]" : "w-full"} transition-all duration-200`}>
+        <div className={`relative ${selectedKey ? "w-[75%]" : "w-full"} transition-[width] duration-200`}>
           {loading && (
             <div className="absolute inset-0 flex items-center justify-center bg-slate-50">
               <div className="flex flex-col items-center gap-4">

@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-
-const JIRA_BASE_URL = process.env.JIRA_BASE_URL!;
-const JIRA_EMAIL = process.env.JIRA_EMAIL!;
-const JIRA_API_TOKEN = process.env.JIRA_API_TOKEN!;
+import { jiraFetch } from "@/lib/jira";
 
 const FIELDS = [
   "summary",
@@ -29,26 +26,14 @@ export async function GET(
     return NextResponse.json({ error: "Missing issue key" }, { status: 400 });
   }
 
-  const auth = "Basic " + Buffer.from(`${JIRA_EMAIL}:${JIRA_API_TOKEN}`).toString("base64");
-
   try {
-    const res = await fetch(
-      `${JIRA_BASE_URL}/rest/api/3/issue/${encodeURIComponent(key)}?fields=${FIELDS}`,
-      { headers: { Authorization: auth, Accept: "application/json" } }
-    );
-
-    if (!res.ok) {
-      const text = await res.text();
-      return NextResponse.json(
-        { error: `Jira API error ${res.status}: ${text}` },
-        { status: res.status }
-      );
-    }
-
-    const data = await res.json();
+    const data = await jiraFetch(`/issue/${encodeURIComponent(key)}?fields=${FIELDS}`);
     return NextResponse.json(data);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    // Surface Jira API errors with the original status code when possible
+    const statusMatch = message.match(/Jira API error (\d+)/);
+    const status = statusMatch ? parseInt(statusMatch[1], 10) : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

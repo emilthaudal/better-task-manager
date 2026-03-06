@@ -26,6 +26,7 @@ export default function EpicPicker() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoadingProjects(true);
     fetch("/api/jira/projects")
       .then((r) => {
@@ -39,6 +40,7 @@ export default function EpicPicker() {
 
   useEffect(() => {
     if (!selectedProject) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setEpics([]);
       setSelectedEpic("");
       return;

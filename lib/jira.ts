@@ -6,7 +6,7 @@ function authHeader(): string {
   return "Basic " + Buffer.from(`${JIRA_EMAIL}:${JIRA_API_TOKEN}`).toString("base64");
 }
 
-async function jiraFetch<T>(path: string): Promise<T> {
+export async function jiraFetch<T>(path: string): Promise<T> {
   const res = await fetch(`${JIRA_BASE_URL}/rest/api/3${path}`, {
     headers: {
       Authorization: authHeader(),
@@ -78,7 +78,6 @@ export interface JiraIssue {
     subtasks?: Array<{ id: string; key: string; fields: { summary: string; status: JiraStatus; issuetype: JiraIssueType } }>;
     issuelinks: JiraIssueLink[];
     priority?: { name: string; iconUrl?: string };
-    story_points?: number;
   };
 }
 

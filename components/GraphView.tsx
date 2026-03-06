@@ -28,6 +28,7 @@ type AnyNode = Node;
 const nodeTypes = { issueNode: IssueNode, taskGroupNode: TaskGroupNode };
 const edgeTypes = { elkEdge: ElkEdge };
 const FIT_VIEW_OPTIONS = { padding: 0.2 } as const;
+const PRO_OPTIONS = { hideAttribution: true } as const;
 
 interface GraphViewProps {
   issues: JiraIssue[];
@@ -41,6 +42,9 @@ export default function GraphView({ issues, latestIssues, onNodeSelect }: GraphV
   const [nodes, setNodes, onNodesChange] = useNodesState<AnyNode>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const layoutDoneRef = useRef(false);
+  // Stable ref to current edges — allows reading edge topology without stale closures
+  const edgesRef = useRef<Edge[]>(edges);
+  useEffect(() => { edgesRef.current = edges; }, [edges]);
 
   // Stable nodeColor callback — avoids MiniMap re-rendering on every render
   const miniMapNodeColor = useCallback((n: AnyNode) => {
@@ -175,25 +179,26 @@ export default function GraphView({ issues, latestIssues, onNodeSelect }: GraphV
         return;
       }
 
+      // Compute connected sets from the stable ref — no side-effects in updaters
       const connectedNodes = new Set<string>([clickedKey]);
       const connectedEdges = new Set<string>();
-
-      setEdges((eds) => {
-        for (const edge of eds) {
-          if (edge.source === clickedKey || edge.target === clickedKey) {
-            connectedEdges.add(edge.id);
-            connectedNodes.add(edge.source);
-            connectedNodes.add(edge.target);
-          }
+      for (const edge of edgesRef.current) {
+        if (edge.source === clickedKey || edge.target === clickedKey) {
+          connectedEdges.add(edge.id);
+          connectedNodes.add(edge.source);
+          connectedNodes.add(edge.target);
         }
-        return eds.map((e) => ({
+      }
+
+      setEdges((eds) =>
+        eds.map((e) => ({
           ...e,
           style: {
             ...e.style,
             opacity: connectedEdges.has(e.id) ? 1 : 0.1,
           },
-        }));
-      });
+        }))
+      );
 
       setNodes((nds) =>
         nds.map((n) => ({
@@ -245,7 +250,7 @@ export default function GraphView({ issues, latestIssues, onNodeSelect }: GraphV
         fitViewOptions={FIT_VIEW_OPTIONS}
         minZoom={0.1}
         maxZoom={2}
-        proOptions={{ hideAttribution: true }}
+        proOptions={PRO_OPTIONS}
       >
         <Background color="#e2e8f0" gap={20} />
         <Controls />

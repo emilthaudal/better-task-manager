@@ -4,12 +4,12 @@
  * Unknown nodes fall back to rendering their children recursively.
  */
 
-interface AdfMark {
+export interface AdfMark {
   type: string;
   attrs?: Record<string, string | number | boolean | null>;
 }
 
-interface AdfNode {
+export interface AdfNode {
   type: string;
   attrs?: Record<string, string | number | boolean | null>;
   content?: AdfNode[];

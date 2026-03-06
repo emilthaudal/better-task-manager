@@ -49,7 +49,7 @@ function IssueNode({ data, selected }: NodeProps<IssueNodeType>) {
             ? `0 0 0 2px #6366f1, 0 4px 20px rgba(99,102,241,0.18), 0 1px 4px rgba(0,0,0,0.08)`
             : "0 1px 3px rgba(0,0,0,0.07), 0 4px 12px rgba(0,0,0,0.06)",
         }}
-        className={`${cardBg} rounded-xl flex flex-col overflow-hidden transition-all duration-150 border border-slate-200/80 cursor-pointer hover:-translate-y-0.5 hover:shadow-[0_0_0_2px_#a5b4fc,_0_6px_20px_rgba(99,102,241,0.15),_0_1px_4px_rgba(0,0,0,0.08)] hover:border-indigo-200/80`}
+        className={`${cardBg} rounded-xl flex flex-col overflow-hidden transition-[box-shadow,border-color,opacity,transform] duration-150 border border-slate-200/80 cursor-pointer hover:-translate-y-0.5 hover:shadow-[0_0_0_2px_#a5b4fc,_0_6px_20px_rgba(99,102,241,0.15),_0_1px_4px_rgba(0,0,0,0.08)] hover:border-indigo-200/80`}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-3 pt-2.5 pb-1.5 gap-2">
