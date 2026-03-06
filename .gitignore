@@ -46,3 +46,7 @@ next-env.d.ts
 
 # screenshot test outputs
 tests/screenshots/output/*.png
+
+# Dolt database files (added by bd init)
+.dolt/
+*.db

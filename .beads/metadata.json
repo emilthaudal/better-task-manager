@@ -2,5 +2,6 @@
   "database": "dolt",
   "backend": "dolt",
   "dolt_mode": "server",
-  "dolt_database": "better_task_manager"
+  "dolt_database": "better_task_manager",
+  "project_id": "a075f460-dd3d-4041-b432-765bbaa99ada"
 }
