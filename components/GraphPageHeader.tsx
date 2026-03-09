@@ -1,6 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { ChevronLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import LiveBadge from "@/components/LiveBadge";
 import ThemeToggle from "@/components/ThemeToggle";
 
@@ -40,27 +42,15 @@ export default function GraphPageHeader({
   return (
     <header className="flex items-center gap-3 px-5 py-0 h-14 bg-white dark:bg-slate-900 border-b border-slate-200/80 dark:border-slate-700/80 shrink-0 shadow-sm shadow-slate-100 dark:shadow-slate-900/50">
       {/* Back */}
-      <button
+      <Button
+        variant="ghost"
+        size="sm"
         onClick={() => router.push("/")}
-        className="flex items-center gap-1.5 text-slate-400 hover:text-slate-800 dark:text-slate-500 dark:hover:text-slate-200 transition-colors text-sm font-medium group"
+        className="gap-1.5 text-slate-400 hover:text-slate-800 dark:text-slate-500 dark:hover:text-slate-200 px-2 h-8 [&_svg]:transition-transform [&:hover_svg]:-translate-x-0.5"
       >
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 16 16"
-          fill="none"
-          className="transition-transform group-hover:-translate-x-0.5"
-        >
-          <path
-            d="M10 12L6 8l4-4"
-            stroke="currentColor"
-            strokeWidth="1.75"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
+        <ChevronLeft className="w-4 h-4" />
         Back
-      </button>
+      </Button>
 
       {/* Divider */}
       <div className="w-px h-5 bg-slate-200 dark:bg-slate-700" />

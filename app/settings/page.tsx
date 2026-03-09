@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useState, useCallback } from "react";
+import { Settings } from "lucide-react";
 import type { MaskedConfig } from "@/app/api/config/route";
-import GearIcon from "@/components/icons/GearIcon";
 import BackgroundBlobs from "@/components/BackgroundBlobs";
 
 type TestState =
@@ -233,7 +233,7 @@ export default function SettingsPage() {
 
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center shadow-md shadow-indigo-200 flex-shrink-0">
-              <GearIcon size={18} className="text-white" />
+              <Settings size={18} className="text-white" />
             </div>
             <div>
               <h1 className="text-xl font-bold text-slate-900 tracking-tight">Settings</h1>

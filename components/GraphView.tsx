@@ -19,6 +19,7 @@ import TaskGroupNode from "./TaskGroupNode";
 import EpicGroupNode from "./EpicGroupNode";
 import ElkEdge from "./ElkEdge";
 import Legend from "./Legend";
+import { Button } from "@/components/ui/button";
 import { buildGraph, buildEdgesOnly, STATUS_COLORS, STATUS_TEXT_COLORS } from "@/lib/buildGraph";
 import { diffIssues } from "@/lib/diffGraph";
 import { computeCriticalPath } from "@/lib/criticalPath";
@@ -394,20 +395,20 @@ export default function GraphView({ issues, latestIssues, onNodeSelect }: GraphV
 
       {/* Critical path toggle button — only shown when blocking edges exist */}
       {criticalPath.length > 0 && (
-        <button
+        <Button
           onClick={toggleCriticalPath}
           title={
             criticalPathOn
               ? "Hide critical path"
               : `Show critical path (${criticalPath.length} step${criticalPath.length === 1 ? "" : "s"})`
           }
+          variant={criticalPathOn ? "default" : "outline"}
+          size="sm"
           className={[
             "absolute top-4 left-4 z-10",
-            "flex items-center gap-2 px-3 py-2 rounded-xl",
-            "text-[11px] font-semibold tracking-wide",
-            "border shadow-lg transition-all duration-150 backdrop-blur-sm",
+            "rounded-xl text-[11px] font-semibold tracking-wide shadow-lg backdrop-blur-sm",
             criticalPathOn
-              ? "bg-amber-500 border-amber-400 text-white shadow-amber-200/60 dark:shadow-amber-900/40"
+              ? "bg-amber-500 border-amber-400 text-white hover:bg-amber-600 shadow-amber-200/60 dark:shadow-amber-900/40"
               : [
                   "bg-white/90 dark:bg-slate-800/90",
                   "border-slate-200 dark:border-slate-700",
@@ -434,7 +435,7 @@ export default function GraphView({ issues, latestIssues, onNodeSelect }: GraphV
               {criticalPath.length}
             </span>
           )}
-        </button>
+        </Button>
       )}
     </div>
   );
