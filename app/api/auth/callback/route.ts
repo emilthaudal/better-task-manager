@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getIronSession } from "iron-session";
-import { sessionOptions } from "@/lib/session";
+import { sealData } from "iron-session";
+import { sessionOptions, SESSION_PASSWORD } from "@/lib/session";
 import type { SessionData, AtlassianSite, AtlassianUser } from "@/lib/session";
 import { OAUTH_STATE_COOKIE } from "@/app/api/auth/login/route";
 
@@ -108,7 +108,32 @@ export async function GET(req: NextRequest) {
     const destination =
       sites.length === 1 ? `${appUrl}/` : `${appUrl}/select-site`;
 
-    // Build the final redirect response and write the iron-session onto it
+    // Build the session data and seal it directly so we can write it via
+    // response.cookies.set() — the same approach we use for the CSRF state.
+    // Using getIronSession(req, NextResponse.redirect(...)) silently fails on
+    // Vercel because the redirect response's Set-Cookie is dropped somewhere
+    // in the middleware/CDN layer before it reaches the browser.
+    const sessionData: SessionData = {
+      accessToken,
+      refreshToken,
+      expiresAt,
+      // Store only essential site fields to keep cookie size small
+      sites: sites.map(({ id, name, url, avatarUrl }) => ({
+        id,
+        name,
+        url,
+        avatarUrl,
+        scopes: [],
+      })),
+      user,
+      cloudId: sites.length === 1 ? sites[0].id : undefined,
+    };
+
+    const sealed = await sealData(sessionData, {
+      password: SESSION_PASSWORD,
+      ttl: (sessionOptions.cookieOptions?.maxAge as number) ?? 60 * 60 * 24 * 7,
+    });
+
     const response = NextResponse.redirect(destination);
 
     // Clear the CSRF state cookie — it's no longer needed
@@ -120,21 +145,14 @@ export async function GET(req: NextRequest) {
       maxAge: 0,
     });
 
-    const finalSession = await getIronSession<SessionData>(req, response, sessionOptions);
-    finalSession.accessToken = accessToken;
-    finalSession.refreshToken = refreshToken;
-    finalSession.expiresAt = expiresAt;
-    // Store only essential site fields to keep cookie size small
-    finalSession.sites = sites.map(({ id, name, url, avatarUrl }) => ({
-      id,
-      name,
-      url,
-      avatarUrl,
-      scopes: [],
-    }));
-    finalSession.user = user;
-    finalSession.cloudId = sites.length === 1 ? sites[0].id : undefined;
-    await finalSession.save();
+    // Write the authenticated session cookie directly
+    response.cookies.set(sessionOptions.cookieName, sealed, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+    });
 
     return response;
   } catch (err) {

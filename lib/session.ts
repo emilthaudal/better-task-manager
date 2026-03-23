@@ -36,7 +36,7 @@ export interface SessionData {
   oauthState?: string;
 }
 
-const SESSION_PASSWORD =
+export const SESSION_PASSWORD =
   process.env.SESSION_SECRET ?? "dev-only-secret-replace-in-production-32ch";
 
 export const sessionOptions: SessionOptions = {
