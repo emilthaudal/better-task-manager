@@ -1,0 +1,8 @@
+{
+  "regions": ["iad1"],
+  "functions": {
+    "app/api/jira/issues/project/route.ts": {
+      "maxDuration": 60
+    }
+  }
+}
