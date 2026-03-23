@@ -1,7 +1,6 @@
 import Link from "next/link";
 import EpicPicker from "@/components/EpicPicker";
 import ThemeToggle from "@/components/ThemeToggle";
-import GearIcon from "@/components/icons/GearIcon";
 import HomeShell from "@/components/HomeShell";
 
 export default function Home() {
@@ -16,14 +15,6 @@ export default function Home() {
       controls={
         <>
           <ThemeToggle />
-          <Link
-            href="/settings"
-            className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
-            title="Configure Jira connection"
-          >
-            <GearIcon size={14} />
-            Settings
-          </Link>
         </>
       }
       picker={<EpicPicker />}

@@ -1,4 +1,4 @@
-import { getCredentials } from "@/lib/config";
+import type { SessionData } from "@/lib/session";
 
 /** HTTP status codes that are worth retrying (transient or rate-limit). */
 const RETRYABLE_STATUSES = new Set([429, 503, 504]);
@@ -10,18 +10,52 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export async function jiraFetch<T>(path: string, signal?: AbortSignal): Promise<T> {
-  const creds = getCredentials();
-  if (!creds) {
-    throw new Error(
-      "Jira credentials are not configured. Please visit /settings to set up your Jira connection."
-    );
+/**
+ * Build the Authorization header and base URL for Jira requests.
+ *
+ * OAuth path (default, production):
+ *   - Bearer token from session
+ *   - Base URL: https://api.atlassian.com/ex/jira/{cloudId}
+ *
+ * Basic auth bypass (local dev only, JIRA_BYPASS=true):
+ *   - Basic base64(email:apiToken) from env vars
+ *   - Base URL: JIRA_BASE_URL env var
+ */
+function resolveAuth(session?: SessionData): { authHeader: string; baseUrl: string } {
+  if (process.env.JIRA_BYPASS === "true") {
+    const email = process.env.JIRA_EMAIL;
+    const apiToken = process.env.JIRA_API_TOKEN;
+    const baseUrl = process.env.JIRA_BASE_URL;
+    if (!email || !apiToken || !baseUrl) {
+      throw new Error(
+        "JIRA_BYPASS=true requires JIRA_EMAIL, JIRA_API_TOKEN, and JIRA_BASE_URL env vars.",
+      );
+    }
+    return {
+      authHeader: "Basic " + Buffer.from(`${email}:${apiToken}`).toString("base64"),
+      baseUrl: `${baseUrl}/rest/api/3`,
+    };
   }
 
-  const url = `${creds.baseUrl}/rest/api/3${path}`;
+  if (!session?.accessToken || !session.cloudId) {
+    throw new Error("Not authenticated. Please sign in to continue.");
+  }
+
+  return {
+    authHeader: `Bearer ${session.accessToken}`,
+    baseUrl: `https://api.atlassian.com/ex/jira/${session.cloudId}/rest/api/3`,
+  };
+}
+
+export async function jiraFetch<T>(
+  path: string,
+  session?: SessionData,
+  signal?: AbortSignal,
+): Promise<T> {
+  const { authHeader, baseUrl } = resolveAuth(session);
+  const url = `${baseUrl}${path}`;
   const headers = {
-    Authorization:
-      "Basic " + Buffer.from(`${creds.email}:${creds.apiToken}`).toString("base64"),
+    Authorization: authHeader,
     Accept: "application/json",
   };
 
@@ -44,7 +78,9 @@ export async function jiraFetch<T>(path: string, signal?: AbortSignal): Promise<
       // Network / DNS error — always retryable
       lastError = networkErr instanceof Error ? networkErr : new Error(String(networkErr));
       const delay = Math.pow(2, attempt) * 1000;
-      console.warn(`[jira] Network error on attempt ${attempt + 1} for ${path}: ${lastError.message}. Retrying in ${delay}ms…`);
+      console.warn(
+        `[jira] Network error on attempt ${attempt + 1} for ${path}: ${lastError.message}. Retrying in ${delay}ms…`,
+      );
       await sleep(delay);
       continue;
     }
@@ -69,7 +105,9 @@ export async function jiraFetch<T>(path: string, signal?: AbortSignal): Promise<
       ? parseFloat(retryAfterHeader) * 1000
       : Math.pow(2, attempt) * 1000;
 
-    console.warn(`[jira] Status ${res.status} on attempt ${attempt + 1} for ${path}. Retrying in ${delay}ms…`);
+    console.warn(
+      `[jira] Status ${res.status} on attempt ${attempt + 1} for ${path}. Retrying in ${delay}ms…`,
+    );
     await sleep(delay);
   }
 
@@ -131,7 +169,11 @@ export interface JiraIssue {
     issuetype: JiraIssueType;
     assignee: JiraUser | null;
     parent?: { id: string; key: string; fields: { summary: string; issuetype: JiraIssueType } };
-    subtasks?: Array<{ id: string; key: string; fields: { summary: string; status: JiraStatus; issuetype: JiraIssueType } }>;
+    subtasks?: Array<{
+      id: string;
+      key: string;
+      fields: { summary: string; status: JiraStatus; issuetype: JiraIssueType };
+    }>;
     issuelinks: JiraIssueLink[];
     priority?: { name: string; iconUrl?: string };
     labels?: string[];
@@ -153,7 +195,12 @@ interface SearchResult<T> {
 // ── API helpers ──────────────────────────────────────────────────────────────
 
 /** Fetch all pages of a JQL search using the /search/jql endpoint, returning every issue. */
-export async function searchIssues(jql: string, fields: string[], signal?: AbortSignal): Promise<JiraIssue[]> {
+export async function searchIssues(
+  jql: string,
+  fields: string[],
+  session?: SessionData,
+  signal?: AbortSignal,
+): Promise<JiraIssue[]> {
   const all: JiraIssue[] = [];
   const maxResults = 100;
   let nextPageToken: string | undefined = undefined;
@@ -167,7 +214,11 @@ export async function searchIssues(jql: string, fields: string[], signal?: Abort
     if (nextPageToken) {
       params.set("nextPageToken", nextPageToken);
     }
-    const page = await jiraFetch<SearchResult<JiraIssue>>(`/search/jql?${params}`, signal);
+    const page = await jiraFetch<SearchResult<JiraIssue>>(
+      `/search/jql?${params}`,
+      session,
+      signal,
+    );
     all.push(...page.issues);
     if (page.isLast || !page.nextPageToken) break;
     nextPageToken = page.nextPageToken;
@@ -177,7 +228,7 @@ export async function searchIssues(jql: string, fields: string[], signal?: Abort
 }
 
 /** Fetch all projects accessible to the token. */
-export async function getProjects(): Promise<JiraProject[]> {
+export async function getProjects(session?: SessionData): Promise<JiraProject[]> {
   const all: JiraProject[] = [];
   let startAt = 0;
   const maxResults = 50;
@@ -188,7 +239,10 @@ export async function getProjects(): Promise<JiraProject[]> {
       startAt: String(startAt),
       orderBy: "name",
     });
-    const page = await jiraFetch<{ values: JiraProject[]; isLast: boolean }>(`/project/search?${params}`);
+    const page = await jiraFetch<{ values: JiraProject[]; isLast: boolean }>(
+      `/project/search?${params}`,
+      session,
+    );
     all.push(...page.values);
     if (page.isLast) break;
     startAt += page.values.length;
@@ -202,29 +256,52 @@ export async function getProjects(): Promise<JiraProject[]> {
  * Excluding done epics keeps the result set manageable for large projects and
  * prevents hundreds of parallel expansion calls when building the project graph.
  */
-export async function getEpics(projectKey: string): Promise<JiraIssue[]> {
+export async function getEpics(
+  projectKey: string,
+  session?: SessionData,
+): Promise<JiraIssue[]> {
   return searchIssues(
     `project = "${projectKey}" AND issueType = Epic AND statusCategory != Done ORDER BY created DESC`,
-    ["summary", "status", "assignee", "issuetype", "issuelinks", "created", "duedate", "customfield_10015"]
+    [
+      "summary",
+      "status",
+      "assignee",
+      "issuetype",
+      "issuelinks",
+      "created",
+      "duedate",
+      "customfield_10015",
+    ],
+    session,
   );
 }
 
 /** Fetch all issues that are direct children of an epic (one level). */
-export async function getEpicChildren(epicKey: string, signal?: AbortSignal): Promise<JiraIssue[]> {
+export async function getEpicChildren(
+  epicKey: string,
+  session?: SessionData,
+  signal?: AbortSignal,
+): Promise<JiraIssue[]> {
   return searchIssues(
     `parent = "${epicKey}" ORDER BY created ASC`,
     ["summary", "status", "issuetype", "assignee", "parent", "subtasks", "issuelinks", "priority", "labels"],
+    session,
     signal,
   );
 }
 
 /** Fetch subtasks of a set of issue keys. */
-export async function getSubtasks(parentKeys: string[], signal?: AbortSignal): Promise<JiraIssue[]> {
+export async function getSubtasks(
+  parentKeys: string[],
+  session?: SessionData,
+  signal?: AbortSignal,
+): Promise<JiraIssue[]> {
   if (parentKeys.length === 0) return [];
   const inClause = parentKeys.map((k) => `"${k}"`).join(", ");
   return searchIssues(
     `parent in (${inClause}) ORDER BY created ASC`,
     ["summary", "status", "issuetype", "assignee", "parent", "subtasks", "issuelinks", "priority", "labels"],
+    session,
     signal,
   );
 }

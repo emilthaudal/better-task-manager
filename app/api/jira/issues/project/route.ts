@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { getEpics, getEpicChildren, getSubtasks } from "@/lib/jira";
+import { getServerSession } from "@/lib/session";
 import { pLimit } from "@/lib/concurrency";
 import type { StreamMessage } from "@/lib/streamTypes";
 
@@ -30,11 +31,15 @@ export async function GET(req: NextRequest) {
     });
   }
 
+  // Resolve the session before entering the ReadableStream constructor —
+  // the cookies() API cannot be called from inside a stream callback.
+  const session = await getServerSession();
+
   const stream = new ReadableStream({
     async start(controller) {
       try {
         // ── 1. Fetch all open epics ───────────────────────────────────────────
-        const epics = await getEpics(project);
+        const epics = await getEpics(project, session);
 
         // Send epics immediately so the client can render the graph skeleton
         controller.enqueue(
@@ -49,11 +54,11 @@ export async function GET(req: NextRequest) {
             const signal = AbortSignal.timeout(EPIC_EXPAND_TIMEOUT_MS);
 
             try {
-              const children = await getEpicChildren(epic.key, signal);
+              const children = await getEpicChildren(epic.key, session, signal);
               const nonSubtaskKeys = children
                 .filter((i) => !i.fields.issuetype.subtask)
                 .map((i) => i.key);
-              const subtasks = await getSubtasks(nonSubtaskKeys, signal);
+              const subtasks = await getSubtasks(nonSubtaskKeys, session, signal);
 
               expanded++;
               controller.enqueue(

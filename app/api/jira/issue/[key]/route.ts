@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jiraFetch } from "@/lib/jira";
+import { getServerSession } from "@/lib/session";
 
 const FIELDS = [
   "summary",
@@ -19,15 +20,16 @@ const FIELDS = [
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: Promise<{ key: string }> }
+  { params }: { params: Promise<{ key: string }> },
 ) {
   const { key } = await params;
   if (!key) {
     return NextResponse.json({ error: "Missing issue key" }, { status: 400 });
   }
 
+  const session = await getServerSession();
   try {
-    const data = await jiraFetch(`/issue/${encodeURIComponent(key)}?fields=${FIELDS}`);
+    const data = await jiraFetch(`/issue/${encodeURIComponent(key)}?fields=${FIELDS}`, session);
     return NextResponse.json(data);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";

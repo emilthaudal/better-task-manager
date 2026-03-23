@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getEpicChildren, getSubtasks } from "@/lib/jira";
+import { getServerSession } from "@/lib/session";
 
 export async function GET(req: NextRequest) {
   const epic = req.nextUrl.searchParams.get("epic");
@@ -7,16 +8,17 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Missing required query param: epic" }, { status: 400 });
   }
 
+  const session = await getServerSession();
   try {
     // Level 1: direct children of the epic
-    const children = await getEpicChildren(epic);
+    const children = await getEpicChildren(epic, session);
 
     // Level 2: subtasks of those children
     const nonSubtaskKeys = children
       .filter((i) => !i.fields.issuetype.subtask)
       .map((i) => i.key);
 
-    const subtasks = await getSubtasks(nonSubtaskKeys);
+    const subtasks = await getSubtasks(nonSubtaskKeys, session);
 
     // Combine, deduplicate by key
     const allIssues = [...children, ...subtasks];
