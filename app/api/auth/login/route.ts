@@ -2,14 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getIronSession } from "iron-session";
 import { sessionOptions } from "@/lib/session";
 import type { SessionData } from "@/lib/session";
-import { cookies } from "next/headers";
 
 const ATLASSIAN_CLIENT_ID = process.env.ATLASSIAN_CLIENT_ID ?? "";
-const SCOPES = [
-  "read:jira-work",
-  "read:jira-user",
-  "offline_access",
-].join(" ");
+const SCOPES = ["read:jira-work", "read:jira-user", "offline_access"].join(" ");
 
 export async function GET(_req: NextRequest) {
   if (!ATLASSIAN_CLIENT_ID) {
@@ -21,15 +16,7 @@ export async function GET(_req: NextRequest) {
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const redirectUri = `${appUrl}/api/auth/callback`;
-
-  // Generate a random state nonce for CSRF protection
   const state = crypto.randomUUID();
-
-  // Store state in session before redirect
-  const cookieStore = await cookies();
-  const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
-  session.oauthState = state;
-  await session.save();
 
   const params = new URLSearchParams({
     audience: "api.atlassian.com",
@@ -41,7 +28,16 @@ export async function GET(_req: NextRequest) {
     prompt: "consent",
   });
 
-  return NextResponse.redirect(
+  // Build the redirect response first, then attach the session cookie to it.
+  // Using NextResponse.redirect + the (req, res) iron-session overload ensures
+  // Set-Cookie is written onto the actual response that reaches the browser.
+  const response = NextResponse.redirect(
     `https://auth.atlassian.com/authorize?${params.toString()}`,
   );
+
+  const session = await getIronSession<SessionData>(_req, response, sessionOptions);
+  session.oauthState = state;
+  await session.save();
+
+  return response;
 }

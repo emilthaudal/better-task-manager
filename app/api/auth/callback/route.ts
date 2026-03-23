@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getIronSession } from "iron-session";
 import { sessionOptions } from "@/lib/session";
 import type { SessionData, AtlassianSite, AtlassianUser } from "@/lib/session";
-import { cookies } from "next/headers";
 
 const ATLASSIAN_CLIENT_ID = process.env.ATLASSIAN_CLIENT_ID ?? "";
 const ATLASSIAN_CLIENT_SECRET = process.env.ATLASSIAN_CLIENT_SECRET ?? "";
@@ -22,19 +21,17 @@ export async function GET(req: NextRequest) {
   }
 
   if (!code || !state) {
-    return NextResponse.redirect(
-      `${appUrl}/login?error=missing_params`,
-    );
+    return NextResponse.redirect(`${appUrl}/login?error=missing_params`);
   }
 
-  // Validate CSRF state
-  const cookieStore = await cookies();
-  const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+  // Read the session from the incoming request cookie to validate CSRF state.
+  // We use a temporary response just to satisfy the (req, res) overload —
+  // we'll build the real redirect response later and re-attach the session.
+  const tempRes = new NextResponse();
+  const session = await getIronSession<SessionData>(req, tempRes, sessionOptions);
 
   if (!session.oauthState || session.oauthState !== state) {
-    return NextResponse.redirect(
-      `${appUrl}/login?error=invalid_state`,
-    );
+    return NextResponse.redirect(`${appUrl}/login?error=invalid_state`);
   }
 
   // Exchange authorization code for tokens
@@ -55,9 +52,7 @@ export async function GET(req: NextRequest) {
   if (!tokenRes.ok) {
     const body = await tokenRes.text();
     console.error("Token exchange failed:", body);
-    return NextResponse.redirect(
-      `${appUrl}/login?error=token_exchange_failed`,
-    );
+    return NextResponse.redirect(`${appUrl}/login?error=token_exchange_failed`);
   }
 
   const tokenData = (await tokenRes.json()) as {
@@ -83,9 +78,7 @@ export async function GET(req: NextRequest) {
   );
 
   if (!sitesRes.ok) {
-    return NextResponse.redirect(
-      `${appUrl}/login?error=sites_fetch_failed`,
-    );
+    return NextResponse.redirect(`${appUrl}/login?error=sites_fetch_failed`);
   }
 
   const sites = (await sitesRes.json()) as AtlassianSite[];
@@ -103,23 +96,22 @@ export async function GET(req: NextRequest) {
     user = (await meRes.json()) as AtlassianUser;
   }
 
-  // Persist to session
-  session.accessToken = accessToken;
-  session.refreshToken = refreshToken;
-  session.expiresAt = expiresAt;
-  session.sites = sites;
-  session.user = user;
-  session.oauthState = undefined;
-  // Don't set cloudId yet — user must pick a site
-  session.cloudId = undefined;
-  await session.save();
+  // Determine redirect destination
+  const destination =
+    sites.length === 1 ? `${appUrl}/` : `${appUrl}/select-site`;
 
-  // If only one site, auto-select it and go home
-  if (sites.length === 1) {
-    session.cloudId = sites[0].id;
-    await session.save();
-    return NextResponse.redirect(`${appUrl}/`);
-  }
+  // Build the final redirect response and write the session onto it
+  const response = NextResponse.redirect(destination);
+  const finalSession = await getIronSession<SessionData>(req, response, sessionOptions);
 
-  return NextResponse.redirect(`${appUrl}/select-site`);
+  finalSession.accessToken = accessToken;
+  finalSession.refreshToken = refreshToken;
+  finalSession.expiresAt = expiresAt;
+  finalSession.sites = sites;
+  finalSession.user = user;
+  finalSession.oauthState = undefined;
+  finalSession.cloudId = sites.length === 1 ? sites[0].id : undefined;
+  await finalSession.save();
+
+  return response;
 }
