@@ -41,7 +41,7 @@ export default function GraphPageHeader({
     <header className="flex items-center gap-3 px-5 py-0 h-14 bg-white dark:bg-slate-900 border-b border-slate-200/80 dark:border-slate-700/80 shrink-0 shadow-sm shadow-slate-100 dark:shadow-slate-900/50">
       {/* Back */}
       <button
-        onClick={() => router.push("/")}
+        onClick={() => router.push("/app")}
         className="flex items-center gap-1.5 text-slate-400 hover:text-slate-800 dark:text-slate-500 dark:hover:text-slate-200 transition-colors text-sm font-medium group"
       >
         <svg

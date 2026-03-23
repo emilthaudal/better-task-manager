@@ -40,7 +40,7 @@ export default function SelectSitePage() {
         setSelecting(null);
         return;
       }
-      router.push("/");
+      router.push("/app");
     } catch {
       setError("Failed to select site");
       setSelecting(null);

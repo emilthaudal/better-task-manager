@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Sign in — Better Task Manager",
+  title: "Sign in — TaskGraph",
 };
 
 interface Props {
@@ -25,7 +26,7 @@ export default async function LoginPage({ searchParams }: Props) {
       <div className="w-full max-w-sm rounded-2xl bg-white dark:bg-gray-900 shadow-lg p-8 flex flex-col items-center gap-6">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            Better Task Manager
+            TaskGraph
           </h1>
           <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
             Sign in with your Atlassian account to continue
@@ -59,6 +60,12 @@ export default async function LoginPage({ searchParams }: Props) {
           You will be redirected to Atlassian to authorize access to your Jira
           data.
         </p>
+
+        <div className="flex items-center gap-3 text-xs text-gray-400 dark:text-gray-600">
+          <Link href="/privacy" className="hover:text-gray-600 dark:hover:text-gray-400 transition-colors">Privacy Policy</Link>
+          <span>·</span>
+          <Link href="/terms" className="hover:text-gray-600 dark:hover:text-gray-400 transition-colors">Terms of Service</Link>
+        </div>
       </div>
     </main>
   );

@@ -8,7 +8,11 @@ const COOKIE_NAME = "btm_session";
 
 // Routes that don't require authentication
 const PUBLIC_PATHS = [
+  "/",
   "/login",
+  "/privacy",
+  "/terms",
+  "/contact",
   "/api/auth/login",
   "/api/auth/callback",
   "/api/auth/logout",

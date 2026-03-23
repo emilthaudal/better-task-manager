@@ -16,7 +16,7 @@ export default function BeadsHome() {
       picker={<BeadsPicker />}
       footer={
         <Link
-          href="/"
+          href="/app"
           className="text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
         >
           ← Back to Jira
