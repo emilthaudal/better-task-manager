@@ -36,8 +36,14 @@ export async function GET(req: NextRequest) {
     const tempRes = new NextResponse();
     const session = await getIronSession<SessionData>(req, tempRes, sessionOptions);
 
+    const cookieHeader = req.headers.get("cookie") ?? "(none)";
+    const hasCookie = cookieHeader.includes("btm_session");
+    console.log("[callback] cookie header present:", hasCookie, "| oauthState:", session.oauthState, "| state param:", state);
+
     if (!session.oauthState || session.oauthState !== state) {
-      return NextResponse.redirect(`${appUrl}/login?error=invalid_state`);
+      return NextResponse.redirect(
+        `${appUrl}/login?error=invalid_state&debug_has_cookie=${hasCookie}&debug_has_oauth_state=${!!session.oauthState}`,
+      );
     }
 
     // Exchange authorization code for tokens
