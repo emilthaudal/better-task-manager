@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getIronSession } from "iron-session";
 import { sessionOptions } from "@/lib/session";
 import type { SessionData, AtlassianSite, AtlassianUser } from "@/lib/session";
+import { OAUTH_STATE_COOKIE } from "@/app/api/auth/login/route";
 
 const ATLASSIAN_CLIENT_ID = process.env.ATLASSIAN_CLIENT_ID ?? "";
 const ATLASSIAN_CLIENT_SECRET = process.env.ATLASSIAN_CLIENT_SECRET ?? "";
@@ -29,23 +30,18 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${appUrl}/login?error=server_misconfigured`);
   }
 
+  // Validate CSRF state from the plain cookie (not iron-session).
+  // The state nonce was written as a plain HttpOnly cookie in the login route.
+  const savedState = req.cookies.get(OAUTH_STATE_COOKIE)?.value;
+  console.log("[callback] savedState:", savedState, "| state param:", state, "| cookie present:", !!savedState);
+
+  if (!savedState || savedState !== state) {
+    return NextResponse.redirect(
+      `${appUrl}/login?error=invalid_state&debug_has_cookie=${!!savedState}`,
+    );
+  }
+
   try {
-    // Read the session from the incoming request cookie to validate CSRF state.
-    // We use a temporary response just to satisfy the (req, res) overload —
-    // we'll build the real redirect response later and re-attach the session.
-    const tempRes = new NextResponse();
-    const session = await getIronSession<SessionData>(req, tempRes, sessionOptions);
-
-    const cookieHeader = req.headers.get("cookie") ?? "(none)";
-    const hasCookie = cookieHeader.includes("btm_session");
-    console.log("[callback] cookie header present:", hasCookie, "| oauthState:", session.oauthState, "| state param:", state);
-
-    if (!session.oauthState || session.oauthState !== state) {
-      return NextResponse.redirect(
-        `${appUrl}/login?error=invalid_state&debug_has_cookie=${hasCookie}&debug_has_oauth_state=${!!session.oauthState}`,
-      );
-    }
-
     // Exchange authorization code for tokens
     const redirectUri = `${appUrl}/api/auth/callback`;
 
@@ -112,10 +108,19 @@ export async function GET(req: NextRequest) {
     const destination =
       sites.length === 1 ? `${appUrl}/` : `${appUrl}/select-site`;
 
-    // Build the final redirect response and write the session onto it
+    // Build the final redirect response and write the iron-session onto it
     const response = NextResponse.redirect(destination);
-    const finalSession = await getIronSession<SessionData>(req, response, sessionOptions);
 
+    // Clear the CSRF state cookie — it's no longer needed
+    response.cookies.set(OAUTH_STATE_COOKIE, "", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 0,
+    });
+
+    const finalSession = await getIronSession<SessionData>(req, response, sessionOptions);
     finalSession.accessToken = accessToken;
     finalSession.refreshToken = refreshToken;
     finalSession.expiresAt = expiresAt;
@@ -128,7 +133,6 @@ export async function GET(req: NextRequest) {
       scopes: [],
     }));
     finalSession.user = user;
-    finalSession.oauthState = undefined;
     finalSession.cloudId = sites.length === 1 ? sites[0].id : undefined;
     await finalSession.save();
 
