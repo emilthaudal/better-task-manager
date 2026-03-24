@@ -49,18 +49,13 @@ export async function proxy(req: NextRequest) {
         password: SESSION_SECRET,
       });
 
-      // Has a valid token and selected site
-      if (
-        session.accessToken &&
-        session.cloudId &&
-        session.expiresAt &&
-        session.expiresAt > Date.now()
-      ) {
+      // Has a valid refresh token and selected site — allow through
+      if (session.refreshToken && session.cloudId) {
         return NextResponse.next();
       }
 
-      // Has tokens but no site selected yet — redirect to picker
-      if (session.accessToken && !session.cloudId) {
+      // Has a refresh token but no site selected yet — redirect to picker
+      if (session.refreshToken && !session.cloudId) {
         const url = req.nextUrl.clone();
         url.pathname = "/select-site";
         return NextResponse.redirect(url);

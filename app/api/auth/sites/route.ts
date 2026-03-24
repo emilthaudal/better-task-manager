@@ -1,19 +1,26 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "@/lib/session";
+import { getServerSession, getAccessToken } from "@/lib/session";
 import type { AtlassianSite } from "@/lib/session";
 
 export async function GET() {
   const session = await getServerSession();
 
-  if (!session.accessToken) {
+  if (!session.refreshToken) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
+  let accessToken: string;
+  try {
+    ({ accessToken } = await getAccessToken(session.refreshToken));
+  } catch {
+    return NextResponse.json({ error: "Token refresh failed" }, { status: 401 });
   }
 
   const res = await fetch(
     "https://api.atlassian.com/oauth/token/accessible-resources",
     {
       headers: {
-        Authorization: `Bearer ${session.accessToken}`,
+        Authorization: `Bearer ${accessToken}`,
         Accept: "application/json",
       },
     },

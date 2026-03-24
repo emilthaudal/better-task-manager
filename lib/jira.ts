@@ -1,3 +1,4 @@
+import { getAccessToken } from "@/lib/session";
 import type { SessionData } from "@/lib/session";
 
 /** HTTP status codes that are worth retrying (transient or rate-limit). */
@@ -14,14 +15,16 @@ function sleep(ms: number): Promise<void> {
  * Build the Authorization header and base URL for Jira requests.
  *
  * OAuth path (default, production):
- *   - Bearer token from session
+ *   - Bearer token obtained via getAccessToken(refreshToken)
  *   - Base URL: https://api.atlassian.com/ex/jira/{cloudId}
  *
  * Basic auth bypass (local dev only, JIRA_BYPASS=true):
  *   - Basic base64(email:apiToken) from env vars
  *   - Base URL: JIRA_BASE_URL env var
  */
-function resolveAuth(session?: SessionData): { authHeader: string; baseUrl: string } {
+async function resolveAuth(
+  session?: SessionData,
+): Promise<{ authHeader: string; baseUrl: string }> {
   if (process.env.JIRA_BYPASS === "true") {
     const email = process.env.JIRA_EMAIL;
     const apiToken = process.env.JIRA_API_TOKEN;
@@ -37,12 +40,14 @@ function resolveAuth(session?: SessionData): { authHeader: string; baseUrl: stri
     };
   }
 
-  if (!session?.accessToken || !session.cloudId) {
+  if (!session?.refreshToken || !session.cloudId) {
     throw new Error("Not authenticated. Please sign in to continue.");
   }
 
+  const { accessToken } = await getAccessToken(session.refreshToken);
+
   return {
-    authHeader: `Bearer ${session.accessToken}`,
+    authHeader: `Bearer ${accessToken}`,
     baseUrl: `https://api.atlassian.com/ex/jira/${session.cloudId}/rest/api/3`,
   };
 }
@@ -52,7 +57,7 @@ export async function jiraFetch<T>(
   session?: SessionData,
   signal?: AbortSignal,
 ): Promise<T> {
-  const { authHeader, baseUrl } = resolveAuth(session);
+  const { authHeader, baseUrl } = await resolveAuth(session);
   const url = `${baseUrl}${path}`;
   const headers = {
     Authorization: authHeader,

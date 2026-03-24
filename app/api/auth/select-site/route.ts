@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "@/lib/session";
+import { getServerSession, getAccessToken } from "@/lib/session";
 import type { AtlassianSite } from "@/lib/session";
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession();
 
-  if (!session.accessToken) {
+  if (!session.refreshToken) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
@@ -16,13 +16,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "cloudId is required" }, { status: 400 });
   }
 
+  let accessToken: string;
+  try {
+    ({ accessToken } = await getAccessToken(session.refreshToken));
+  } catch {
+    return NextResponse.json({ error: "Token refresh failed" }, { status: 401 });
+  }
+
   // Fetch sites from Atlassian to validate the chosen cloudId.
-  // sites are no longer stored in the session cookie (too large).
   const sitesRes = await fetch(
     "https://api.atlassian.com/oauth/token/accessible-resources",
     {
       headers: {
-        Authorization: `Bearer ${session.accessToken}`,
+        Authorization: `Bearer ${accessToken}`,
         Accept: "application/json",
       },
     },

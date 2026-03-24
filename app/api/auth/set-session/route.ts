@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
 
   const { sessionData, destination } = payload;
 
-  if (!sessionData?.accessToken) {
+  if (!sessionData?.refreshToken) {
     return Response.redirect(`${appUrl}/login?error=invalid_session`);
   }
 
@@ -45,8 +45,17 @@ export async function GET(req: NextRequest) {
     // destination was not a valid URL — fall back to /app
   }
 
+  // Only store the minimal fields in the cookie — refreshToken + cloudId.
+  // The access token is a large JWT (~1 KB) that pushes the sealed cookie
+  // over the browser's 4096-byte hard limit. Access tokens are obtained
+  // on demand via getAccessToken(refreshToken) which caches them in memory.
+  const cookieSessionData: import("@/lib/session").SessionData = {
+    refreshToken: sessionData.refreshToken,
+    cloudId: sessionData.cloudId,
+  };
+
   // Seal the real session cookie.
-  const sealed = await sealData(sessionData, {
+  const sealed = await sealData(cookieSessionData, {
     password: SESSION_PASSWORD,
     ttl: (sessionOptions.cookieOptions?.maxAge as number) ?? 60 * 60 * 24 * 7,
   });
