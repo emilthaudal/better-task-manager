@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sealData } from "iron-session";
-import { sessionOptions, SESSION_PASSWORD } from "@/lib/session";
+import { SESSION_PASSWORD } from "@/lib/session";
 import type { SessionData, AtlassianSite } from "@/lib/session";
 
 const ATLASSIAN_CLIENT_ID = process.env.ATLASSIAN_CLIENT_ID ?? "";
@@ -145,31 +145,26 @@ export async function GET(req: NextRequest) {
       cloudId: sites.length === 1 ? sites[0].id : undefined,
     };
 
-    const sealed = await sealData(sessionData, {
-      password: SESSION_PASSWORD,
-      ttl: (sessionOptions.cookieOptions?.maxAge as number) ?? 60 * 60 * 24 * 7,
-    });
+    // Seal the session data into a short-lived (60 s) handoff token.
+    // We do NOT set the btm_session cookie here because this response is
+    // delivered to the browser as a cross-site redirect (coming from
+    // atlassian.com). Firefox and Chrome with enhanced tracking protection
+    // silently drop Set-Cookie on cross-site top-level navigations, even
+    // with SameSite=None; Secure. Instead, we redirect to a same-site
+    // endpoint (/api/auth/set-session) that sets the real session cookie
+    // in a first-party context and then onwards to the destination.
+    const handoffToken = await sealData(
+      { sessionData, destination },
+      {
+        password: SESSION_PASSWORD,
+        ttl: 60, // 60 seconds — single use, short window
+      },
+    );
 
-    // Use a standard 302 redirect with Set-Cookie on the redirect response.
-    // The 200-HTML workaround is not needed here — that pattern was for
-    // middleware-level redirects where Vercel's Edge strips Set-Cookie.
-    // This is a Node.js serverless function response; Set-Cookie on a 3xx
-    // is forwarded to the browser correctly.
-    const response = NextResponse.redirect(destination, { status: 302 });
-
-    // Prevent CDN caching of this auth response
+    const setSessionUrl = `${appUrl}/api/auth/set-session?t=${encodeURIComponent(handoffToken)}`;
+    const response = NextResponse.redirect(setSessionUrl, { status: 302 });
     response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
     response.headers.set("Pragma", "no-cache");
-
-    // Write the authenticated session cookie
-    response.cookies.set(sessionOptions.cookieName, sealed, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "none",
-      path: "/",
-      maxAge: 60 * 60 * 24 * 7, // 7 days
-    });
-
     return response;
   } catch (err) {
     const message = err instanceof Error ? err.message : "unknown_error";

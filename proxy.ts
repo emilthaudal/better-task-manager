@@ -15,6 +15,7 @@ const PUBLIC_PATHS = [
   "/contact",
   "/api/auth/login",
   "/api/auth/callback",
+  "/api/auth/set-session",
   "/api/auth/logout",
   "/api/auth/sites",
   "/api/auth/select-site",
