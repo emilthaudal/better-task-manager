@@ -2,10 +2,40 @@ import { NextRequest, NextResponse } from "next/server";
 import { sealData } from "iron-session";
 import { sessionOptions, SESSION_PASSWORD } from "@/lib/session";
 import type { SessionData, AtlassianSite, AtlassianUser } from "@/lib/session";
-import { OAUTH_STATE_COOKIE } from "@/app/api/auth/login/route";
 
 const ATLASSIAN_CLIENT_ID = process.env.ATLASSIAN_CLIENT_ID ?? "";
 const ATLASSIAN_CLIENT_SECRET = process.env.ATLASSIAN_CLIENT_SECRET ?? "";
+
+/**
+ * Compute HMAC-SHA256 of `message` keyed with `secret`.
+ * Returns a lowercase hex string.
+ */
+async function hmacSign(message: string, secret: string): Promise<string> {
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    enc.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const sig = await crypto.subtle.sign("HMAC", key, enc.encode(message));
+  return Array.from(new Uint8Array(sig))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+/**
+ * Constant-time string comparison to prevent timing attacks.
+ */
+function safeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) {
+    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return diff === 0;
+}
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -26,19 +56,34 @@ export async function GET(req: NextRequest) {
   }
 
   if (!ATLASSIAN_CLIENT_ID || !ATLASSIAN_CLIENT_SECRET) {
-    console.error("OAuth callback: missing ATLASSIAN_CLIENT_ID or ATLASSIAN_CLIENT_SECRET env vars");
+    console.error(
+      "OAuth callback: missing ATLASSIAN_CLIENT_ID or ATLASSIAN_CLIENT_SECRET env vars",
+    );
     return NextResponse.redirect(`${appUrl}/login?error=server_misconfigured`);
   }
 
-  // Validate CSRF state from the plain cookie (not iron-session).
-  // The state nonce was written as a plain HttpOnly cookie in the login route.
-  const savedState = req.cookies.get(OAUTH_STATE_COOKIE)?.value;
-  console.log("[callback] savedState:", savedState, "| state param:", state, "| cookie present:", !!savedState);
+  // Validate the CSRF state param via HMAC.
+  // The login route generated state as "<nonce>.<hmac>" where hmac = HMAC-SHA256(nonce, SESSION_SECRET).
+  // We recompute the HMAC here and compare — no cookie or server-side storage needed.
+  const dotIndex = state.lastIndexOf(".");
+  const nonce = dotIndex !== -1 ? state.slice(0, dotIndex) : "";
+  const receivedHmac = dotIndex !== -1 ? state.slice(dotIndex + 1) : "";
 
-  if (!savedState || savedState !== state) {
-    return NextResponse.redirect(
-      `${appUrl}/login?error=invalid_state&debug_has_cookie=${!!savedState}`,
-    );
+  const sessionSecret =
+    process.env.SESSION_SECRET ?? "dev-only-secret-replace-in-production-32ch";
+  const expectedHmac = await hmacSign(nonce, sessionSecret);
+
+  console.log(
+    "[callback] state param present:",
+    !!state,
+    "| nonce:",
+    nonce,
+    "| hmac valid:",
+    safeEqual(receivedHmac, expectedHmac),
+  );
+
+  if (!nonce || !safeEqual(receivedHmac, expectedHmac)) {
+    return NextResponse.redirect(`${appUrl}/login?error=invalid_state`);
   }
 
   try {
@@ -60,7 +105,9 @@ export async function GET(req: NextRequest) {
     if (!tokenRes.ok) {
       const body = await tokenRes.text();
       console.error("Token exchange failed:", body);
-      return NextResponse.redirect(`${appUrl}/login?error=token_exchange_failed`);
+      return NextResponse.redirect(
+        `${appUrl}/login?error=token_exchange_failed`,
+      );
     }
 
     const tokenData = (await tokenRes.json()) as {
@@ -155,15 +202,6 @@ export async function GET(req: NextRequest) {
     const response = new NextResponse(html, {
       status: 200,
       headers: { "Content-Type": "text/html; charset=utf-8" },
-    });
-
-    // Clear the CSRF state cookie — it's no longer needed
-    response.cookies.set(OAUTH_STATE_COOKIE, "", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: 0,
     });
 
     // Write the authenticated session cookie
