@@ -134,7 +134,28 @@ export async function GET(req: NextRequest) {
       ttl: (sessionOptions.cookieOptions?.maxAge as number) ?? 60 * 60 * 24 * 7,
     });
 
-    const response = NextResponse.redirect(destination);
+    // Return a 200 HTML response instead of a 3xx redirect.
+    // Vercel (and some CDNs) strip Set-Cookie headers from redirect responses
+    // before they reach the browser, so the session cookie would be silently
+    // dropped. A 200 response with a client-side redirect avoids this.
+    const safeDestination = destination.replace(/"/g, "&quot;");
+    const html = `<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="refresh" content="0;url=${safeDestination}" />
+    <title>Redirecting…</title>
+  </head>
+  <body>
+    <script>window.location.replace("${safeDestination}");</script>
+    Redirecting…
+  </body>
+</html>`;
+
+    const response = new NextResponse(html, {
+      status: 200,
+      headers: { "Content-Type": "text/html; charset=utf-8" },
+    });
 
     // Clear the CSRF state cookie — it's no longer needed
     response.cookies.set(OAUTH_STATE_COOKIE, "", {
@@ -145,7 +166,7 @@ export async function GET(req: NextRequest) {
       maxAge: 0,
     });
 
-    // Write the authenticated session cookie directly
+    // Write the authenticated session cookie
     response.cookies.set(sessionOptions.cookieName, sealed, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
