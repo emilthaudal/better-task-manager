@@ -7,10 +7,10 @@ import IssueDetailPanel from "@/components/IssueDetailPanel";
 import GraphPageHeader from "@/components/GraphPageHeader";
 import { GraphLoadingState, GraphErrorState, GraphEmptyState } from "@/components/GraphStates";
 import { useIssuePoller } from "@/hooks/useIssuePoller";
-
-const JIRA_BASE_URL = process.env.NEXT_PUBLIC_JIRA_BASE_URL ?? "";
+import { useJiraBaseUrl } from "@/hooks/useJiraBaseUrl";
 
 export default function GraphPage() {
+  const jiraBaseUrl = useJiraBaseUrl();
   const { epicKey } = useParams<{ epicKey: string }>();
 
   const { issues, latestIssues, loading, error, lastUpdated } = useIssuePoller(epicKey);
@@ -57,7 +57,7 @@ export default function GraphPage() {
           <div className="w-[25%] h-full border-l border-slate-200 shrink-0 shadow-[-4px_0_24px_rgba(0,0,0,0.04)]">
             <IssueDetailPanel
               issueKey={selectedKey}
-              jiraBaseUrl={JIRA_BASE_URL}
+              jiraBaseUrl={jiraBaseUrl}
               onClose={() => setSelectedKey(null)}
               onNavigate={(key) => setSelectedKey(key)}
             />

@@ -34,6 +34,8 @@ export interface SessionData {
   refreshToken?: string;
   /** Atlassian Cloud ID for the selected Jira site */
   cloudId?: string;
+  /** The selected Atlassian site URL (e.g. https://acme.atlassian.net) */
+  siteUrl?: string;
   /**
    * @deprecated Removed from cookie storage — too large.
    * Use getAccessToken(session.refreshToken) instead.

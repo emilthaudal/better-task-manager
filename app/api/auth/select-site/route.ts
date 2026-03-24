@@ -48,6 +48,7 @@ export async function POST(req: NextRequest) {
   }
 
   session.cloudId = cloudId;
+  session.siteUrl = validSite.url;
   await session.save();
 
   return NextResponse.json({ ok: true, site: validSite });

@@ -11,8 +11,7 @@ import GraphPageHeader from "@/components/GraphPageHeader";
 import { GraphLoadingState, GraphErrorState, GraphEmptyState } from "@/components/GraphStates";
 import type { JiraIssue } from "@/lib/jira";
 import type { StreamMessage } from "@/lib/streamTypes";
-
-const JIRA_BASE_URL = process.env.NEXT_PUBLIC_JIRA_BASE_URL ?? "";
+import { useJiraBaseUrl } from "@/hooks/useJiraBaseUrl";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -29,6 +28,7 @@ function dedupeByKey(issues: JiraIssue[]): JiraIssue[] {
 
 export default function ProjectGraphPage() {
   const { projectKey } = useParams<{ projectKey: string }>();
+  const jiraBaseUrl = useJiraBaseUrl();
 
   // `issues` is only set once streaming is fully complete — GraphView must
   // receive a stable, final array so that buildGraph (which locks layoutDoneRef)
@@ -210,7 +210,7 @@ export default function ProjectGraphPage() {
           <div className="w-[25%] h-full border-l border-slate-200 shrink-0 shadow-[-4px_0_24px_rgba(0,0,0,0.04)]">
             <IssueDetailPanel
               issueKey={selectedKey}
-              jiraBaseUrl={JIRA_BASE_URL}
+              jiraBaseUrl={jiraBaseUrl}
               onClose={() => setSelectedKey(null)}
               onNavigate={(key) => setSelectedKey(key)}
             />
