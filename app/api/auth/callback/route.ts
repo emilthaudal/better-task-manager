@@ -150,28 +150,16 @@ export async function GET(req: NextRequest) {
       ttl: (sessionOptions.cookieOptions?.maxAge as number) ?? 60 * 60 * 24 * 7,
     });
 
-    // Return a 200 HTML response instead of a 3xx redirect.
-    // Vercel (and some CDNs) strip Set-Cookie headers from redirect responses
-    // before they reach the browser, so the session cookie would be silently
-    // dropped. A 200 response with a client-side redirect avoids this.
-    const safeDestination = destination.replace(/"/g, "&quot;");
-    const html = `<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <meta http-equiv="refresh" content="0;url=${safeDestination}" />
-    <title>Redirecting…</title>
-  </head>
-  <body>
-    <script>window.location.replace("${safeDestination}");</script>
-    Redirecting…
-  </body>
-</html>`;
+    // Use a standard 302 redirect with Set-Cookie on the redirect response.
+    // The 200-HTML workaround is not needed here — that pattern was for
+    // middleware-level redirects where Vercel's Edge strips Set-Cookie.
+    // This is a Node.js serverless function response; Set-Cookie on a 3xx
+    // is forwarded to the browser correctly.
+    const response = NextResponse.redirect(destination, { status: 302 });
 
-    const response = new NextResponse(html, {
-      status: 200,
-      headers: { "Content-Type": "text/html; charset=utf-8" },
-    });
+    // Prevent CDN caching of this auth response
+    response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
+    response.headers.set("Pragma", "no-cache");
 
     // Write the authenticated session cookie
     response.cookies.set(sessionOptions.cookieName, sealed, {

@@ -53,28 +53,10 @@ export async function GET() {
     prompt: "consent",
   });
 
-  // Return a 200 HTML response instead of a 3xx redirect.
-  // Vercel strips Set-Cookie headers from redirect responses before they reach
-  // the browser. A 200 response is reliable; the browser navigates to
-  // Atlassian via window.location.replace() / <meta http-equiv="refresh">.
-  // No cookie is set — state validation is done via the HMAC in the state param.
   const authUrl = `https://auth.atlassian.com/authorize?${params.toString()}`;
-  const safeUrl = authUrl.replace(/"/g, "&quot;");
-  const html = `<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <meta http-equiv="refresh" content="0;url=${safeUrl}" />
-    <title>Redirecting…</title>
-  </head>
-  <body>
-    <script>window.location.replace("${safeUrl}");</script>
-    Redirecting…
-  </body>
-</html>`;
 
-  return new NextResponse(html, {
-    status: 200,
-    headers: { "Content-Type": "text/html; charset=utf-8" },
-  });
+  const response = NextResponse.redirect(authUrl, { status: 302 });
+  response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
+  response.headers.set("Pragma", "no-cache");
+  return response;
 }
