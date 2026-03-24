@@ -213,6 +213,15 @@ export async function GET(req: NextRequest) {
       maxAge: 60 * 60 * 24 * 7, // 7 days
     });
 
+    console.log(
+      "[callback] Set-Cookie header present:",
+      !!response.headers.get("set-cookie"),
+      "| cookie name in response:",
+      response.cookies.get(sessionOptions.cookieName)?.name,
+      "| sealed length:",
+      sealed.length,
+    );
+
     return response;
   } catch (err) {
     const message = err instanceof Error ? err.message : "unknown_error";
