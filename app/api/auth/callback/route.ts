@@ -153,7 +153,7 @@ export async function GET(req: NextRequest) {
 
     // Determine redirect destination
     const destination =
-      sites.length === 1 ? `${appUrl}/` : `${appUrl}/select-site`;
+      sites.length === 1 ? `${appUrl}/app` : `${appUrl}/select-site`;
 
     // Build the session data and seal it directly so we can write it via
     // response.cookies.set() — the same approach we use for the CSRF state.
