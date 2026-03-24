@@ -20,18 +20,23 @@ const PUBLIC_PATHS = [
   "/api/auth/select-site",
   "/api/auth/refresh",
   "/api/auth/me",
+  "/api/auth/debug",
   "/select-site",
 ];
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Allow public paths and static assets
-  if (
-    PUBLIC_PATHS.some((p) => pathname.startsWith(p)) ||
-    pathname.startsWith("/_next") ||
-    pathname.startsWith("/favicon")
-  ) {
+  // Allow static assets always
+  if (pathname.startsWith("/_next") || pathname.startsWith("/favicon")) {
+    return NextResponse.next();
+  }
+
+  // Allow public paths — use exact match for "/" to avoid matching every path
+  const isPublic = PUBLIC_PATHS.some((p) =>
+    p === "/" ? pathname === "/" : pathname.startsWith(p),
+  );
+  if (isPublic) {
     return NextResponse.next();
   }
 
