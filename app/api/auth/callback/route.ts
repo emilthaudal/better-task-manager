@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sealData } from "iron-session";
 import { sessionOptions, SESSION_PASSWORD } from "@/lib/session";
-import type { SessionData, AtlassianSite, AtlassianUser } from "@/lib/session";
+import type { SessionData, AtlassianSite } from "@/lib/session";
 
 const ATLASSIAN_CLIENT_ID = process.env.ATLASSIAN_CLIENT_ID ?? "";
 const ATLASSIAN_CLIENT_SECRET = process.env.ATLASSIAN_CLIENT_SECRET ?? "";
@@ -73,15 +73,6 @@ export async function GET(req: NextRequest) {
     process.env.SESSION_SECRET ?? "dev-only-secret-replace-in-production-32ch";
   const expectedHmac = await hmacSign(nonce, sessionSecret);
 
-  console.log(
-    "[callback] state param present:",
-    !!state,
-    "| nonce:",
-    nonce,
-    "| hmac valid:",
-    safeEqual(receivedHmac, expectedHmac),
-  );
-
   if (!nonce || !safeEqual(receivedHmac, expectedHmac)) {
     return NextResponse.redirect(`${appUrl}/login?error=invalid_state`);
   }
@@ -121,7 +112,8 @@ export async function GET(req: NextRequest) {
     const refreshToken = tokenData.refresh_token;
     const expiresAt = Date.now() + tokenData.expires_in * 1000;
 
-    // Fetch accessible Jira sites
+    // Fetch accessible Jira sites — needed only to determine destination
+    // and set cloudId for single-site users. Not stored in the session cookie.
     const sitesRes = await fetch(
       "https://api.atlassian.com/oauth/token/accessible-resources",
       {
@@ -138,41 +130,18 @@ export async function GET(req: NextRequest) {
 
     const sites = (await sitesRes.json()) as AtlassianSite[];
 
-    // Fetch user identity
-    const meRes = await fetch("https://api.atlassian.com/me", {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        Accept: "application/json",
-      },
-    });
-
-    let user: AtlassianUser | undefined;
-    if (meRes.ok) {
-      user = (await meRes.json()) as AtlassianUser;
-    }
-
     // Determine redirect destination
     const destination =
       sites.length === 1 ? `${appUrl}/app` : `${appUrl}/select-site`;
 
-    // Build the session data and seal it directly so we can write it via
-    // response.cookies.set() — the same approach we use for the CSRF state.
-    // Using getIronSession(req, NextResponse.redirect(...)) silently fails on
-    // Vercel because the redirect response's Set-Cookie is dropped somewhere
-    // in the middleware/CDN layer before it reaches the browser.
+    // Only store the minimum fields needed for authentication checks and API
+    // calls. sites and user are intentionally excluded — they push the sealed
+    // cookie well over the 4 KB browser limit and cause it to be silently
+    // dropped. sites/user are fetched on demand from the Atlassian API instead.
     const sessionData: SessionData = {
       accessToken,
       refreshToken,
       expiresAt,
-      // Store only essential site fields to keep cookie size small
-      sites: sites.map(({ id, name, url, avatarUrl }) => ({
-        id,
-        name,
-        url,
-        avatarUrl,
-        scopes: [],
-      })),
-      user,
       cloudId: sites.length === 1 ? sites[0].id : undefined,
     };
 
@@ -212,15 +181,6 @@ export async function GET(req: NextRequest) {
       path: "/",
       maxAge: 60 * 60 * 24 * 7, // 7 days
     });
-
-    console.log(
-      "[callback] Set-Cookie header present:",
-      !!response.headers.get("set-cookie"),
-      "| cookie name in response:",
-      response.cookies.get(sessionOptions.cookieName)?.name,
-      "| sealed length:",
-      sealed.length,
-    );
 
     return response;
   } catch (err) {

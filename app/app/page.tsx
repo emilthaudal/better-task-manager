@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { cookies } from "next/headers";
 import EpicPicker from "@/components/EpicPicker";
 import ThemeToggle from "@/components/ThemeToggle";
 import HomeShell from "@/components/HomeShell";
@@ -9,20 +8,7 @@ import { getServerSession, isAuthenticated } from "@/lib/session";
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get("btm_session");
-  console.log(
-    "[/app] btm_session cookie present:", !!sessionCookie,
-    "| length:", sessionCookie?.value?.length ?? 0,
-  );
-
   const session = await getServerSession();
-  console.log(
-    "[/app] isAuthenticated:", isAuthenticated(session),
-    "| hasAccessToken:", !!session.accessToken,
-    "| hasCloudId:", !!session.cloudId,
-    "| expiresAt:", session.expiresAt,
-  );
   if (!isAuthenticated(session)) redirect("/login");
 
   return (
