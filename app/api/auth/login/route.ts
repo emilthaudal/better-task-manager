@@ -28,9 +28,31 @@ export async function GET() {
     prompt: "consent",
   });
 
-  const response = NextResponse.redirect(
-    `https://auth.atlassian.com/authorize?${params.toString()}`,
-  );
+  // Return a 200 HTML response instead of a 3xx redirect.
+  // Vercel strips Set-Cookie headers from redirect responses before they reach
+  // the browser, so the CSRF state nonce would be silently lost and the
+  // callback would always fail with invalid_state.
+  // A 200 response sets the cookie reliably; the browser then navigates to
+  // Atlassian via window.location.replace() / <meta http-equiv="refresh">.
+  const authUrl = `https://auth.atlassian.com/authorize?${params.toString()}`;
+  const safeUrl = authUrl.replace(/"/g, "&quot;");
+  const html = `<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="refresh" content="0;url=${safeUrl}" />
+    <title>Redirecting…</title>
+  </head>
+  <body>
+    <script>window.location.replace("${safeUrl}");</script>
+    Redirecting…
+  </body>
+</html>`;
+
+  const response = new NextResponse(html, {
+    status: 200,
+    headers: { "Content-Type": "text/html; charset=utf-8" },
+  });
 
   // Store the CSRF state nonce as a plain cookie (not iron-session).
   // The state is not sensitive — it just needs to survive the round-trip
