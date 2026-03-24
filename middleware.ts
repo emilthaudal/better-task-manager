@@ -23,7 +23,7 @@ const PUBLIC_PATHS = [
   "/select-site",
 ];
 
-export async function proxy(req: NextRequest) {
+export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // Allow public paths and static assets
