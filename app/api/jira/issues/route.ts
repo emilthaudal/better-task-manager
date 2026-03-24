@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { getEpicChildren, getSubtasks } from "@/lib/jira";
 import { getServerSession } from "@/lib/session";
 
+function isAuthError(message: string): boolean {
+  return (
+    message.includes("Not authenticated") ||
+    message.includes("Token refresh failed")
+  );
+}
+
 export async function GET(req: NextRequest) {
   const epic = req.nextUrl.searchParams.get("epic");
   if (!epic) {
@@ -32,6 +39,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(deduped);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
+    if (isAuthError(message)) {
+      return NextResponse.json({ error: message }, { status: 401 });
+    }
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

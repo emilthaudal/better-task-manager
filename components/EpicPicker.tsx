@@ -117,6 +117,7 @@ export default function EpicPicker() {
   const [loadingEpics, setLoadingEpics] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [jiraConnected, setJiraConnected] = useState<boolean | null>(null);
+  const [needsReconnect, setNeedsReconnect] = useState(false);
 
   // Recents list — hydrated client-side only to avoid SSR mismatch
   const [recents, setRecents] = useState<RecentGraphEntry[]>([]);
@@ -133,6 +134,10 @@ export default function EpicPicker() {
     setLoadingProjects(true);
     fetch("/api/jira/projects")
       .then((r) => {
+        if (r.status === 401) {
+          setNeedsReconnect(true);
+          throw new Error("Your Jira session has expired.");
+        }
         if (!r.ok) throw new Error(`Failed to load projects (${r.status})`);
         return r.json();
       })
@@ -161,8 +166,14 @@ export default function EpicPicker() {
     }
     setLoadingEpics(true);
     setSelectedEpic("");
+    let authFailed = false;
     fetch(`/api/jira/epics?project=${encodeURIComponent(selectedProject)}`)
       .then((r) => {
+        if (r.status === 401) {
+          authFailed = true;
+          setNeedsReconnect(true);
+          throw new Error("Your Jira session has expired.");
+        }
         if (!r.ok) throw new Error(`Failed to load epics (${r.status})`);
         return r.json();
       })
@@ -173,7 +184,10 @@ export default function EpicPicker() {
           setSelectedEpic(lastEpic);
         }
       })
-      .catch((e: Error) => setError(e.message))
+      .catch((e: Error) => {
+        setError(e.message);
+        if (authFailed) setJiraConnected(false);
+      })
       .finally(() => setLoadingEpics(false));
   }, [selectedProject]);
 
@@ -253,7 +267,24 @@ export default function EpicPicker() {
         </div>
       )}
 
-      {error && <ErrorBanner message={error} />}
+      {needsReconnect ? (
+        <div className="flex flex-col gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+          <p className="text-sm font-medium text-amber-800">
+            Your Jira session has expired.
+          </p>
+          <p className="text-xs text-amber-700">
+            Reconnect to pick up where you left off.
+          </p>
+          <Button
+            onClick={() => { window.location.href = "/api/auth/login"; }}
+            className="mt-1 w-full bg-amber-500 hover:bg-amber-600 text-white"
+          >
+            Reconnect to Jira →
+          </Button>
+        </div>
+      ) : (
+        error && <ErrorBanner message={error} />
+      )}
 
       {/* Project */}
       <div className="flex flex-col gap-1.5">

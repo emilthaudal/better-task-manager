@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { getEpics } from "@/lib/jira";
 import { getServerSession } from "@/lib/session";
 
+function isAuthError(message: string): boolean {
+  return (
+    message.includes("Not authenticated") ||
+    message.includes("Token refresh failed")
+  );
+}
+
 export async function GET(req: NextRequest) {
   const project = req.nextUrl.searchParams.get("project");
   if (!project) {
@@ -15,6 +22,9 @@ export async function GET(req: NextRequest) {
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("[/api/jira/epics]", message);
+    if (isAuthError(message)) {
+      return NextResponse.json({ error: message }, { status: 401 });
+    }
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
