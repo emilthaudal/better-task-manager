@@ -3,6 +3,12 @@ import { getServerSession, getAccessToken, isAuthenticated, persistRotatedToken 
 import type { AtlassianSite } from "@/lib/session";
 
 export async function GET() {
+  // JIRA_BYPASS path (local dev) — no session exists in this mode, so this
+  // must run before the isAuthenticated gate below.
+  if (process.env.JIRA_BYPASS === "true") {
+    return NextResponse.json({ url: process.env.JIRA_BASE_URL ?? "" });
+  }
+
   const session = await getServerSession();
 
   if (!isAuthenticated(session)) {
@@ -12,11 +18,6 @@ export async function GET() {
   // Fast path: siteUrl already stored in session (set by select-site after this deploy).
   if (session.siteUrl) {
     return NextResponse.json({ url: session.siteUrl });
-  }
-
-  // JIRA_BYPASS path (local dev).
-  if (process.env.JIRA_BYPASS === "true") {
-    return NextResponse.json({ url: process.env.JIRA_BASE_URL ?? "" });
   }
 
   // Fallback for existing sessions that predate siteUrl storage:

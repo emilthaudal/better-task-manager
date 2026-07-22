@@ -33,6 +33,12 @@ export async function proxy(req: NextRequest) {
     return NextResponse.next();
   }
 
+  // Local dev bypass — skip the OAuth session gate entirely when using a
+  // personal Jira API token (see lib/jira.ts resolveAuth's JIRA_BYPASS path).
+  if (process.env.JIRA_BYPASS === "true") {
+    return NextResponse.next();
+  }
+
   // Allow public paths — use exact match for "/" to avoid matching every path
   const isPublic = PUBLIC_PATHS.some((p) =>
     p === "/" ? pathname === "/" : pathname.startsWith(p),
