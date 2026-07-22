@@ -1,4 +1,4 @@
-import type { SessionOptions } from "iron-session";
+import type { IronSession, SessionOptions } from "iron-session";
 import { getIronSession } from "iron-session";
 import type { NextRequest } from "next/server";
 import type { NextResponse } from "next/server";
@@ -94,6 +94,22 @@ export async function getServerSession() {
 /** Returns true if the session has a valid refresh token and a selected cloudId. */
 export function isAuthenticated(session: SessionData): boolean {
   return !!session.refreshToken && !!session.cloudId;
+}
+
+/**
+ * Persists session.refreshToken if getAccessToken() rotated it during this
+ * request. Atlassian rotates refresh tokens on every use and invalidates the
+ * previous one, so a rotated token that isn't written back to the cookie
+ * becomes unusable the next time a different (or recycled) Lambda instance
+ * tries to refresh with the stale value — forcing a full re-login.
+ */
+export async function persistRotatedToken(
+  session: IronSession<SessionData>,
+  priorRefreshToken: string | undefined,
+): Promise<void> {
+  if (session.refreshToken && session.refreshToken !== priorRefreshToken) {
+    await session.save();
+  }
 }
 
 // ---------------------------------------------------------------------------

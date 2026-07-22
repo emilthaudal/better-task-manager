@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getEpics } from "@/lib/jira";
-import { getServerSession } from "@/lib/session";
+import { getServerSession, persistRotatedToken } from "@/lib/session";
 
 function isAuthError(message: string): boolean {
   return (
@@ -16,8 +16,10 @@ export async function GET(req: NextRequest) {
   }
 
   const session = await getServerSession();
+  const priorRefreshToken = session.refreshToken;
   try {
     const epics = await getEpics(project, session);
+    await persistRotatedToken(session, priorRefreshToken);
     return NextResponse.json(epics);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";

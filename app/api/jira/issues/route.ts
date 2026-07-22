@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getEpicChildren, getSubtasks } from "@/lib/jira";
-import { getServerSession } from "@/lib/session";
+import { getServerSession, persistRotatedToken } from "@/lib/session";
 
 function isAuthError(message: string): boolean {
   return (
@@ -16,6 +16,7 @@ export async function GET(req: NextRequest) {
   }
 
   const session = await getServerSession();
+  const priorRefreshToken = session.refreshToken;
   try {
     // Level 1: direct children of the epic
     const children = await getEpicChildren(epic, session);
@@ -36,6 +37,7 @@ export async function GET(req: NextRequest) {
       return true;
     });
 
+    await persistRotatedToken(session, priorRefreshToken);
     return NextResponse.json(deduped);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";

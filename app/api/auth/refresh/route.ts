@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession, getAccessToken } from "@/lib/session";
+import { getServerSession, getAccessToken, persistRotatedToken } from "@/lib/session";
 
 export async function POST() {
   const session = await getServerSession();
@@ -8,11 +8,15 @@ export async function POST() {
     return NextResponse.json({ error: "No refresh token" }, { status: 401 });
   }
 
+  const priorRefreshToken = session.refreshToken;
   try {
-    // getAccessToken handles the Atlassian token refresh and caches the result.
-    // If the refresh token has been rotated, the new one is returned but we
-    // don't persist it here — it will be picked up on the next full login.
-    await getAccessToken(session.refreshToken);
+    // Atlassian rotates the refresh token on every use and invalidates the
+    // old one, so the rotated token must be written back to the cookie here
+    // — otherwise the next Lambda instance retries with a stale, already
+    // -invalidated token and the refresh fails.
+    const { refreshToken } = await getAccessToken(session.refreshToken);
+    session.refreshToken = refreshToken;
+    await persistRotatedToken(session, priorRefreshToken);
     return NextResponse.json({ ok: true });
   } catch {
     // Refresh failed — destroy session so the proxy redirects to /login

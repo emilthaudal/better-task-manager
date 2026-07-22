@@ -18,7 +18,9 @@ export async function POST(req: NextRequest) {
 
   let accessToken: string;
   try {
-    ({ accessToken } = await getAccessToken(session.refreshToken));
+    let refreshToken: string;
+    ({ accessToken, refreshToken } = await getAccessToken(session.refreshToken));
+    session.refreshToken = refreshToken;
   } catch {
     return NextResponse.json({ error: "Token refresh failed" }, { status: 401 });
   }
