@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jiraFetch } from "@/lib/jira";
-import { getServerSession } from "@/lib/session";
+import { getServerSession, persistRotatedToken } from "@/lib/session";
 
 const FIELDS = [
   "summary",
@@ -28,8 +28,10 @@ export async function GET(
   }
 
   const session = await getServerSession();
+  const priorRefreshToken = session.refreshToken;
   try {
     const data = await jiraFetch(`/issue/${encodeURIComponent(key)}?fields=${FIELDS}`, session);
+    await persistRotatedToken(session, priorRefreshToken);
     return NextResponse.json(data);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";

@@ -44,7 +44,11 @@ async function resolveAuth(
     throw new Error("Not authenticated. Please sign in to continue.");
   }
 
-  const { accessToken } = await getAccessToken(session.refreshToken);
+  const { accessToken, refreshToken } = await getAccessToken(session.refreshToken);
+  // Atlassian rotates refresh tokens on every use — keep the in-memory
+  // session object current so the caller can persist it via
+  // persistRotatedToken() once the request's Jira calls are done.
+  session.refreshToken = refreshToken;
 
   return {
     authHeader: `Bearer ${accessToken}`,

@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { getEpics, getEpicChildren, getSubtasks } from "@/lib/jira";
-import { getServerSession } from "@/lib/session";
+import { getAccessToken, getServerSession, persistRotatedToken } from "@/lib/session";
 import { pLimit } from "@/lib/concurrency";
 import type { StreamMessage } from "@/lib/streamTypes";
 
@@ -32,8 +32,21 @@ export async function GET(req: NextRequest) {
   }
 
   // Resolve the session before entering the ReadableStream constructor —
-  // the cookies() API cannot be called from inside a stream callback.
+  // the cookies() API cannot be called from inside a stream callback. Force
+  // the access-token refresh (and persist any rotated refresh token) here
+  // too, since Atlassian invalidates the old refresh token on rotation and
+  // there's no later point in this handler where the cookie can be written.
   const session = await getServerSession();
+  if (session.refreshToken) {
+    const priorRefreshToken = session.refreshToken;
+    try {
+      const { refreshToken } = await getAccessToken(session.refreshToken);
+      session.refreshToken = refreshToken;
+      await persistRotatedToken(session, priorRefreshToken);
+    } catch {
+      // Let the stream's own getEpics() call surface the auth error as usual.
+    }
+  }
 
   const stream = new ReadableStream({
     async start(controller) {
