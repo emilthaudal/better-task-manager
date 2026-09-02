@@ -141,6 +141,44 @@ export function buildGraphStructure(issues: JiraIssue[]): GraphStructure {
   const edges: Edge[] = [];
   const edgeSet = new Set<string>();
 
+  // ── 0a. "blocks" adjacency (blocker → blocked) ──────────────────────────
+  // Built early (before node creation) so per-issue "actively blocked" state
+  // can be baked into each issueNode's data at creation time.
+  const blocksAdj = new Map<string, Set<string>>();
+  for (const issue of issues) {
+    for (const link of issue.fields.issuelinks ?? []) {
+      if (link.outwardIssue && issueMap.has(link.outwardIssue.key)) {
+        if (link.type.outward.toLowerCase() === "blocks") {
+          if (!blocksAdj.has(issue.key)) blocksAdj.set(issue.key, new Set());
+          blocksAdj.get(issue.key)!.add(link.outwardIssue.key);
+        }
+      }
+      if (link.inwardIssue && issueMap.has(link.inwardIssue.key)) {
+        const typeName = link.type.inward.toLowerCase();
+        if (typeName === "is blocked by") {
+          const blocker = link.inwardIssue.key;
+          if (!blocksAdj.has(blocker)) blocksAdj.set(blocker, new Set());
+          blocksAdj.get(blocker)!.add(issue.key);
+        } else if (typeName === "blocks") {
+          if (!blocksAdj.has(issue.key)) blocksAdj.set(issue.key, new Set());
+          blocksAdj.get(issue.key)!.add(link.inwardIssue.key);
+        }
+      }
+    }
+  }
+
+  // An issue is "actively blocked" when at least one issue that blocks it
+  // (per blocksAdj) is not yet Done. Drives the blocked-card treatment in
+  // IssueNode — a card only needs to know its own state, not walk edges.
+  const activelyBlockedKeys = new Set<string>();
+  for (const [blockerKey, blockedKeys] of blocksAdj.entries()) {
+    const blocker = issueMap.get(blockerKey);
+    if (!blocker || blocker.fields.status.statusCategory.key === "done") continue;
+    for (const blockedKey of blockedKeys) {
+      activelyBlockedKeys.add(blockedKey);
+    }
+  }
+
   // ── 0. Build epic -> member issues map ───────────────────────────────────
   // For each issue, find the epic it belongs to by walking up the parent chain.
   // epicToMembers: epicKey (or UNASSIGNED_EPIC_KEY) -> Set of direct member keys
@@ -394,6 +432,7 @@ export function buildGraphStructure(issues: JiraIssue[]): GraphStructure {
         insideGroup: true,
         isEpicStandalone: false,
         isExternal: (parentIssue.fields.labels as string[] | undefined)?.includes(EXTERNAL_LABEL) ?? false,
+        isBlocked: activelyBlockedKeys.has(parentKey),
         bgColor: statusBgColor(parentCat),
         textColor: statusTextColor(parentCat),
         subtaskCount: subtaskKeys.length,
@@ -424,6 +463,7 @@ export function buildGraphStructure(issues: JiraIssue[]): GraphStructure {
           insideGroup: true,
           isEpicStandalone: false,
           isExternal: (subtaskIssue.fields.labels as string[] | undefined)?.includes(EXTERNAL_LABEL) ?? false,
+          isBlocked: activelyBlockedKeys.has(sk),
           bgColor: statusBgColor(cat),
           textColor: statusTextColor(cat),
         } satisfies IssueNodeData,
@@ -485,6 +525,7 @@ export function buildGraphStructure(issues: JiraIssue[]): GraphStructure {
           insideGroup: false,
           isEpicStandalone: false,
           isExternal: (childIssue.fields.labels as string[] | undefined)?.includes(EXTERNAL_LABEL) ?? false,
+          isBlocked: activelyBlockedKeys.has(ck),
           bgColor: statusBgColor(cat),
           textColor: statusTextColor(cat),
         } satisfies IssueNodeData,
@@ -534,6 +575,7 @@ export function buildGraphStructure(issues: JiraIssue[]): GraphStructure {
         insideGroup: false,
         isEpicStandalone,
         isExternal: (issue.fields.labels as string[] | undefined)?.includes(EXTERNAL_LABEL) ?? false,
+        isBlocked: activelyBlockedKeys.has(issue.key),
         bgColor: statusBgColor(cat),
         textColor: statusTextColor(cat),
       } satisfies IssueNodeData,
@@ -541,30 +583,6 @@ export function buildGraphStructure(issues: JiraIssue[]): GraphStructure {
 
     if (standaloneEpicGroupId) {
       issueEpicGroupId.set(issue.key, standaloneEpicGroupId);
-    }
-  }
-
-  // ── 4a. Transitive reduction of "blocks" edges ──────────────────────────
-  const blocksAdj = new Map<string, Set<string>>();
-  for (const issue of issues) {
-    for (const link of issue.fields.issuelinks ?? []) {
-      if (link.outwardIssue && issueMap.has(link.outwardIssue.key)) {
-        if (link.type.outward.toLowerCase() === "blocks") {
-          if (!blocksAdj.has(issue.key)) blocksAdj.set(issue.key, new Set());
-          blocksAdj.get(issue.key)!.add(link.outwardIssue.key);
-        }
-      }
-      if (link.inwardIssue && issueMap.has(link.inwardIssue.key)) {
-        const typeName = link.type.inward.toLowerCase();
-        if (typeName === "is blocked by") {
-          const blocker = link.inwardIssue.key;
-          if (!blocksAdj.has(blocker)) blocksAdj.set(blocker, new Set());
-          blocksAdj.get(blocker)!.add(issue.key);
-        } else if (typeName === "blocks") {
-          if (!blocksAdj.has(issue.key)) blocksAdj.set(issue.key, new Set());
-          blocksAdj.get(issue.key)!.add(link.inwardIssue.key);
-        }
-      }
     }
   }
 

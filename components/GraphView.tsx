@@ -205,6 +205,9 @@ export default function GraphView({ issues, latestIssues, onNodeSelect, selected
             insideGroup: false,
             isEpicStandalone: false,
             isExternal: issue.fields.labels?.includes("external") ?? false,
+            // Placeholder node for a live-added issue — blocksAdj isn't recomputed here,
+            // so it starts unblocked and picks up the real value on the next full rebuild.
+            isBlocked: false,
             bgColor: STATUS_COLORS[cat] ?? STATUS_COLORS.new,
             textColor: STATUS_TEXT_COLORS[cat] ?? STATUS_TEXT_COLORS.new,
           },

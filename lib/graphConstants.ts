@@ -130,6 +130,9 @@ export interface IssueNodeData {
   /** True when the issue has the "external" Jira label, indicating it
    *  depends on work from another team. Renders with an orange border and badge. */
   isExternal: boolean;
+  /** True when at least one issue that blocks this one is not yet Done.
+   *  Renders with a rose tint and a stop-flag badge in place of the status dot. */
+  isBlocked: boolean;
   bgColor: string;
   textColor: string;
   subtaskCount?: number;

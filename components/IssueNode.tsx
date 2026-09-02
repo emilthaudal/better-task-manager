@@ -15,6 +15,9 @@ const ISSUE_TYPE_LABEL: Record<string, { short: string; color: string; bg: strin
 /** Orange accent for external-dependency tasks — overrides the status border color. */
 const EXTERNAL_BORDER_COLOR = "#f97316"; // orange-500
 
+/** Rose accent for tasks stuck behind an unresolved blocker — overrides the status border color. */
+const BLOCKED_BORDER_COLOR = "#e11d48"; // rose-600
+
 function avatarInitials(name: string): string {
   return name
     .split(" ")
@@ -40,15 +43,35 @@ function DoneCheck({ size }: { size: number }) {
   );
 }
 
+/** Small stop-flag glyph used to mark cards stuck behind an unresolved blocker. */
+function BlockedFlag({ size }: { size: number }) {
+  return (
+    <span
+      className="rounded-full flex items-center justify-center shrink-0"
+      style={{ width: size, height: size, background: BLOCKED_BORDER_COLOR }}
+    >
+      <svg viewBox="0 0 12 12" style={{ width: size * 0.6, height: size * 0.6 }}>
+        <path d="M6 2v5" stroke="#fff" strokeWidth={1.8} fill="none" strokeLinecap="round" />
+        <circle cx="6" cy="9.5" r="0.9" fill="#fff" />
+      </svg>
+    </span>
+  );
+}
+
 function IssueNode({ data, selected }: NodeProps<IssueNodeType>) {
   const isDone = data.statusCategory === "done";
+  // A done task is never shown as blocked, even if a stale blocker link lingers.
+  const isBlocked = data.isBlocked && !isDone;
 
-  // External tasks get an orange border regardless of status; standalone epics stay amber.
+  // External tasks get an orange border regardless of status; standalone epics stay amber;
+  // blocked tasks get a rose border so the stop-flag treatment reads on the stripe too.
   const borderColor = data.isExternal
     ? EXTERNAL_BORDER_COLOR
     : data.isEpicStandalone
       ? "#fbbf24"
-      : data.bgColor;
+      : isBlocked
+        ? BLOCKED_BORDER_COLOR
+        : data.bgColor;
 
   // ── Compact chip for subtask nodes ───────────────────────────────────────
   // Subtasks that live inside a taskGroupNode render as compact title-only chips.
@@ -65,10 +88,11 @@ function IssueNode({ data, selected }: NodeProps<IssueNodeType>) {
             ? `0 0 0 2px #6366f1, 0 4px 16px rgba(99,102,241,0.18), 0 1px 4px rgba(0,0,0,0.08)`
             : "0 1px 3px rgba(0,0,0,0.07), 0 4px 10px rgba(0,0,0,0.05)",
         }}
-        className={`${isDone ? "bg-emerald-50/70 dark:bg-emerald-950/30" : "bg-white dark:bg-slate-800"} rounded-lg overflow-hidden transition-[box-shadow,border-color,opacity,transform] duration-150 border border-slate-200/80 dark:border-slate-700/80 cursor-pointer hover:-translate-y-0.5 hover:shadow-[0_0_0_2px_#a5b4fc,_0_6px_16px_rgba(99,102,241,0.12)] hover:border-indigo-200/80 dark:hover:border-indigo-600/60 px-2.5 py-1.5`}
+        className={`${isDone ? "bg-emerald-50/70 dark:bg-emerald-950/30" : isBlocked ? "bg-rose-50/70 dark:bg-rose-950/30" : "bg-white dark:bg-slate-800"} rounded-lg overflow-hidden transition-[box-shadow,border-color,opacity,transform] duration-150 border border-slate-200/80 dark:border-slate-700/80 cursor-pointer hover:-translate-y-0.5 hover:shadow-[0_0_0_2px_#a5b4fc,_0_6px_16px_rgba(99,102,241,0.12)] hover:border-indigo-200/80 dark:hover:border-indigo-600/60 px-2.5 py-1.5`}
       >
         <div className="flex items-center gap-1.5">
           {isDone && <DoneCheck size={13} />}
+          {isBlocked && <BlockedFlag size={13} />}
           {data.isExternal && (
             <span
               className="text-[9px] font-semibold px-1 py-0.5 rounded tracking-wide shrink-0"
@@ -79,7 +103,7 @@ function IssueNode({ data, selected }: NodeProps<IssueNodeType>) {
             </span>
           )}
           <div
-            className={`text-[12px] font-medium leading-snug line-clamp-2 ${isDone ? "text-slate-500 dark:text-slate-400" : "text-slate-800 dark:text-slate-100"}`}
+            className={`text-[12px] font-medium leading-snug line-clamp-2 ${isDone || isBlocked ? "text-slate-500 dark:text-slate-400" : "text-slate-800 dark:text-slate-100"}`}
           >
             {data.summary}
           </div>
@@ -95,7 +119,9 @@ function IssueNode({ data, selected }: NodeProps<IssueNodeType>) {
     ? "bg-amber-50/40 dark:bg-amber-950/20"
     : isDone
       ? "bg-emerald-50/60 dark:bg-emerald-950/25"
-      : "bg-white dark:bg-slate-800";
+      : isBlocked
+        ? "bg-rose-50/60 dark:bg-rose-950/25"
+        : "bg-white dark:bg-slate-800";
 
   return (
     <>
@@ -147,7 +173,7 @@ function IssueNode({ data, selected }: NodeProps<IssueNodeType>) {
 
         {/* Summary */}
         <div
-          className={`px-3 pb-2 text-[13px] font-medium leading-snug line-clamp-2 ${isDone ? "text-slate-500 dark:text-slate-400" : "text-slate-800 dark:text-slate-100"}`}
+          className={`px-3 pb-2 text-[13px] font-medium leading-snug line-clamp-2 ${isDone || isBlocked ? "text-slate-500 dark:text-slate-400" : "text-slate-800 dark:text-slate-100"}`}
         >
           {data.summary}
         </div>
@@ -158,6 +184,10 @@ function IssueNode({ data, selected }: NodeProps<IssueNodeType>) {
           {isDone ? (
             <span className="flex items-center gap-1.5">
               <DoneCheck size={15} />
+            </span>
+          ) : isBlocked ? (
+            <span className="flex items-center gap-1.5">
+              <BlockedFlag size={15} />
             </span>
           ) : (
             <span
