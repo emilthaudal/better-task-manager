@@ -26,7 +26,23 @@ function avatarInitials(name: string): string {
 
 type IssueNodeType = Node<IssueNodeData, "issueNode">;
 
+/** Small check glyph used to mark completed cards — a shape reads at a distance where a color hue doesn't. */
+function DoneCheck({ size }: { size: number }) {
+  return (
+    <span
+      className="rounded-full flex items-center justify-center shrink-0"
+      style={{ width: size, height: size, background: "#16a34a" }}
+    >
+      <svg viewBox="0 0 12 12" style={{ width: size * 0.6, height: size * 0.6 }}>
+        <path d="M2 6l3 3 5-6" stroke="#fff" strokeWidth={1.8} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </span>
+  );
+}
+
 function IssueNode({ data, selected }: NodeProps<IssueNodeType>) {
+  const isDone = data.statusCategory === "done";
+
   // External tasks get an orange border regardless of status; standalone epics stay amber.
   const borderColor = data.isExternal
     ? EXTERNAL_BORDER_COLOR
@@ -49,9 +65,10 @@ function IssueNode({ data, selected }: NodeProps<IssueNodeType>) {
             ? `0 0 0 2px #6366f1, 0 4px 16px rgba(99,102,241,0.18), 0 1px 4px rgba(0,0,0,0.08)`
             : "0 1px 3px rgba(0,0,0,0.07), 0 4px 10px rgba(0,0,0,0.05)",
         }}
-        className="bg-white dark:bg-slate-800 rounded-lg overflow-hidden transition-[box-shadow,border-color,opacity,transform] duration-150 border border-slate-200/80 dark:border-slate-700/80 cursor-pointer hover:-translate-y-0.5 hover:shadow-[0_0_0_2px_#a5b4fc,_0_6px_16px_rgba(99,102,241,0.12)] hover:border-indigo-200/80 dark:hover:border-indigo-600/60 px-2.5 py-1.5"
+        className={`${isDone ? "bg-emerald-50/70 dark:bg-emerald-950/30" : "bg-white dark:bg-slate-800"} rounded-lg overflow-hidden transition-[box-shadow,border-color,opacity,transform] duration-150 border border-slate-200/80 dark:border-slate-700/80 cursor-pointer hover:-translate-y-0.5 hover:shadow-[0_0_0_2px_#a5b4fc,_0_6px_16px_rgba(99,102,241,0.12)] hover:border-indigo-200/80 dark:hover:border-indigo-600/60 px-2.5 py-1.5`}
       >
         <div className="flex items-center gap-1.5">
+          {isDone && <DoneCheck size={13} />}
           {data.isExternal && (
             <span
               className="text-[9px] font-semibold px-1 py-0.5 rounded tracking-wide shrink-0"
@@ -61,7 +78,9 @@ function IssueNode({ data, selected }: NodeProps<IssueNodeType>) {
               ↗ Ext
             </span>
           )}
-          <div className="text-[12px] font-medium text-slate-800 dark:text-slate-100 leading-snug line-clamp-2">
+          <div
+            className={`text-[12px] font-medium leading-snug line-clamp-2 ${isDone ? "text-slate-500 dark:text-slate-400" : "text-slate-800 dark:text-slate-100"}`}
+          >
             {data.summary}
           </div>
         </div>
@@ -74,7 +93,9 @@ function IssueNode({ data, selected }: NodeProps<IssueNodeType>) {
   const width = data.isEpicStandalone ? 320 : 280;
   const cardBg = data.isEpicStandalone
     ? "bg-amber-50/40 dark:bg-amber-950/20"
-    : "bg-white dark:bg-slate-800";
+    : isDone
+      ? "bg-emerald-50/60 dark:bg-emerald-950/25"
+      : "bg-white dark:bg-slate-800";
 
   return (
     <>
@@ -125,23 +146,31 @@ function IssueNode({ data, selected }: NodeProps<IssueNodeType>) {
         </div>
 
         {/* Summary */}
-        <div className="px-3 pb-2 text-[13px] font-medium text-slate-800 dark:text-slate-100 leading-snug line-clamp-2">
+        <div
+          className={`px-3 pb-2 text-[13px] font-medium leading-snug line-clamp-2 ${isDone ? "text-slate-500 dark:text-slate-400" : "text-slate-800 dark:text-slate-100"}`}
+        >
           {data.summary}
         </div>
 
         {/* Footer */}
         <div className="flex items-center justify-between px-3 pb-2.5 gap-2 mt-auto">
           {/* Status */}
-          <span
-            className="text-[10px] font-semibold flex items-center gap-1"
-            style={{ color: data.textColor }}
-          >
+          {isDone ? (
+            <span className="flex items-center gap-1.5">
+              <DoneCheck size={15} />
+            </span>
+          ) : (
             <span
-              className="inline-block w-1.5 h-1.5 rounded-full"
-              style={{ background: data.bgColor }}
-            />
-            {data.statusName}
-          </span>
+              className="text-[10px] font-semibold flex items-center gap-1"
+              style={{ color: data.textColor }}
+            >
+              <span
+                className="inline-block w-1.5 h-1.5 rounded-full"
+                style={{ background: data.bgColor }}
+              />
+              {data.statusName}
+            </span>
+          )}
 
           <div className="flex items-center gap-1.5 ml-auto">
             {/* Subtask count badge */}
