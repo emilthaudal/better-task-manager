@@ -13,6 +13,8 @@ import type { JiraIssue } from "@/lib/jira";
 import type { StreamMessage } from "@/lib/streamTypes";
 import { useJiraBaseUrl } from "@/hooks/useJiraBaseUrl";
 
+const POLL_INTERVAL_MS = 30_000;
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function dedupeByKey(issues: JiraIssue[]): JiraIssue[] {
@@ -34,6 +36,7 @@ export default function ProjectGraphPage() {
   // receive a stable, final array so that buildGraph (which locks layoutDoneRef)
   // runs exactly once on the complete dataset rather than on a partial stream.
   const [issues, setIssues] = useState<JiraIssue[]>([]);
+  const [latestIssues, setLatestIssues] = useState<JiraIssue[]>([]);
   const [loading, setLoading] = useState(true);
   // null = not yet streaming, object = streaming in progress
   const [expandProgress, setExpandProgress] = useState<{ done: number; total: number } | null>(null);
@@ -51,16 +54,18 @@ export default function ProjectGraphPage() {
     setSelectedKey(key);
   }, []);
 
-  const streamIssues = useCallback(async (project: string) => {
+  const streamIssues = useCallback(async (project: string, silent = false) => {
     // Cancel any previous in-flight stream
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
 
-    setLoading(true);
-    setError(null);
-    setIssues([]);
-    setExpandProgress(null);
+    if (!silent) {
+      setLoading(true);
+      setError(null);
+      setIssues([]);
+      setExpandProgress(null);
+    }
     accIssuesRef.current = [];
 
     let fatalError = false;
@@ -105,13 +110,14 @@ export default function ProjectGraphPage() {
             // Accumulate epics — do NOT push to state yet (GraphView would
             // run buildGraph on partial data and lock out further updates)
             accIssuesRef.current = dedupeByKey([...accIssuesRef.current, ...msg.issues]);
-            setExpandProgress({ done: 0, total: msg.total });
+            if (!silent) setExpandProgress({ done: 0, total: msg.total });
           } else if (msg.type === "children") {
             accIssuesRef.current = dedupeByKey([...accIssuesRef.current, ...msg.issues]);
-            setExpandProgress({ done: msg.expanded, total: msg.total });
+            if (!silent) setExpandProgress({ done: msg.expanded, total: msg.total });
           } else if (msg.type === "error") {
-            if (msg.epicKey === "") {
-              // Fatal top-level error (e.g. getEpics failed)
+            if (msg.epicKey === "" && !silent) {
+              // Fatal top-level error (e.g. getEpics failed) — ignored for
+              // silent background polls, which fail silently like useIssuePoller
               fatalError = true;
               setError(msg.error);
               setLoading(false);
@@ -119,12 +125,19 @@ export default function ProjectGraphPage() {
             // Per-epic errors are non-fatal — the graph keeps building
           } else if (msg.type === "done") {
             if (!fatalError) {
-              // Flush the complete accumulated set to state exactly once —
-              // GraphView will run buildGraph on the full dataset
-              setIssues(accIssuesRef.current);
+              if (silent) {
+                // Patch GraphView in place via latestIssues — do not touch
+                // `issues` (that would re-run buildGraph and reset layout)
+                setLatestIssues(accIssuesRef.current);
+              } else {
+                // Flush the complete accumulated set to state exactly once —
+                // GraphView will run buildGraph on the full dataset
+                setIssues(accIssuesRef.current);
+                setLatestIssues(accIssuesRef.current);
+                setExpandProgress(null);
+                setLoading(false);
+              }
               setLastUpdated(new Date());
-              setExpandProgress(null);
-              setLoading(false);
             }
           }
         }
@@ -132,6 +145,7 @@ export default function ProjectGraphPage() {
     } catch (err) {
       if (!isMountedRef.current) return;
       if (err instanceof Error && err.name === "AbortError") return; // navigation away
+      if (silent) return; // swallow background polling errors
       setError(err instanceof Error ? err.message : "Unknown error");
       setLoading(false);
     }
@@ -149,9 +163,17 @@ export default function ProjectGraphPage() {
     };
   }, [projectKey, streamIssues]);
 
-  // Derive latestIssues — for the project graph we just use current issues
-  // (no background polling needed; user can navigate away and back to refresh)
-  const latestIssues = issues;
+  // Background polling — refreshes latestIssues in place every 30s so the
+  // graph reflects board updates without disrupting the current layout.
+  useEffect(() => {
+    if (!projectKey || loading || error) return;
+
+    const id = setInterval(() => {
+      void streamIssues(projectKey, true);
+    }, POLL_INTERVAL_MS);
+
+    return () => clearInterval(id);
+  }, [projectKey, loading, error, streamIssues]);
 
   const handleViewChange = useCallback((tab: ViewTab) => {
     setActiveView(tab);
