@@ -1,0 +1,162 @@
+"use client";
+
+import { useDraggable } from "@dnd-kit/core";
+import type { JiraIssue } from "@/lib/jira";
+import { STATUS_COLORS } from "@/lib/graphConstants";
+
+const ISSUE_TYPE_LABEL: Record<string, { short: string; color: string; bg: string }> = {
+  Story: { short: "Story", color: "#0891b2", bg: "#e0f9ff" },
+  Bug: { short: "Bug", color: "#dc2626", bg: "#fee2e2" },
+  Task: { short: "Task", color: "#0369a1", bg: "#e0f2fe" },
+  Subtask: { short: "Sub", color: "#0369a1", bg: "#e0f2fe" },
+  Epic: { short: "Epic", color: "#d97706", bg: "#fef3c7" },
+};
+
+function avatarInitials(name: string): string {
+  return name
+    .split(" ")
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase();
+}
+
+function formatCreated(iso: string | undefined): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+const CARD_BASE_CLASS =
+  "text-left rounded-lg border bg-white dark:bg-slate-800 p-2.5 shrink-0 shadow-[0_1px_3px_rgba(0,0,0,0.05)]";
+
+/** The card's visual body, shared between the in-list draggable card and the floating DragOverlay clone. */
+export function KanbanCardBody({ issue }: { issue: JiraIssue }) {
+  const typeInfo = ISSUE_TYPE_LABEL[issue.fields.issuetype.name] ?? {
+    short: issue.fields.issuetype.name,
+    color: "#64748b",
+    bg: "#f1f5f9",
+  };
+  const cat = issue.fields.status.statusCategory.key;
+  const dotColor = STATUS_COLORS[cat] ?? STATUS_COLORS.new;
+  const subtasks = issue.fields.subtasks ?? [];
+  const created = formatCreated(issue.fields.created);
+
+  return (
+    <>
+      <div className="flex items-center justify-between gap-2 mb-1.5">
+        <span className="text-[11px] font-mono font-semibold text-slate-400 dark:text-slate-500 truncate">
+          {issue.key}
+        </span>
+        {issue.fields.assignee ? (
+          <span
+            className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white shrink-0"
+            style={{ background: "#6366f1" }}
+            title={issue.fields.assignee.displayName}
+          >
+            {avatarInitials(issue.fields.assignee.displayName)}
+          </span>
+        ) : (
+          <span
+            className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500"
+            title="Unassigned"
+          >
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
+              <path d="M12 12c2.7 0 4.9-2.2 4.9-4.9S14.7 2.2 12 2.2 7.1 4.4 7.1 7.1 9.3 12 12 12Zm0 2.4c-3.3 0-9.8 1.6-9.8 4.9v2.5h19.6v-2.5c0-3.3-6.5-4.9-9.8-4.9Z" />
+            </svg>
+          </span>
+        )}
+      </div>
+
+      <div className="flex items-start gap-1.5 mb-2">
+        <span className="w-2 h-2 rounded-full shrink-0 mt-1" style={{ background: dotColor }} />
+        <span className="text-[12.5px] font-medium leading-snug line-clamp-3 text-slate-800 dark:text-slate-100">
+          {issue.fields.summary}
+        </span>
+      </div>
+
+      <div className="flex items-center justify-between gap-2">
+        <span
+          className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md tracking-wide shrink-0"
+          data-issue-type={issue.fields.issuetype.name}
+          style={{ color: typeInfo.color, background: typeInfo.bg }}
+        >
+          {typeInfo.short}
+        </span>
+
+        <div className="flex items-center gap-2 ml-auto">
+          {subtasks.length > 0 && (
+            <span
+              className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md tracking-wide shrink-0"
+              style={{ color: "#0369a1", background: "#e0f2fe" }}
+              title={`${subtasks.length} subtask${subtasks.length === 1 ? "" : "s"}`}
+            >
+              ↳ {subtasks.length}
+            </span>
+          )}
+          {created && (
+            <span className="text-[10px] text-slate-400 dark:text-slate-500 shrink-0" title="Created">
+              {created}
+            </span>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
+/** Static clone rendered inside dnd-kit's DragOverlay while a card is being dragged. */
+export function KanbanCardOverlay({ issue }: { issue: JiraIssue }) {
+  return (
+    <div
+      className={[CARD_BASE_CLASS, "border-indigo-300 dark:border-indigo-600 rotate-2 shadow-xl cursor-grabbing"].join(" ")}
+      style={{ width: 236 }}
+    >
+      <KanbanCardBody issue={issue} />
+    </div>
+  );
+}
+
+interface KanbanCardProps {
+  issue: JiraIssue;
+  selected: boolean;
+  onClick: () => void;
+  /** True while this card's own move is in flight — dims it and blocks re-dragging until it resolves. */
+  pending?: boolean;
+}
+
+export default function KanbanCard({ issue, selected, onClick, pending }: KanbanCardProps) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: issue.key,
+    disabled: pending,
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      onClick={onClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") onClick();
+      }}
+      style={{
+        opacity: isDragging || pending ? 0.4 : 1,
+        touchAction: "none",
+      }}
+      className={[
+        CARD_BASE_CLASS,
+        "cursor-grab active:cursor-grabbing transition-[box-shadow,border-color,transform] duration-150",
+        "hover:-translate-y-0.5 hover:shadow-[0_0_0_2px_#a5b4fc,_0_6px_16px_rgba(99,102,241,0.12)]",
+        selected
+          ? "border-indigo-300 dark:border-indigo-600 shadow-[0_0_0_2px_#6366f1]"
+          : "border-slate-200/80 dark:border-slate-700/80",
+      ].join(" ")}
+    >
+      <KanbanCardBody issue={issue} />
+    </div>
+  );
+}

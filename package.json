@@ -13,6 +13,7 @@
     "screenshot": "PATH=\"$HOME/.bun/bin:$PATH\" bun run tests/screenshots/run.ts"
   },
   "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
     "@radix-ui/react-avatar": "^1.1.11",
     "@radix-ui/react-scroll-area": "^1.2.10",
     "@radix-ui/react-separator": "^1.1.8",
