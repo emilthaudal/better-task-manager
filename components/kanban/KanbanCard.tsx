@@ -1,8 +1,10 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import type { JiraIssue } from "@/lib/jira";
 import { STATUS_COLORS, ISSUE_TYPE_LABEL, ISSUE_TYPE_FALLBACK } from "@/lib/graphConstants";
+import CardMenu from "./CardMenu";
 
 function avatarInitials(name: string): string {
   return name
@@ -11,6 +13,17 @@ function avatarInitials(name: string): string {
     .map((w) => w[0])
     .join("")
     .toUpperCase();
+}
+
+/** Deterministic hue per assignee so different people get visibly different avatar colors. */
+function avatarColor(name: string): string {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = (hash << 5) - hash + name.charCodeAt(i);
+    hash |= 0;
+  }
+  const hue = Math.abs(hash) % 360;
+  return `hsl(${hue}, 55%, 45%)`;
 }
 
 function formatCreated(iso: string | undefined): string | null {
@@ -24,7 +37,7 @@ const CARD_BASE_CLASS =
   "text-left rounded-lg border bg-white dark:bg-slate-800 p-2.5 shrink-0 shadow-[0_1px_3px_rgba(0,0,0,0.05)]";
 
 /** The card's visual body, shared between the in-list draggable card and the floating DragOverlay clone. */
-export function KanbanCardBody({ issue }: { issue: JiraIssue }) {
+export function KanbanCardBody({ issue, menu }: { issue: JiraIssue; menu?: ReactNode }) {
   const typeInfo = ISSUE_TYPE_LABEL[issue.fields.issuetype.name] ?? {
     short: issue.fields.issuetype.name,
     ...ISSUE_TYPE_FALLBACK,
@@ -40,10 +53,11 @@ export function KanbanCardBody({ issue }: { issue: JiraIssue }) {
         <span className="text-[11px] font-mono font-semibold text-slate-400 dark:text-slate-500 truncate">
           {issue.key}
         </span>
+        {menu}
         {issue.fields.assignee ? (
           <span
             className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white shrink-0"
-            style={{ background: "var(--accent-focus-ring)" }}
+            style={{ background: avatarColor(issue.fields.assignee.displayName) }}
             title={issue.fields.assignee.displayName}
           >
             {avatarInitials(issue.fields.assignee.displayName)}
@@ -115,13 +129,21 @@ interface KanbanCardProps {
   onClick: () => void;
   /** True while this card's own move is in flight — dims it and blocks re-dragging until it resolves. */
   pending?: boolean;
+  onEdit?: () => void;
+  onCloseIssue?: () => void;
+  onDelete?: () => void;
 }
 
-export default function KanbanCard({ issue, selected, onClick, pending }: KanbanCardProps) {
+export default function KanbanCard({ issue, selected, onClick, pending, onEdit, onCloseIssue, onDelete }: KanbanCardProps) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: issue.key,
     disabled: pending,
   });
+
+  const menu =
+    onEdit && onCloseIssue && onDelete ? (
+      <CardMenu onEdit={onEdit} onClose={onCloseIssue} onDelete={onDelete} />
+    ) : null;
 
   return (
     <div
@@ -140,14 +162,14 @@ export default function KanbanCard({ issue, selected, onClick, pending }: Kanban
       }}
       className={[
         CARD_BASE_CLASS,
-        "cursor-grab active:cursor-grabbing transition-[box-shadow,border-color,transform] duration-150",
+        "group cursor-grab active:cursor-grabbing transition-[box-shadow,border-color,transform] duration-150",
         "hover:-translate-y-0.5 hover:shadow-[0_0_0_2px_var(--accent-focus-ring-hover),_0_6px_16px_var(--accent-focus-ring-shadow)]",
         selected
           ? "border-indigo-300 dark:border-indigo-600 shadow-[0_0_0_2px_var(--accent-focus-ring)]"
           : "border-slate-200/80 dark:border-slate-700/80",
       ].join(" ")}
     >
-      <KanbanCardBody issue={issue} />
+      <KanbanCardBody issue={issue} menu={menu} />
     </div>
   );
 }

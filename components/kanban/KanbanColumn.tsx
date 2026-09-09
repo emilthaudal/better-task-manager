@@ -14,9 +14,22 @@ interface KanbanColumnProps {
   pendingKeys: Set<string>;
   /** Present only on the first "To Do"-category column of each swimlane. */
   onCreate?: (summary: string) => Promise<void>;
+  onEditIssue?: (key: string) => void;
+  onCloseIssue?: (key: string) => void;
+  onDeleteIssue?: (key: string) => void;
 }
 
-export default function KanbanColumn({ id, issues, selectedKey, onIssueSelect, pendingKeys, onCreate }: KanbanColumnProps) {
+export default function KanbanColumn({
+  id,
+  issues,
+  selectedKey,
+  onIssueSelect,
+  pendingKeys,
+  onCreate,
+  onEditIssue,
+  onCloseIssue,
+  onDeleteIssue,
+}: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id });
 
   return (
@@ -35,6 +48,9 @@ export default function KanbanColumn({ id, issues, selectedKey, onIssueSelect, p
           selected={selectedKey === issue.key}
           onClick={() => onIssueSelect?.(issue.key)}
           pending={pendingKeys.has(issue.key)}
+          onEdit={onEditIssue ? () => onEditIssue(issue.key) : undefined}
+          onCloseIssue={onCloseIssue ? () => onCloseIssue(issue.key) : undefined}
+          onDelete={onDeleteIssue ? () => onDeleteIssue(issue.key) : undefined}
         />
       ))}
     </div>

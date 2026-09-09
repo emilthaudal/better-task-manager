@@ -1,5 +1,6 @@
 import { getAccessToken } from "@/lib/session";
 import type { SessionData } from "@/lib/session";
+import { textToAdf } from "@/lib/adf";
 
 /** HTTP status codes that are worth retrying (transient or rate-limit). */
 const RETRYABLE_STATUSES = new Set([429, 503, 504]);
@@ -448,6 +449,17 @@ export async function updateIssue(
   });
 }
 
+/** Users assignable to an issue, optionally narrowed by a typeahead query — mirrors Jira's own assignee picker. */
+export async function getAssignableUsers(
+  issueKey: string,
+  query?: string,
+  session?: SessionData,
+): Promise<JiraUser[]> {
+  const params = new URLSearchParams({ issueKey });
+  if (query) params.set("query", query);
+  return jiraFetch<JiraUser[]>(`/user/assignable/search?${params}`, session);
+}
+
 /** Issue types this project's create screen allows, excluding subtasks and epics (those need a parent/no parent respectively). */
 export async function getCreateIssueTypes(
   projectKey: string,
@@ -481,13 +493,7 @@ export async function createIssue(
     summary: input.summary,
   };
   if (input.description) {
-    fields.description = {
-      type: "doc",
-      version: 1,
-      content: [
-        { type: "paragraph", content: [{ type: "text", text: input.description }] },
-      ],
-    };
+    fields.description = textToAdf(input.description);
   }
   if (input.assigneeAccountId) {
     fields.assignee = { accountId: input.assigneeAccountId };
