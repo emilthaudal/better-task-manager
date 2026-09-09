@@ -61,7 +61,7 @@ function RecentItem({ entry, onClick, onRemove }: RecentItemProps) {
     : `${entry.key} · All epics`;
 
   return (
-    <div className="group flex items-center gap-2.5 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2.5 hover:border-indigo-200 hover:bg-indigo-50/60 transition-colors">
+    <div className="group flex items-center gap-2.5 rounded-xl border border-border bg-muted px-3 py-2.5 hover:border-primary/30 hover:bg-primary/5 transition-colors">
       <button
         onClick={onClick}
         className="flex items-center gap-2.5 flex-1 min-w-0 text-left cursor-pointer"
@@ -69,8 +69,8 @@ function RecentItem({ entry, onClick, onRemove }: RecentItemProps) {
       >
         <span className="mt-px">{isEpic ? <RecentEpicIcon /> : <RecentProjectIcon />}</span>
         <span className="flex flex-col min-w-0">
-          <span className="text-xs font-semibold text-slate-800 truncate leading-tight">{title}</span>
-          <span className="text-[10px] text-slate-400 truncate leading-snug">{subtitle}</span>
+          <span className="text-xs font-semibold text-foreground truncate leading-tight">{title}</span>
+          <span className="text-[10px] text-muted-foreground truncate leading-snug">{subtitle}</span>
         </span>
       </button>
       <Button
@@ -80,7 +80,7 @@ function RecentItem({ entry, onClick, onRemove }: RecentItemProps) {
           e.stopPropagation();
           onRemove();
         }}
-        className="shrink-0 h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity text-slate-300 hover:text-slate-500"
+        className="shrink-0 h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
         aria-label="Remove from recents"
       >
         <X className="h-3 w-3" />
@@ -250,7 +250,7 @@ export default function EpicPicker() {
       {/* Recent graphs */}
       {recents.length > 0 && (
         <div className="flex flex-col gap-1.5">
-          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
+          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
             Jump back in
           </span>
           <div className="flex flex-col gap-1.5">
@@ -263,7 +263,7 @@ export default function EpicPicker() {
               />
             ))}
           </div>
-          <div className="border-t border-slate-100 mt-1.5" />
+          <div className="border-t border-border mt-1.5" />
         </div>
       )}
 
@@ -288,7 +288,7 @@ export default function EpicPicker() {
 
       {/* Project */}
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Project</label>
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Project</label>
         <div className="relative">
           <select
             className={selectClass}
@@ -311,7 +311,7 @@ export default function EpicPicker() {
 
       {/* Epic */}
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Epic</label>
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Epic</label>
         <div className="relative">
           <select
             className={selectClass}
@@ -362,13 +362,13 @@ export default function EpicPicker() {
         {jiraConnected === null && (
           <>
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse shrink-0" />
-            <span className="text-[11px] text-slate-400">Connecting to Jira Cloud…</span>
+            <span className="text-[11px] text-muted-foreground">Connecting to Jira Cloud…</span>
           </>
         )}
         {jiraConnected === true && (
           <>
             <span className="w-1.5 h-1.5 rounded-full bg-green-400 shrink-0" />
-            <span className="text-[11px] text-slate-400">Connected to Jira Cloud</span>
+            <span className="text-[11px] text-muted-foreground">Connected to Jira Cloud</span>
           </>
         )}
         {jiraConnected === false && (

@@ -22,24 +22,24 @@ export function GraphLoadingState({
   label = "Loading…",
   accentColor = "indigo",
 }: GraphLoadingStateProps) {
-  const ringBase = accentColor === "violet" ? "border-violet-100" : "border-indigo-100";
+  const ringBase = accentColor === "violet" ? "border-secondary/20" : "border-primary/20";
   const ringAccent = accentColor === "violet"
-    ? "border-violet-600 border-t-transparent"
-    : "border-indigo-600 border-t-transparent";
+    ? "border-secondary border-t-transparent"
+    : "border-primary border-t-transparent";
 
   return (
-    <div className="absolute inset-0 flex items-center justify-center bg-slate-50">
+    <div className="absolute inset-0 flex items-center justify-center bg-muted">
       <div className="flex flex-col items-center gap-4">
         <div className="relative w-10 h-10">
           <div className={`absolute inset-0 rounded-full border-2 ${ringBase}`} />
           <div className={`absolute inset-0 rounded-full border-2 ${ringAccent} animate-spin`} />
         </div>
         {progress ? (
-          <p className="text-sm text-slate-400 font-medium">
+          <p className="text-sm text-muted-foreground font-medium">
             Loading {progress.done} / {progress.total} epics…
           </p>
         ) : (
-          <p className="text-sm text-slate-400 font-medium">{label}</p>
+          <p className="text-sm text-muted-foreground font-medium">{label}</p>
         )}
       </div>
     </div>
@@ -69,19 +69,19 @@ export function GraphErrorState({
   accentColor = "indigo",
 }: GraphErrorStateProps) {
   const router = useRouter();
-  const linkColor = accentColor === "violet" ? "text-violet-600" : "text-indigo-600";
+  const linkColor = accentColor === "violet" ? "text-secondary" : "text-primary";
 
   return (
     <div className="absolute inset-0 flex items-center justify-center">
-      <div className="bg-white border border-red-200 rounded-2xl px-8 py-6 max-w-sm text-center shadow-lg">
-        <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+      <div className="bg-card border border-destructive/30 rounded-2xl px-8 py-6 max-w-sm text-center shadow-lg">
+        <div className="w-10 h-10 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-3">
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-            <path d="M9 6v4M9 12.5v.5" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" />
-            <circle cx="9" cy="9" r="7.5" stroke="#dc2626" strokeWidth="1.5" />
+            <path d="M9 6v4M9 12.5v.5" stroke="var(--destructive)" strokeWidth="2" strokeLinecap="round" />
+            <circle cx="9" cy="9" r="7.5" stroke="var(--destructive)" strokeWidth="1.5" />
           </svg>
         </div>
-        <p className="font-semibold text-sm text-slate-800 mb-1">{heading}</p>
-        <p className="text-xs text-slate-500 mb-4">{message}</p>
+        <p className="font-semibold text-sm text-foreground mb-1">{heading}</p>
+        <p className="text-xs text-muted-foreground mb-4">{message}</p>
         <button
           onClick={() => router.push(backHref)}
           className={`text-xs font-medium ${linkColor} hover:underline cursor-pointer`}
@@ -113,12 +113,12 @@ export function GraphEmptyState({
   accentColor = "indigo",
 }: GraphEmptyStateProps) {
   const router = useRouter();
-  const linkColor = accentColor === "violet" ? "text-violet-500" : "text-indigo-500";
+  const linkColor = accentColor === "violet" ? "text-secondary" : "text-primary";
 
   return (
     <div className="absolute inset-0 flex items-center justify-center">
       <div className="text-center">
-        <p className="text-slate-400 text-sm">{message}</p>
+        <p className="text-muted-foreground text-sm">{message}</p>
         <button
           onClick={() => router.push(backHref)}
           className={`mt-2 text-xs ${linkColor} hover:underline cursor-pointer`}

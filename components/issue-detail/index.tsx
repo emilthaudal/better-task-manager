@@ -58,7 +58,7 @@ export default function IssueDetailPanel({
 
   return (
     <aside
-      className="flex flex-col h-full w-full bg-white dark:bg-slate-900 overflow-hidden"
+      className="flex flex-col h-full w-full bg-background overflow-hidden"
     >
       <IssueHeader
         issueKey={issueKey}
@@ -72,9 +72,9 @@ export default function IssueDetailPanel({
         {loading && <PanelSkeleton />}
 
         {error && (
-          <div className="mx-5 mt-5 bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800/60 rounded-xl px-4 py-3">
-            <p className="text-sm font-semibold text-red-700 dark:text-red-400 mb-0.5">Failed to load issue</p>
-            <p className="text-sm text-red-600 dark:text-red-500">{error}</p>
+          <div className="mx-5 mt-5 bg-red-50 dark:bg-red-950/60 border border-destructive/40 rounded-xl px-4 py-3">
+            <p className="text-sm font-semibold text-destructive mb-0.5">Failed to load issue</p>
+            <p className="text-sm text-destructive">{error}</p>
           </div>
         )}
 

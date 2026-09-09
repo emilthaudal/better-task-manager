@@ -7,9 +7,9 @@ import type { StoryGroupNodeData } from "@/lib/buildGraph";
 type StoryGroupNodeType = Node<StoryGroupNodeData, "storyGroupNode">;
 
 // Story accent color: teal/cyan (distinct from Jira's purple-for-epics)
-const STORY_BORDER = "#0891b2";
-const STORY_TINT = "rgba(8,145,178,0.05)";
-const STORY_HEADER_TEXT = "#0e7490";
+const STORY_BORDER = "var(--story-border)";
+const STORY_TINT = "var(--story-tint)";
+const STORY_HEADER_TEXT = "var(--story-header-text)";
 
 /**
  * Container node that visually groups all tasks belonging to a story.
@@ -56,7 +56,7 @@ function StoryGroupNode({ data, width, height }: NodeProps<StoryGroupNodeType>) 
             display: "flex",
             alignItems: "center",
             gap: 6,
-            borderBottom: `1px solid rgba(8,145,178,0.15)`,
+            borderBottom: `1px solid var(--story-divider)`,
             minHeight: 28,
           }}
         >

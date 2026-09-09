@@ -42,7 +42,7 @@ const PRO_OPTIONS = { hideAttribution: true } as const;
 
 /** Amber ring style applied to nodes on the critical path. */
 const CRITICAL_NODE_STYLE: React.CSSProperties = {
-  outline: "2px solid #f59e0b",
+  outline: "2px solid var(--accent-critical)",
   outlineOffset: "2px",
   borderRadius: "12px",
 };
@@ -109,8 +109,8 @@ export default function GraphView({ issues, latestIssues, onNodeSelect, selected
 
   // Stable nodeColor callback — avoids MiniMap re-rendering on every render
   const miniMapNodeColor = useCallback((n: AnyNode) => {
-    if (n.type === "issueNode") return n.data.bgColor ?? "#e2e8f0";
-    return "#e2e8f0";
+    if (n.type === "issueNode") return n.data.bgColor ?? "var(--graph-node-fallback)";
+    return "var(--graph-node-fallback)";
   }, []);
 
   // Build the ELK layout once — when initial issues first arrive.
@@ -420,7 +420,7 @@ export default function GraphView({ issues, latestIssues, onNodeSelect, selected
   }, [highlightConnected, onNodeSelect]);
 
   return (
-    <div className="w-full h-full relative dark:bg-slate-900">
+    <div className="w-full h-full relative dark:bg-background">
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -443,8 +443,8 @@ export default function GraphView({ issues, latestIssues, onNodeSelect, selected
         <Controls />
         <MiniMap
           nodeColor={miniMapNodeColor}
-          maskColor="rgba(248,250,252,0.7)"
-          className="!border-slate-200 dark:!border-slate-700"
+          maskColor="var(--graph-minimap-mask)"
+          className="!border-border"
         />
       </ReactFlow>
       <Legend />
@@ -466,10 +466,10 @@ export default function GraphView({ issues, latestIssues, onNodeSelect, selected
             criticalPathOn
               ? "bg-amber-500 border-amber-400 text-white shadow-amber-200/60 dark:shadow-amber-900/40"
               : [
-                  "bg-white/90 dark:bg-slate-800/90",
-                  "border-slate-200 dark:border-slate-700",
-                  "text-slate-600 dark:text-slate-300",
-                  "hover:bg-amber-50 dark:hover:bg-slate-700",
+                  "bg-card/90",
+                  "border-border",
+                  "text-muted-foreground",
+                  "hover:bg-amber-50 dark:hover:bg-accent",
                   "hover:border-amber-300 hover:text-amber-700 dark:hover:text-amber-400",
                   "shadow-slate-200/60 dark:shadow-slate-900/40",
                 ].join(" "),

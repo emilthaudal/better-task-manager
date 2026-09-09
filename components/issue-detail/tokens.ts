@@ -1,18 +1,18 @@
 export const STATUS_STYLES: Record<string, { dot: string; text: string; bg: string; border: string }> = {
   new: {
-    dot: "#94a3b8",
+    dot: "var(--status-todo)",
     text: "text-slate-600",
     bg: "bg-slate-100",
     border: "border-slate-200",
   },
   indeterminate: {
-    dot: "#6366f1",
+    dot: "var(--status-progress)",
     text: "text-indigo-700",
     bg: "bg-indigo-50",
     border: "border-indigo-200",
   },
   done: {
-    dot: "#22c55e",
+    dot: "var(--status-done)",
     text: "text-green-700",
     bg: "bg-green-50",
     border: "border-green-200",

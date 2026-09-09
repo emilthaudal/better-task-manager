@@ -44,7 +44,7 @@ function ElkEdge({
 }: EdgeProps) {
   const edgeData = data as ElkEdgeData | undefined;
   const bendPoints = edgeData?.bendPoints;
-  const color = edgeData?.color ?? "#94a3b8";
+  const color = edgeData?.color ?? "var(--edge-default)";
 
   const { edgePath, labelX, labelY } = useMemo(() => {
     if (bendPoints && bendPoints.length >= 2) {
@@ -114,7 +114,7 @@ function ElkEdge({
               fontSize: 11,
               fontWeight: 600,
               color: (labelStyle?.fill as string) ?? color,
-              background: "white",
+              background: "var(--edge-label-bg)",
               opacity: (labelBgStyle?.fillOpacity as number) ?? 0.85,
               whiteSpace: "nowrap",
             }}

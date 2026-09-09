@@ -48,19 +48,19 @@ export default function SelectSitePage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-950 p-4">
-      <div className="w-full max-w-md rounded-2xl bg-white dark:bg-gray-900 shadow-lg p-8 flex flex-col gap-6">
+    <main className="flex min-h-screen items-center justify-center bg-muted p-4">
+      <div className="w-full max-w-md rounded-2xl bg-background shadow-lg p-8 flex flex-col gap-6">
         <div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+          <h1 className="text-xl font-bold text-foreground">
             Select a Jira site
           </h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          <p className="mt-1 text-sm text-muted-foreground">
             Choose the Jira site you want to work with.
           </p>
         </div>
 
         {error && (
-          <div className="rounded-lg bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 px-4 py-3 text-sm text-red-700 dark:text-red-300">
+          <div className="rounded-lg bg-red-50 dark:bg-red-950 border border-destructive/40 px-4 py-3 text-sm text-destructive">
             {error}
           </div>
         )}
@@ -70,12 +70,12 @@ export default function SelectSitePage() {
             {[1, 2].map((n) => (
               <div
                 key={n}
-                className="h-16 rounded-lg bg-gray-100 dark:bg-gray-800 animate-pulse"
+                className="h-16 rounded-lg bg-accent animate-pulse"
               />
             ))}
           </div>
         ) : sites.length === 0 ? (
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <p className="text-sm text-muted-foreground">
             No accessible Jira sites found. Make sure you have granted access to
             at least one site.
           </p>
@@ -86,7 +86,7 @@ export default function SelectSitePage() {
                 <button
                   onClick={() => handleSelect(site.id)}
                   disabled={selecting !== null}
-                  className="w-full flex items-center gap-4 rounded-lg border border-gray-200 dark:border-gray-700 p-4 text-left hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-60"
+                  className="w-full flex items-center gap-4 rounded-lg border border-border p-4 text-left hover:bg-accent transition-colors disabled:opacity-60"
                 >
                   {site.avatarUrl && (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -97,10 +97,10 @@ export default function SelectSitePage() {
                     />
                   )}
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium text-gray-900 dark:text-gray-100 truncate">
+                    <p className="font-medium text-foreground truncate">
                       {site.name}
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                    <p className="text-xs text-muted-foreground truncate">
                       {site.url}
                     </p>
                   </div>
@@ -134,7 +134,7 @@ export default function SelectSitePage() {
 
         <a
           href="/api/auth/logout"
-          className="text-xs text-gray-400 dark:text-gray-600 hover:underline text-center"
+          className="text-xs text-muted-foreground hover:underline text-center"
         >
           Sign out and use a different account
         </a>

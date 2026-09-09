@@ -9,10 +9,11 @@ export const metadata: Metadata = {
 };
 
 export default function LandingPage() {
+  const signInHref = process.env.JIRA_BYPASS === "true" ? "/app" : "/api/auth/login";
   return (
-    <div className="min-h-screen flex flex-col bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100">
+    <div className="min-h-screen flex flex-col bg-popover text-foreground">
       {/* ── Navbar ── */}
-      <header className="sticky top-0 z-50 border-b border-slate-200/80 dark:border-slate-800/80 bg-white/80 dark:bg-slate-950/80 backdrop-blur-sm">
+      <header className="sticky top-0 z-50 border-b border-border bg-popover/80 backdrop-blur-sm">
         <nav className="max-w-5xl mx-auto px-6 h-14 flex items-center gap-6">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 shrink-0">
@@ -25,23 +26,23 @@ export default function LandingPage() {
                 <line x1="12" y1="4" x2="8" y2="12" stroke="white" strokeWidth="1.5" strokeOpacity="0.7" />
               </svg>
             </div>
-            <span className="font-bold text-slate-900 dark:text-slate-100 tracking-tight">TaskGraph</span>
+            <span className="font-bold text-foreground tracking-tight">TaskGraph</span>
           </Link>
 
           {/* Spacer */}
           <div className="flex-1" />
 
           {/* Nav links */}
-          <div className="hidden sm:flex items-center gap-5 text-sm text-slate-500 dark:text-slate-400">
-            <Link href="/privacy" className="hover:text-slate-900 dark:hover:text-slate-200 transition-colors">Privacy</Link>
-            <Link href="/terms" className="hover:text-slate-900 dark:hover:text-slate-200 transition-colors">Terms</Link>
-            <Link href="/contact" className="hover:text-slate-900 dark:hover:text-slate-200 transition-colors">Contact</Link>
+          <div className="hidden sm:flex items-center gap-5 text-sm text-muted-foreground">
+            <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
+            <Link href="/terms" className="hover:text-foreground transition-colors">Terms</Link>
+            <Link href="/contact" className="hover:text-foreground transition-colors">Contact</Link>
           </div>
 
           <div className="flex items-center gap-3 ml-4">
             <ThemeToggle />
             <Link
-              href="/login"
+              href={process.env.JIRA_BYPASS === "true" ? "/app" : "/login"}
               className="text-sm font-medium bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white px-4 py-1.5 rounded-lg transition-colors"
             >
               Sign in
@@ -65,23 +66,23 @@ export default function LandingPage() {
         />
 
         <div className="relative max-w-2xl">
-          <div className="inline-flex items-center gap-2 bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-100 dark:border-indigo-800/60 text-indigo-600 dark:text-indigo-400 text-xs font-semibold px-3 py-1 rounded-full mb-6">
+          <div className="inline-flex items-center gap-2 bg-indigo-50 dark:bg-indigo-950/60 border border-primary/20 text-primary text-xs font-semibold px-3 py-1 rounded-full mb-6">
             <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
             Free · No data stored · Jira OAuth
           </div>
 
-          <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-slate-50 leading-tight mb-5">
+          <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-foreground leading-tight mb-5">
             See your Jira tasks<br />
             <span className="text-indigo-600">as a dependency graph</span>
           </h1>
 
-          <p className="text-lg text-slate-500 dark:text-slate-400 leading-relaxed mb-8 max-w-xl mx-auto">
+          <p className="text-lg text-muted-foreground leading-relaxed mb-8 max-w-xl mx-auto">
             TaskGraph connects to your Jira workspace and renders interactive graphs so you can instantly see what&apos;s blocked, what&apos;s in progress, and what you can actually ship next.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <a
-              href="/api/auth/login"
+              href={signInHref}
               className="flex items-center gap-3 bg-[#0052CC] hover:bg-[#0747A6] active:bg-[#003884] text-white font-semibold px-6 py-3 rounded-xl transition-colors text-sm shadow-lg shadow-blue-200 dark:shadow-blue-950"
             >
               <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" className="h-5 w-5 shrink-0 fill-current">
@@ -94,7 +95,7 @@ export default function LandingPage() {
               href="https://github.com/sumsar01/better-task-manager"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 border border-slate-200 dark:border-slate-700 px-5 py-3 rounded-xl transition-colors"
+              className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground border border-border px-5 py-3 rounded-xl transition-colors"
             >
               <svg aria-hidden="true" viewBox="0 0 16 16" className="h-4 w-4 fill-current">
                 <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z" />
@@ -106,22 +107,22 @@ export default function LandingPage() {
       </section>
 
       {/* ── Features ── */}
-      <section className="py-20 px-6 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-200/80 dark:border-slate-800/80">
+      <section className="py-20 px-6 bg-muted/50 border-t border-border">
         <div className="max-w-5xl mx-auto">
-          <h2 className="text-2xl font-bold text-center text-slate-900 dark:text-slate-100 mb-12 tracking-tight">
+          <h2 className="text-2xl font-bold text-center text-foreground mb-12 tracking-tight">
             Everything you need to understand your work
           </h2>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {FEATURES.map((f) => (
               <div
                 key={f.title}
-                className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700/80 p-6 shadow-sm"
+                className="rounded-2xl bg-background border border-border p-6 shadow-sm"
               >
                 <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 flex items-center justify-center mb-4">
                   {f.icon}
                 </div>
-                <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-1.5">{f.title}</h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{f.description}</p>
+                <h3 className="font-semibold text-foreground mb-1.5">{f.title}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">{f.description}</p>
               </div>
             ))}
           </div>
@@ -129,18 +130,18 @@ export default function LandingPage() {
       </section>
 
       {/* ── Footer ── */}
-      <footer className="border-t border-slate-200/80 dark:border-slate-800/80 py-8 px-6">
-        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-slate-400 dark:text-slate-500">
+      <footer className="border-t border-border py-8 px-6">
+        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
           <span>© {new Date().getFullYear()} TaskGraph</span>
           <div className="flex items-center gap-5">
-            <Link href="/privacy" className="hover:text-slate-700 dark:hover:text-slate-300 transition-colors">Privacy Policy</Link>
-            <Link href="/terms" className="hover:text-slate-700 dark:hover:text-slate-300 transition-colors">Terms of Service</Link>
-            <Link href="/contact" className="hover:text-slate-700 dark:hover:text-slate-300 transition-colors">Contact</Link>
+            <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</Link>
+            <Link href="/terms" className="hover:text-foreground transition-colors">Terms of Service</Link>
+            <Link href="/contact" className="hover:text-foreground transition-colors">Contact</Link>
             <a
               href="https://github.com/sumsar01/better-task-manager"
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
+              className="hover:text-foreground transition-colors"
             >
               GitHub
             </a>

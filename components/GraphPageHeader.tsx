@@ -38,11 +38,11 @@ export default function GraphPageHeader({
   const showBadge = showMeta && lastUpdated !== null;
 
   return (
-    <header className="flex items-center gap-3 px-5 py-0 h-14 bg-white dark:bg-slate-900 border-b border-slate-200/80 dark:border-slate-700/80 shrink-0 shadow-sm shadow-slate-100 dark:shadow-slate-900/50">
+    <header className="flex items-center gap-3 px-5 py-0 h-14 bg-background border-b border-border shrink-0 shadow-sm shadow-slate-100 dark:shadow-slate-900/50">
       {/* Back */}
       <button
         onClick={() => router.push("/app")}
-        className="flex items-center gap-1.5 text-slate-400 hover:text-slate-800 dark:text-slate-500 dark:hover:text-slate-200 transition-colors text-sm font-medium group"
+        className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors text-sm font-medium group"
       >
         <svg
           width="16"
@@ -63,7 +63,7 @@ export default function GraphPageHeader({
       </button>
 
       {/* Divider */}
-      <div className="w-px h-5 bg-slate-200 dark:bg-slate-700" />
+      <div className="w-px h-5 bg-accent" />
 
       {/* App name */}
       <div className="flex items-center gap-2">
@@ -76,25 +76,25 @@ export default function GraphPageHeader({
             <line x1="9" y1="3" x2="6" y2="9" stroke="white" strokeWidth="1.2" strokeOpacity="0.7" />
           </svg>
         </div>
-        <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">TaskGraph</span>
+        <span className="text-sm font-semibold text-foreground">TaskGraph</span>
       </div>
 
       {/* Divider */}
-      <div className="w-px h-5 bg-slate-200 dark:bg-slate-700" />
+      <div className="w-px h-5 bg-accent" />
 
       {/* Key chip */}
-      <span className="text-[11px] font-mono font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-100 dark:border-indigo-800/60 px-2.5 py-1 rounded-full">
+      <span className="text-[11px] font-mono font-semibold text-primary bg-indigo-50 dark:bg-indigo-950/60 border border-primary/20 px-2.5 py-1 rounded-full">
         {chipKey}
       </span>
 
       {/* Optional label (e.g. "All Epics") */}
       {chipLabel && (
-        <span className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">{chipLabel}</span>
+        <span className="text-[11px] text-muted-foreground font-medium">{chipLabel}</span>
       )}
 
       {/* Issue count */}
       {showCount && (
-        <span className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">
+        <span className="text-[11px] text-muted-foreground font-medium">
           · {issueCount} issue{issueCount !== 1 ? "s" : ""}
         </span>
       )}

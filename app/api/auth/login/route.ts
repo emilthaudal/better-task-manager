@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 
 const ATLASSIAN_CLIENT_ID = process.env.ATLASSIAN_CLIENT_ID ?? "";
-const SCOPES = ["read:jira-work", "read:jira-user", "offline_access"].join(" ");
+const SCOPES = [
+  "read:jira-work",
+  "write:jira-work",
+  "read:jira-user",
+  "offline_access",
+].join(" ");
 
 /**
  * Compute HMAC-SHA256 of `message` keyed with `secret`.

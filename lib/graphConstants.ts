@@ -33,56 +33,68 @@ export const UNASSIGNED_EPIC_KEY = "__unassigned__";
 export const EXTERNAL_LABEL = "external";
 
 // ── Color tables ──────────────────────────────────────────────────────────────
+//
+// All colors below reference CSS custom properties defined in app/globals.css
+// (under "Theme color tokens") rather than literal hex values, so a theme
+// switch only needs to change that variable block — nothing here.
 
 // Per-epic accent color palette (cycles through these)
-// Each entry: [bgTint (8% opacity fill), headerBg, headerText, border]
+// tint is a low-opacity fill derived from the same base var as the header/border.
 export const EPIC_COLORS: Array<{
   tint: string;
   header: string;
   text: string;
   border: string;
-}> = [
-  { tint: "rgba(99,102,241,0.07)",  header: "#6366f1", text: "#ffffff", border: "#6366f1" }, // indigo
-  { tint: "rgba(16,185,129,0.07)",  header: "#10b981", text: "#ffffff", border: "#10b981" }, // emerald
-  { tint: "rgba(245,158,11,0.07)",  header: "#f59e0b", text: "#ffffff", border: "#f59e0b" }, // amber
-  { tint: "rgba(239,68,68,0.07)",   header: "#ef4444", text: "#ffffff", border: "#ef4444" }, // red
-  { tint: "rgba(59,130,246,0.07)",  header: "#3b82f6", text: "#ffffff", border: "#3b82f6" }, // blue
-  { tint: "rgba(168,85,247,0.07)",  header: "#a855f7", text: "#ffffff", border: "#a855f7" }, // purple
-  { tint: "rgba(236,72,153,0.07)",  header: "#ec4899", text: "#ffffff", border: "#ec4899" }, // pink
-];
+}> = [1, 2, 3, 4, 5, 6, 7].map((i) => ({
+  tint: `color-mix(in srgb, var(--epic-${i}) var(--epic-tint-opacity), transparent)`,
+  header: `var(--epic-${i})`,
+  text: "var(--epic-text-on-accent)",
+  border: `var(--epic-${i})`,
+}));
 
 // Unassigned group uses a neutral grey
 export const UNASSIGNED_EPIC_COLOR = {
-  tint: "rgba(148,163,184,0.07)",
-  header: "#94a3b8",
-  text: "#ffffff",
-  border: "#94a3b8",
+  tint: "color-mix(in srgb, var(--epic-unassigned) var(--epic-tint-opacity), transparent)",
+  header: "var(--epic-unassigned)",
+  text: "var(--epic-text-on-accent)",
+  border: "var(--epic-unassigned)",
 };
 
 // Status → accent bar color (left border on white card nodes)
 export const STATUS_COLORS: Record<string, string> = {
-  new: "#94a3b8",           // To Do → slate-400
-  indeterminate: "#6366f1", // In Progress → indigo-500
-  done: "#22c55e",          // Done → green-500
+  new: "var(--status-todo)",
+  indeterminate: "var(--status-progress)",
+  done: "var(--status-done)",
 };
 
 export const STATUS_TEXT_COLORS: Record<string, string> = {
-  new: "#64748b",           // slate-500
-  indeterminate: "#6366f1", // indigo-500
-  done: "#16a34a",          // green-600
+  new: "var(--status-todo-text)",
+  indeterminate: "var(--status-progress-text)",
+  done: "var(--status-done-text)",
 };
 
 // Edge link type name → color
 export const EDGE_COLORS: Record<string, string> = {
-  blocks: "#ef4444",       // red-500
-  "is blocked by": "#ef4444",
-  subtask: "#3b82f6",      // blue-500
-  parent: "#3b82f6",
-  "relates to": "#94a3b8", // slate-400
-  clones: "#a855f7",       // purple-500
-  "is cloned by": "#a855f7",
-  default: "#94a3b8",
+  blocks: "var(--edge-blocks)",
+  "is blocked by": "var(--edge-blocks)",
+  subtask: "var(--edge-subtask)",
+  parent: "var(--edge-subtask)",
+  "relates to": "var(--edge-relates)",
+  clones: "var(--edge-clones)",
+  "is cloned by": "var(--edge-clones)",
+  default: "var(--edge-default)",
 };
+
+// Issue type → pill color, shared between IssueNode and KanbanCard.
+export const ISSUE_TYPE_LABEL: Record<string, { short: string; color: string; bg: string }> = {
+  Story:   { short: "Story", color: "var(--type-story-color)", bg: "var(--type-story-bg)" },
+  Bug:     { short: "Bug",   color: "var(--type-bug-color)",   bg: "var(--type-bug-bg)" },
+  Task:    { short: "Task",  color: "var(--type-task-color)",  bg: "var(--type-task-bg)" },
+  Subtask: { short: "Sub",   color: "var(--type-task-color)",  bg: "var(--type-task-bg)" },
+  Epic:    { short: "Epic",  color: "var(--type-epic-color)",  bg: "var(--type-epic-bg)" },
+};
+
+export const ISSUE_TYPE_FALLBACK = { color: "var(--type-default-color)", bg: "var(--type-default-bg)" };
 
 // ── Derived helpers ───────────────────────────────────────────────────────────
 
