@@ -113,45 +113,45 @@ export default function EditIssueDialog({ issue, onClose, onSaved, onError }: Ed
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <span className="text-[12px] font-mono font-semibold text-slate-400 dark:text-slate-500">{issue.key}</span>
+            <span className="text-[12px] font-mono font-semibold text-muted-foreground">{issue.key}</span>
             Edit issue
           </DialogTitle>
         </DialogHeader>
 
         {loading ? (
-          <div className="py-8 text-center text-sm text-slate-400 dark:text-slate-500">Loading…</div>
+          <div className="py-8 text-center text-sm text-muted-foreground">Loading…</div>
         ) : (
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+              <label className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
                 Title
               </label>
               {canEditSummary ? (
                 <input
                   value={summary}
                   onChange={(e) => setSummary(e.target.value)}
-                  className="text-sm rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-3 py-2 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900"
+                  className="text-sm rounded-md border border-border bg-muted px-3 py-2 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900"
                 />
               ) : (
-                <p className="text-sm text-slate-500 dark:text-slate-400">{summary}</p>
+                <p className="text-sm text-muted-foreground">{summary}</p>
               )}
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+              <label className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
                 Description
               </label>
               {canEditDescription ? (
                 <Textarea rows={4} value={description} onChange={(e) => setDescription(e.target.value)} />
               ) : (
-                <p className="text-sm text-slate-500 dark:text-slate-400 whitespace-pre-wrap">
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap">
                   {description || "No description."}
                 </p>
               )}
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+              <label className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
                 Status
               </label>
               {transitions.length > 0 ? (
@@ -168,14 +168,14 @@ export default function EditIssueDialog({ issue, onClose, onSaved, onError }: Ed
                   </SelectContent>
                 </Select>
               ) : (
-                <p className="text-sm text-slate-500 dark:text-slate-400">
+                <p className="text-sm text-muted-foreground">
                   {issue.fields.status.name} — no other status is available to you.
                 </p>
               )}
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+              <label className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
                 Assignee
               </label>
               {canEditAssignee ? (
@@ -196,14 +196,14 @@ export default function EditIssueDialog({ issue, onClose, onSaved, onError }: Ed
                   </SelectContent>
                 </Select>
               ) : (
-                <p className="text-sm text-slate-500 dark:text-slate-400">
+                <p className="text-sm text-muted-foreground">
                   {issue.fields.assignee?.displayName ?? "Unassigned"}
                 </p>
               )}
             </div>
 
             {issue.fields.priority && (
-              <div className="flex items-center gap-2 text-[11.5px] text-slate-400 dark:text-slate-500">
+              <div className="flex items-center gap-2 text-[11.5px] text-muted-foreground">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <circle cx="12" cy="12" r="9" />
                   <path d="M12 8v5M12 16h.01" />
@@ -218,7 +218,7 @@ export default function EditIssueDialog({ issue, onClose, onSaved, onError }: Ed
           <button
             type="button"
             onClick={onClose}
-            className="text-[13px] font-semibold px-3 py-1.5 rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+            className="text-[13px] font-semibold px-3 py-1.5 rounded-md text-muted-foreground hover:bg-accent transition-colors"
           >
             Cancel
           </button>

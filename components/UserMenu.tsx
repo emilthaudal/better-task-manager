@@ -22,7 +22,7 @@ export default function UserMenu() {
     <div className="relative">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-2 rounded-full p-1 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+        className="flex items-center gap-2 rounded-full p-1 hover:bg-accent transition-colors"
         aria-label="Account menu"
         aria-expanded={open}
       >
@@ -48,25 +48,25 @@ export default function UserMenu() {
             onClick={() => setOpen(false)}
           />
           {/* Dropdown */}
-          <div className="absolute right-0 mt-2 w-56 z-20 rounded-xl bg-white dark:bg-gray-900 shadow-lg border border-gray-200 dark:border-gray-700 py-1">
-            <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">
-              <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+          <div className="absolute right-0 mt-2 w-56 z-20 rounded-xl bg-background shadow-lg border border-border py-1">
+            <div className="px-4 py-3 border-b border-border">
+              <p className="text-sm font-medium text-foreground truncate">
                 {user.name}
               </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+              <p className="text-xs text-muted-foreground truncate">
                 {user.email}
               </p>
             </div>
             <a
               href="/select-site"
-              className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              className="block px-4 py-2 text-sm text-foreground hover:bg-accent transition-colors"
               onClick={() => setOpen(false)}
             >
               Switch Jira site
             </a>
             <a
               href="/api/auth/logout"
-              className="block px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              className="block px-4 py-2 text-sm text-destructive hover:bg-accent transition-colors"
             >
               Sign out
             </a>

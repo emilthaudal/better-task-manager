@@ -21,7 +21,7 @@ export default function GraphPage() {
   }, []);
 
   return (
-    <div className="flex flex-col h-screen bg-slate-50">
+    <div className="flex flex-col h-screen bg-background">
       <GraphPageHeader
         chipKey={epicKey}
         issueCount={issues.length}
@@ -54,7 +54,7 @@ export default function GraphPage() {
 
         {/* Detail panel */}
         {selectedKey && (
-          <div className="w-[25%] h-full border-l border-slate-200 shrink-0 shadow-[-4px_0_24px_rgba(0,0,0,0.04)]">
+          <div className="w-[25%] h-full border-l border-border shrink-0 shadow-[-4px_0_24px_rgba(0,0,0,0.04)]">
             <IssueDetailPanel
               issueKey={selectedKey}
               jiraBaseUrl={jiraBaseUrl}

@@ -40,7 +40,7 @@ export default function HomeShell({
   footer,
 }: HomeShellProps) {
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center px-4 bg-slate-50 dark:bg-slate-950 relative overflow-hidden">
+    <main className="min-h-screen flex flex-col items-center justify-center px-4 bg-muted relative overflow-hidden">
       <BackgroundBlobs topColor={topBlobColor} bottomColor={bottomBlobColor} />
 
       <div className="relative w-full max-w-md">
@@ -63,19 +63,19 @@ export default function HomeShell({
                 <line x1="12" y1="4" x2="8" y2="12" stroke="white" strokeWidth="1.5" strokeOpacity="0.7" />
               </svg>
             </div>
-            <span className="text-lg font-bold text-slate-900 dark:text-slate-100 tracking-tight">TaskGraph</span>
+            <span className="text-lg font-bold text-foreground tracking-tight">TaskGraph</span>
           </div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight leading-tight">
+          <h1 className="text-2xl font-bold text-foreground tracking-tight leading-tight">
             Visualize your<br />
             <span className={highlightColor}>{headingHighlight}</span>
           </h1>
-          <p className="mt-2.5 text-slate-500 dark:text-slate-400 text-sm leading-relaxed">
+          <p className="mt-2.5 text-muted-foreground text-sm leading-relaxed">
             See what&apos;s blocked, what&apos;s in progress,<br />and what you can ship next.
           </p>
         </div>
 
         {/* Card */}
-        <Card className="rounded-2xl border-slate-200 dark:border-slate-700/80 shadow-xl shadow-slate-200/50 dark:shadow-black/30">
+        <Card className="rounded-2xl border-border shadow-xl shadow-slate-200/50 dark:shadow-black/30">
           <CardContent className="px-6 pt-6 pb-6">
             {picker}
           </CardContent>

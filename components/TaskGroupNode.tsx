@@ -25,16 +25,16 @@ function TaskGroupNode({ data }: NodeProps<TaskGroupNodeType>) {
   return (
     <>
       {/* Target handle at the top of the group — dependency edges enter here */}
-      <Handle type="target" position={Position.Top} className="!bg-slate-300 !w-2 !h-2 !border-white !border-2" />
+      <Handle type="target" position={Position.Top} className="!bg-border !w-2 !h-2 !border-background !border-2" />
 
       <div
         style={{ width: totalWidth, height: totalHeight }}
-        className="relative rounded-[14px] border border-dashed border-slate-300/50 dark:border-slate-600/50 bg-white/70 dark:bg-slate-800/50"
+        className="relative rounded-[14px] border border-dashed border-border/50 bg-card/70"
       />
 
       {/* Source handle at the bottom of the group — dependency edges exit here,
           below all sub-tasks, so they never visually pass through the group */}
-      <Handle type="source" position={Position.Bottom} className="!bg-slate-300 !w-2 !h-2 !border-white !border-2" />
+      <Handle type="source" position={Position.Bottom} className="!bg-border !w-2 !h-2 !border-background !border-2" />
     </>
   );
 }

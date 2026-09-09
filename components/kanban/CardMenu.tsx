@@ -23,7 +23,7 @@ export default function CardMenu({ onEdit, onClose, onDelete }: CardMenuProps) {
           aria-label="Issue actions"
           onClick={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
-          className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100 shrink-0 w-5 h-5 rounded-md flex items-center justify-center text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-700 dark:hover:text-slate-200 transition-opacity"
+          className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100 shrink-0 w-5 h-5 rounded-md flex items-center justify-center text-muted-foreground hover:bg-accent hover:text-foreground transition-opacity"
         >
           <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
             <circle cx="12" cy="5" r="1.8" />

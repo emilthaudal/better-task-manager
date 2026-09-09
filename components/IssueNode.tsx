@@ -80,7 +80,7 @@ function IssueNode({ data, selected }: NodeProps<IssueNodeType>) {
             ? `0 0 0 2px var(--accent-focus-ring), 0 4px 16px var(--accent-focus-ring-shadow), 0 1px 4px rgba(0,0,0,0.08)`
             : "0 1px 3px rgba(0,0,0,0.07), 0 4px 10px rgba(0,0,0,0.05)",
         }}
-        className={`${isDone ? "bg-emerald-50/70 dark:bg-emerald-950/30" : isBlocked ? "bg-rose-50/70 dark:bg-rose-950/30" : "bg-white dark:bg-slate-800"} rounded-lg overflow-hidden transition-[box-shadow,border-color,opacity,transform] duration-150 border border-slate-200/80 dark:border-slate-700/80 cursor-pointer hover:-translate-y-0.5 hover:shadow-[0_0_0_2px_var(--accent-focus-ring-hover),_0_6px_16px_var(--accent-focus-ring-shadow)] hover:border-indigo-200/80 dark:hover:border-indigo-600/60 px-2.5 py-1.5`}
+        className={`${isDone ? "bg-emerald-50/70 dark:bg-emerald-950/30" : isBlocked ? "bg-rose-50/70 dark:bg-rose-950/30" : "bg-card"} rounded-lg overflow-hidden transition-[box-shadow,border-color,opacity,transform] duration-150 border border-border cursor-pointer hover:-translate-y-0.5 hover:shadow-[0_0_0_2px_var(--accent-focus-ring-hover),_0_6px_16px_var(--accent-focus-ring-shadow)] hover:border-primary/60 px-2.5 py-1.5`}
       >
         <div className="flex items-center gap-1.5">
           {isDone && <DoneCheck size={13} />}
@@ -95,7 +95,7 @@ function IssueNode({ data, selected }: NodeProps<IssueNodeType>) {
             </span>
           )}
           <div
-            className={`text-[12px] font-medium leading-snug line-clamp-2 ${isDone || isBlocked ? "text-slate-500 dark:text-slate-400" : "text-slate-800 dark:text-slate-100"}`}
+            className={`text-[12px] font-medium leading-snug line-clamp-2 ${isDone || isBlocked ? "text-muted-foreground" : "text-foreground"}`}
           >
             {data.summary}
           </div>
@@ -113,7 +113,7 @@ function IssueNode({ data, selected }: NodeProps<IssueNodeType>) {
       ? "bg-emerald-50/60 dark:bg-emerald-950/25"
       : isBlocked
         ? "bg-rose-50/60 dark:bg-rose-950/25"
-        : "bg-white dark:bg-slate-800";
+        : "bg-card";
 
   return (
     <>
@@ -122,7 +122,7 @@ function IssueNode({ data, selected }: NodeProps<IssueNodeType>) {
           handles so dependency edges enter/exit at the true top/bottom of the
           group, never passing through the sub-task area. */}
       {!data.insideGroup && (
-        <Handle type="target" position={Position.Top} className="!bg-slate-300 !w-2 !h-2 !border-white !border-2" />
+        <Handle type="target" position={Position.Top} className="!bg-border !w-2 !h-2 !border-background !border-2" />
       )}
 
       <div
@@ -133,7 +133,7 @@ function IssueNode({ data, selected }: NodeProps<IssueNodeType>) {
             ? `0 0 0 2px var(--accent-focus-ring), 0 4px 20px var(--accent-focus-ring-shadow), 0 1px 4px rgba(0,0,0,0.08)`
             : "0 1px 3px rgba(0,0,0,0.07), 0 4px 12px rgba(0,0,0,0.06)",
         }}
-        className={`${cardBg} rounded-xl flex flex-col overflow-hidden transition-[box-shadow,border-color,opacity,transform] duration-150 border border-slate-200/80 dark:border-slate-700/80 cursor-pointer hover:-translate-y-0.5 hover:shadow-[0_0_0_2px_var(--accent-focus-ring-hover),_0_6px_20px_var(--accent-focus-ring-shadow),_0_1px_4px_rgba(0,0,0,0.08)] hover:border-indigo-200/80 dark:hover:border-indigo-600/60`}
+        className={`${cardBg} rounded-xl flex flex-col overflow-hidden transition-[box-shadow,border-color,opacity,transform] duration-150 border border-border cursor-pointer hover:-translate-y-0.5 hover:shadow-[0_0_0_2px_var(--accent-focus-ring-hover),_0_6px_20px_var(--accent-focus-ring-shadow),_0_1px_4px_rgba(0,0,0,0.08)] hover:border-primary/60`}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-3 pt-2.5 pb-1.5 gap-2">
@@ -158,14 +158,14 @@ function IssueNode({ data, selected }: NodeProps<IssueNodeType>) {
             )}
           </div>
           {/* Issue key */}
-          <span className="text-[11px] font-mono font-semibold text-slate-400 dark:text-slate-500 shrink-0">
+          <span className="text-[11px] font-mono font-semibold text-muted-foreground shrink-0">
             {data.key}
           </span>
         </div>
 
         {/* Summary */}
         <div
-          className={`px-3 pb-2 text-[13px] font-medium leading-snug line-clamp-2 ${isDone || isBlocked ? "text-slate-500 dark:text-slate-400" : "text-slate-800 dark:text-slate-100"}`}
+          className={`px-3 pb-2 text-[13px] font-medium leading-snug line-clamp-2 ${isDone || isBlocked ? "text-muted-foreground" : "text-foreground"}`}
         >
           {data.summary}
         </div>
@@ -265,7 +265,7 @@ function IssueNode({ data, selected }: NodeProps<IssueNodeType>) {
       </div>
 
       {!data.insideGroup && (
-        <Handle type="source" position={Position.Bottom} className="!bg-slate-300 !w-2 !h-2 !border-white !border-2" />
+        <Handle type="source" position={Position.Bottom} className="!bg-border !w-2 !h-2 !border-background !border-2" />
       )}
     </>
   );

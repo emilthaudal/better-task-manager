@@ -47,8 +47,8 @@ export function ToastStack({ toasts, onDismiss }: { toasts: ToastItem[]; onDismi
           className={[
             "flex items-start gap-2 rounded-lg border px-3 py-2.5 text-[13px] font-medium shadow-lg cursor-pointer",
             t.tone === "error"
-              ? "bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300"
-              : "bg-white dark:bg-slate-800 border-slate-200/80 dark:border-slate-700/80 text-slate-700 dark:text-slate-200",
+              ? "bg-red-50 dark:bg-red-950 border-destructive/40 text-destructive"
+              : "bg-card border-border text-foreground",
           ].join(" ")}
           onClick={() => onDismiss(t.id)}
         >

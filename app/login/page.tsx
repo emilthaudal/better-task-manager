@@ -27,19 +27,19 @@ export default async function LoginPage({ searchParams }: Props) {
   const errorMessage = error ? (ERROR_MESSAGES[error] ?? "An unexpected error occurred.") : null;
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-950 p-4">
-      <div className="w-full max-w-sm rounded-2xl bg-white dark:bg-gray-900 shadow-lg p-8 flex flex-col items-center gap-6">
+    <main className="flex min-h-screen items-center justify-center bg-muted p-4">
+      <div className="w-full max-w-sm rounded-2xl bg-background shadow-lg p-8 flex flex-col items-center gap-6">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+          <h1 className="text-2xl font-bold text-foreground">
             TaskGraph
           </h1>
-          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+          <p className="mt-2 text-sm text-muted-foreground">
             Sign in with your Atlassian account to continue
           </p>
         </div>
 
         {errorMessage && (
-          <div className="w-full rounded-lg bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 px-4 py-3 text-sm text-red-700 dark:text-red-300">
+          <div className="w-full rounded-lg bg-red-50 dark:bg-red-950 border border-destructive/40 px-4 py-3 text-sm text-destructive">
             {errorMessage}
           </div>
         )}
@@ -61,15 +61,15 @@ export default async function LoginPage({ searchParams }: Props) {
           Sign in with Atlassian
         </a>
 
-        <p className="text-xs text-gray-400 dark:text-gray-600 text-center">
+        <p className="text-xs text-muted-foreground text-center">
           You will be redirected to Atlassian to authorize access to your Jira
           data.
         </p>
 
-        <div className="flex items-center gap-3 text-xs text-gray-400 dark:text-gray-600">
-          <Link href="/privacy" className="hover:text-gray-600 dark:hover:text-gray-400 transition-colors">Privacy Policy</Link>
+        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</Link>
           <span>·</span>
-          <Link href="/terms" className="hover:text-gray-600 dark:hover:text-gray-400 transition-colors">Terms of Service</Link>
+          <Link href="/terms" className="hover:text-foreground transition-colors">Terms of Service</Link>
         </div>
       </div>
     </main>

@@ -420,7 +420,7 @@ export default function GraphView({ issues, latestIssues, onNodeSelect, selected
   }, [highlightConnected, onNodeSelect]);
 
   return (
-    <div className="w-full h-full relative dark:bg-slate-900">
+    <div className="w-full h-full relative dark:bg-background">
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -444,7 +444,7 @@ export default function GraphView({ issues, latestIssues, onNodeSelect, selected
         <MiniMap
           nodeColor={miniMapNodeColor}
           maskColor="var(--graph-minimap-mask)"
-          className="!border-slate-200 dark:!border-slate-700"
+          className="!border-border"
         />
       </ReactFlow>
       <Legend />
@@ -466,10 +466,10 @@ export default function GraphView({ issues, latestIssues, onNodeSelect, selected
             criticalPathOn
               ? "bg-amber-500 border-amber-400 text-white shadow-amber-200/60 dark:shadow-amber-900/40"
               : [
-                  "bg-white/90 dark:bg-slate-800/90",
-                  "border-slate-200 dark:border-slate-700",
-                  "text-slate-600 dark:text-slate-300",
-                  "hover:bg-amber-50 dark:hover:bg-slate-700",
+                  "bg-card/90",
+                  "border-border",
+                  "text-muted-foreground",
+                  "hover:bg-amber-50 dark:hover:bg-accent",
                   "hover:border-amber-300 hover:text-amber-700 dark:hover:text-amber-400",
                   "shadow-slate-200/60 dark:shadow-slate-900/40",
                 ].join(" "),
