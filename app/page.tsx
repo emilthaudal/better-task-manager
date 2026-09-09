@@ -9,6 +9,7 @@ export const metadata: Metadata = {
 };
 
 export default function LandingPage() {
+  const signInHref = process.env.JIRA_BYPASS === "true" ? "/app" : "/api/auth/login";
   return (
     <div className="min-h-screen flex flex-col bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100">
       {/* ── Navbar ── */}
@@ -41,7 +42,7 @@ export default function LandingPage() {
           <div className="flex items-center gap-3 ml-4">
             <ThemeToggle />
             <Link
-              href="/login"
+              href={process.env.JIRA_BYPASS === "true" ? "/app" : "/login"}
               className="text-sm font-medium bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white px-4 py-1.5 rounded-lg transition-colors"
             >
               Sign in
@@ -81,7 +82,7 @@ export default function LandingPage() {
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <a
-              href="/api/auth/login"
+              href={signInHref}
               className="flex items-center gap-3 bg-[#0052CC] hover:bg-[#0747A6] active:bg-[#003884] text-white font-semibold px-6 py-3 rounded-xl transition-colors text-sm shadow-lg shadow-blue-200 dark:shadow-blue-950"
             >
               <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" className="h-5 w-5 shrink-0 fill-current">

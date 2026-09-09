@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
   title: "Sign in — TaskGraph",
@@ -18,6 +19,10 @@ const ERROR_MESSAGES: Record<string, string> = {
 };
 
 export default async function LoginPage({ searchParams }: Props) {
+  if (process.env.JIRA_BYPASS === "true") {
+    redirect("/app");
+  }
+
   const { error } = await searchParams;
   const errorMessage = error ? (ERROR_MESSAGES[error] ?? "An unexpected error occurred.") : null;
 
