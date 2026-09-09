@@ -104,11 +104,6 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* ── React Flow performance ───────────────────────────────────────────────── */
-.react-flow__viewport {
-  will-change: transform;
-}
-
 /* ── React Flow dark mode overrides ──────────────────────────────────────── */
 .dark .react-flow__background {
   background-color: #0f172a;
