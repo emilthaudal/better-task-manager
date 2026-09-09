@@ -413,13 +413,13 @@ export async function getIssueEditMeta(
   return jiraFetch<JiraEditMeta>(`/issue/${encodeURIComponent(issueKey)}/editmeta`, session);
 }
 
-/** Whether this user holds the DELETE_ISSUE permission for a specific issue's project. */
+/** Whether this user holds the DELETE_ISSUES permission for a specific issue's project. */
 export async function canDeleteIssue(issueKey: string, session?: SessionData): Promise<boolean> {
   const data = await jiraFetch<{ permissions: Record<string, { havePermission: boolean }> }>(
-    `/mypermissions?issueKey=${encodeURIComponent(issueKey)}&permissions=DELETE_ISSUE`,
+    `/mypermissions?issueKey=${encodeURIComponent(issueKey)}&permissions=DELETE_ISSUES`,
     session,
   );
-  return data.permissions.DELETE_ISSUE?.havePermission ?? false;
+  return data.permissions.DELETE_ISSUES?.havePermission ?? false;
 }
 
 /** Move an issue to a new status by transition id (from getIssueTransitions). */
