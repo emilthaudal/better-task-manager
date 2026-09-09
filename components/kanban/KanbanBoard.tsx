@@ -98,6 +98,7 @@ interface KanbanBoardProps {
 
 export default function KanbanBoard({ issues, onIssueSelect, selectedKey, projectKey }: KanbanBoardProps) {
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   // Epics the user has explicitly expanded/collapsed — once touched, a group's
   // done-ness no longer drives its collapsed state, so an intentional "let me
   // look at this finished epic" choice doesn't get clobbered by the
@@ -246,6 +247,23 @@ export default function KanbanBoard({ issues, onIssueSelect, selectedKey, projec
   function handleDragStart(event: DragStartEvent) {
     const issue = issueMap.get(String(event.active.id));
     setActiveIssue(issue ?? null);
+
+    // Something in the activation path (not our own code — autoScroll is off
+    // and no focus-triggered scroll traces back to us either) nudges the
+    // board's scroll position by a couple of pixels the instant a drag
+    // activates. Snapshot and re-assert scrollTop over the next couple of
+    // frames to cancel it out regardless of the exact cause.
+    const container = scrollContainerRef.current;
+    if (container) {
+      const scrollTop = container.scrollTop;
+      const restore = () => {
+        if (container.scrollTop !== scrollTop) container.scrollTop = scrollTop;
+      };
+      requestAnimationFrame(() => {
+        restore();
+        requestAnimationFrame(restore);
+      });
+    }
   }
 
   function handleDragCancel() {
@@ -444,7 +462,7 @@ export default function KanbanBoard({ issues, onIssueSelect, selectedKey, projec
       // a card up. The board is short enough that auto-scroll isn't needed.
       autoScroll={false}
     >
-      <div className="flex-1 min-h-0 overflow-auto bg-popover px-4 pb-4">
+      <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-auto bg-popover px-4 pb-4">
         {/* flex + justify-center centers the panel when it's narrower than the viewport;
             w-fit + min-w-full let the row grow past 100% and fall back to natural
             left-aligned scrolling (instead of clipping) once the board overflows.

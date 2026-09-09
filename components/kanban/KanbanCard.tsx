@@ -162,10 +162,17 @@ export default function KanbanCard({
       {...attributes}
       onClick={onClick}
       // Prevents the browser's default click-to-focus scrollIntoView nudge —
-      // without this, starting a drag near a sticky column header shifts the
-      // whole board by a couple of pixels as the browser "helpfully" scrolls
-      // the newly-focused card fully into view. Keyboard focus (Tab) is unaffected.
-      onMouseDown={(e) => e.preventDefault()}
+      // Chromium grants focus during pointerdown's default action, so we must
+      // preventDefault() there. But dnd-kit's own pointerdown handler (from
+      // `listeners`, called first below) bails out of activating a drag if it
+      // sees event.defaultPrevented — so preventDefault() has to run *after*
+      // dnd-kit has already inspected the event, not before (a capture-phase
+      // handler that ran first silently disabled dragging entirely). Keyboard
+      // focus (Tab) is unaffected either way.
+      onPointerDown={(e) => {
+        listeners?.onPointerDown?.(e);
+        e.preventDefault();
+      }}
       role="button"
       tabIndex={0}
       onKeyDown={(e) => {
