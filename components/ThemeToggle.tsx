@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Moon, Palette, Sun } from "lucide-react";
+import { Check, Palette } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -9,22 +9,19 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { THEMES, useTheme, type Theme } from "@/hooks/useTheme";
-
-const THEME_ICONS: Record<Theme, typeof Sun> = {
-  light: Sun,
-  dark: Moon,
-  "tokyo-night": Palette,
-};
+import { THEMES, useTheme } from "@/hooks/useTheme";
 
 /**
  * Theme picker button. Reads/sets the app theme via useTheme() and shows a
  * dropdown of available palettes (light, dark, tokyo-night, ...), each with
  * a small swatch preview.
+ *
+ * Uses a fixed palette icon (not sun/moon) — swapping the icon per active
+ * theme reads as a plain light/dark toggle and hides that more palettes
+ * are available.
  */
 export default function ThemeToggle() {
   const { theme, setTheme } = useTheme();
-  const ActiveIcon = THEME_ICONS[theme];
 
   return (
     <DropdownMenu>
@@ -36,7 +33,7 @@ export default function ThemeToggle() {
           title="Change theme"
           className="h-8 w-8"
         >
-          <ActiveIcon className="h-4 w-4" aria-hidden="true" />
+          <Palette className="h-4 w-4" aria-hidden="true" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-44">
