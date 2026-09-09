@@ -172,7 +172,11 @@ export default function KanbanCard({
       }}
       className={[
         CARD_BASE_CLASS,
-        "group cursor-grab active:cursor-grabbing",
+        // select-none matters more than it looks: without it, moving the pointer
+        // inside the drag-activation deadzone (before dnd-kit registers a drag)
+        // lets the browser start a native text selection, which reads as sticky/
+        // laggy resistance right at the moment you try to pick a card up.
+        "select-none group cursor-grab active:cursor-grabbing",
         dragActive
           ? "border-border"
           : [

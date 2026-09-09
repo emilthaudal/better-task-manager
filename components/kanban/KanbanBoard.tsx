@@ -126,7 +126,9 @@ export default function KanbanBoard({ issues, onIssueSelect, selectedKey, projec
     });
   }, [issues]);
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+  // A small distance still distinguishes a click (open the detail panel) from a
+  // drag, but keeps the pickup snappy rather than feeling like there's a dead zone.
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 3 } }));
 
   const boardIssues = useMemo(() => localIssues.filter((i) => isBoardable(i.fields.issuetype)), [localIssues]);
   const issueMap = useMemo(() => new Map(boardIssues.map((i) => [i.key, i])), [boardIssues]);
