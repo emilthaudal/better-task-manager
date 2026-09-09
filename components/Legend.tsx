@@ -1,23 +1,23 @@
 const LEGEND_ITEMS = [
-  { color: "#ef4444", label: "Blocks", dash: false, bold: false },
-  { color: "#94a3b8", label: "Blocks (resolved)", dash: false, bold: false },
-  { color: "#94a3b8", label: "Relates to", dash: false, bold: false },
-  { color: "#a855f7", label: "Clones", dash: false, bold: false },
-  { color: "#ef4444", label: "Cross-epic bundle", dash: false, bold: true },
-  { color: "#ef4444", label: "Cross-story bundle", dash: false, bold: false, strokeWidth: 2.5 },
+  { color: "var(--edge-blocks)", label: "Blocks", dash: false, bold: false },
+  { color: "var(--edge-relates)", label: "Blocks (resolved)", dash: false, bold: false },
+  { color: "var(--edge-relates)", label: "Relates to", dash: false, bold: false },
+  { color: "var(--edge-clones)", label: "Clones", dash: false, bold: false },
+  { color: "var(--edge-blocks)", label: "Cross-epic bundle", dash: false, bold: true },
+  { color: "var(--edge-blocks)", label: "Cross-story bundle", dash: false, bold: false, strokeWidth: 2.5 },
 ];
 
 const STATUS_ITEMS = [
-  { color: "#94a3b8", label: "To Do" },
-  { color: "#6366f1", label: "In Progress" },
-  { color: "#22c55e", label: "Done" },
+  { color: "var(--status-todo)", label: "To Do" },
+  { color: "var(--status-progress)", label: "In Progress" },
+  { color: "var(--status-done)", label: "Done" },
 ];
 
 const BADGE_ITEMS = [
-  { bg: "#ffedd5", text: "#9a3412", symbol: "↗", label: "Blocks cross-epic" },
-  { bg: "#fee2e2", text: "#991b1b", symbol: "↙", label: "Blocked cross-epic" },
-  { bg: "#f97316", text: "#ffffff", symbol: "↗", label: "Blocks cross-story" },
-  { bg: "#ef4444", text: "#ffffff", symbol: "↙", label: "Blocked cross-story" },
+  { bg: "var(--badge-cross-out-bg)", text: "var(--badge-cross-out-color)", symbol: "↗", label: "Blocks cross-epic" },
+  { bg: "var(--badge-cross-in-bg)", text: "var(--badge-cross-in-color)", symbol: "↙", label: "Blocked cross-epic" },
+  { bg: "var(--badge-cross-story-out-bg)", text: "var(--badge-on-solid)", symbol: "↗", label: "Blocks cross-story" },
+  { bg: "var(--badge-cross-story-in-bg)", text: "var(--badge-on-solid)", symbol: "↙", label: "Blocked cross-story" },
 ];
 
 export default function Legend() {

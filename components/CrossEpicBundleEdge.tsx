@@ -32,7 +32,7 @@ function CrossEpicBundleEdge({
 }: EdgeProps) {
   const edgeData = data as CrossEpicBundleEdgeData | undefined;
   const bendPoints = edgeData?.bendPoints as ElkPoint[] | undefined;
-  const color = edgeData?.color ?? "#ef4444";
+  const color = edgeData?.color ?? "var(--edge-blocks)";
   const label = edgeData?.label ?? "";
 
   const { edgePath, labelX, labelY } = useMemo(() => {
@@ -94,7 +94,7 @@ function CrossEpicBundleEdge({
               borderRadius: 999,
               fontSize: 11,
               fontWeight: 700,
-              color: "#ffffff",
+              color: "var(--badge-on-solid)",
               background: color,
               whiteSpace: "nowrap",
               boxShadow: "0 1px 4px rgba(0,0,0,0.25)",

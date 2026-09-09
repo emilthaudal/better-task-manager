@@ -2,15 +2,7 @@
 
 import { useDraggable } from "@dnd-kit/core";
 import type { JiraIssue } from "@/lib/jira";
-import { STATUS_COLORS } from "@/lib/graphConstants";
-
-const ISSUE_TYPE_LABEL: Record<string, { short: string; color: string; bg: string }> = {
-  Story: { short: "Story", color: "#0891b2", bg: "#e0f9ff" },
-  Bug: { short: "Bug", color: "#dc2626", bg: "#fee2e2" },
-  Task: { short: "Task", color: "#0369a1", bg: "#e0f2fe" },
-  Subtask: { short: "Sub", color: "#0369a1", bg: "#e0f2fe" },
-  Epic: { short: "Epic", color: "#d97706", bg: "#fef3c7" },
-};
+import { STATUS_COLORS, ISSUE_TYPE_LABEL, ISSUE_TYPE_FALLBACK } from "@/lib/graphConstants";
 
 function avatarInitials(name: string): string {
   return name
@@ -35,8 +27,7 @@ const CARD_BASE_CLASS =
 export function KanbanCardBody({ issue }: { issue: JiraIssue }) {
   const typeInfo = ISSUE_TYPE_LABEL[issue.fields.issuetype.name] ?? {
     short: issue.fields.issuetype.name,
-    color: "#64748b",
-    bg: "#f1f5f9",
+    ...ISSUE_TYPE_FALLBACK,
   };
   const cat = issue.fields.status.statusCategory.key;
   const dotColor = STATUS_COLORS[cat] ?? STATUS_COLORS.new;
@@ -52,7 +43,7 @@ export function KanbanCardBody({ issue }: { issue: JiraIssue }) {
         {issue.fields.assignee ? (
           <span
             className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white shrink-0"
-            style={{ background: "#6366f1" }}
+            style={{ background: "var(--accent-focus-ring)" }}
             title={issue.fields.assignee.displayName}
           >
             {avatarInitials(issue.fields.assignee.displayName)}
@@ -89,7 +80,7 @@ export function KanbanCardBody({ issue }: { issue: JiraIssue }) {
           {subtasks.length > 0 && (
             <span
               className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md tracking-wide shrink-0"
-              style={{ color: "#0369a1", background: "#e0f2fe" }}
+              style={{ color: "var(--type-task-color)", background: "var(--type-task-bg)" }}
               title={`${subtasks.length} subtask${subtasks.length === 1 ? "" : "s"}`}
             >
               ↳ {subtasks.length}
@@ -150,9 +141,9 @@ export default function KanbanCard({ issue, selected, onClick, pending }: Kanban
       className={[
         CARD_BASE_CLASS,
         "cursor-grab active:cursor-grabbing transition-[box-shadow,border-color,transform] duration-150",
-        "hover:-translate-y-0.5 hover:shadow-[0_0_0_2px_#a5b4fc,_0_6px_16px_rgba(99,102,241,0.12)]",
+        "hover:-translate-y-0.5 hover:shadow-[0_0_0_2px_var(--accent-focus-ring-hover),_0_6px_16px_var(--accent-focus-ring-shadow)]",
         selected
-          ? "border-indigo-300 dark:border-indigo-600 shadow-[0_0_0_2px_#6366f1]"
+          ? "border-indigo-300 dark:border-indigo-600 shadow-[0_0_0_2px_var(--accent-focus-ring)]"
           : "border-slate-200/80 dark:border-slate-700/80",
       ].join(" ")}
     >

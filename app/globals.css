@@ -35,6 +35,90 @@
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.585 0.233 277.1);
+
+  /* ── Theme color tokens ───────────────────────────────────────────────────
+     Everything the graph/kanban views render — status, issue type, epic
+     accents, edges, badges — is centralized here so a future theme only has
+     to override this block (see html.dark below for the pattern). */
+
+  /* Status (To Do / In Progress / Done) */
+  --status-todo: #94a3b8;
+  --status-todo-text: #64748b;
+  --status-progress: #6366f1;
+  --status-progress-text: #6366f1;
+  --status-done: #22c55e;
+  --status-done-text: #16a34a;
+  --status-done-bg: rgba(34, 197, 94, 0.12);
+
+  /* Dependency edges */
+  --edge-blocks: #ef4444;
+  --edge-subtask: #3b82f6;
+  --edge-relates: #94a3b8;
+  --edge-clones: #a855f7;
+  --edge-default: #94a3b8;
+  --edge-label-bg: #ffffff;
+
+  /* Issue-type pills */
+  --type-story-color: #0891b2;
+  --type-story-bg: #e0f9ff;
+  --type-bug-color: #dc2626;
+  --type-bug-bg: #fee2e2;
+  --type-task-color: #0369a1;
+  --type-task-bg: #e0f2fe;
+  --type-epic-color: #d97706;
+  --type-epic-bg: #fef3c7;
+  --type-default-color: #64748b;
+  --type-default-bg: #f1f5f9;
+
+  /* Epic accent palette (cycles per epic) + unassigned group */
+  --epic-1: #6366f1; /* indigo */
+  --epic-2: #10b981; /* emerald */
+  --epic-3: #f59e0b; /* amber */
+  --epic-4: #ef4444; /* red */
+  --epic-5: #3b82f6; /* blue */
+  --epic-6: #a855f7; /* purple */
+  --epic-7: #ec4899; /* pink */
+  --epic-unassigned: #94a3b8;
+  --epic-text-on-accent: #ffffff;
+  --epic-tint-opacity: 7%;
+
+  /* Story group accent */
+  --story-border: #0891b2;
+  --story-header-text: #0e7490;
+  --story-tint: rgba(8, 145, 178, 0.05);
+  --story-divider: rgba(8, 145, 178, 0.15);
+
+  /* Card state accents */
+  --accent-external: #f97316;
+  --accent-blocked: #e11d48;
+  --accent-done-check: #16a34a;
+  --accent-epic-standalone: #fbbf24;
+  --accent-focus-ring: #6366f1;
+  --accent-focus-ring-shadow: rgba(99, 102, 241, 0.18);
+  --accent-focus-ring-hover: #a5b4fc;
+  --accent-critical: #f59e0b;
+
+  /* Cross-epic / cross-story badges */
+  --badge-cross-out-color: #9a3412;
+  --badge-cross-out-bg: #ffedd5;
+  --badge-cross-in-color: #991b1b;
+  --badge-cross-in-bg: #fee2e2;
+  --badge-cross-story-out-bg: #f97316;
+  --badge-cross-story-in-bg: #ef4444;
+  --badge-on-solid: #ffffff;
+
+  /* Avatar palette (hashed per-name) */
+  --avatar-1: #6366f1;
+  --avatar-2: #8b5cf6;
+  --avatar-3: #ec4899;
+  --avatar-4: #f59e0b;
+  --avatar-5: #10b981;
+  --avatar-6: #0ea5e9;
+  --avatar-7: #f97316;
+
+  /* Minimap / misc graph chrome */
+  --graph-node-fallback: #e2e8f0;
+  --graph-minimap-mask: rgba(248, 250, 252, 0.7);
 }
 
 html.dark {
@@ -64,6 +148,37 @@ html.dark {
   --border: oklch(0.269 0 0);
   --input: oklch(0.269 0 0);
   --ring: oklch(0.711 0.194 277.1);
+
+  /* ── Theme color tokens — dark overrides ─────────────────────────────────
+     Only values that actually change in dark mode are listed; everything
+     else falls through to the :root definitions above. */
+
+  --status-done-bg: rgba(34, 197, 94, 0.18);
+
+  --edge-label-bg: #1e293b;
+
+  --type-story-color: #a78bfa;
+  --type-story-bg: #1e1b4b;
+  --type-bug-color: #fca5a5;
+  --type-bug-bg: #2d1111;
+  --type-task-color: #7dd3fc;
+  --type-task-bg: #0c1f2e;
+  --type-epic-color: #fcd34d;
+  --type-epic-bg: #1c1500;
+  --type-default-color: #94a3b8;
+  --type-default-bg: #1e293b;
+
+  --epic-tint-opacity: 14%;
+
+  --accent-external: #fb923c;
+
+  --badge-cross-out-color: #fdba74;
+  --badge-cross-out-bg: #431407;
+  --badge-cross-in-color: #fca5a5;
+  --badge-cross-in-bg: #2d1111;
+
+  --graph-node-fallback: #334155;
+  --graph-minimap-mask: rgba(15, 23, 42, 0.7);
 }
 
 @theme inline {
@@ -262,18 +377,6 @@ body {
 .dark .adf-content .adf-th, .dark .adf-content .adf-td { border-color: #334155; }
 .dark .adf-content .adf-th { background: #1e293b; color: #94a3b8; }
 .dark .adf-content .adf-media-placeholder { background: #1e293b; border-color: #475569; color: #64748b; }
-
-/* ── IssueNode type pill dark mode overrides ─────────────────────────────── */
-/* These override the hardcoded inline hex colors set in IssueNode.tsx        */
-.dark [data-issue-type="Story"]   { color: #a78bfa !important; background: #1e1b4b !important; }
-.dark [data-issue-type="Bug"]     { color: #fca5a5 !important; background: #2d1111 !important; }
-.dark [data-issue-type="Task"]    { color: #7dd3fc !important; background: #0c1f2e !important; }
-.dark [data-issue-type="Subtask"] { color: #7dd3fc !important; background: #0c1f2e !important; }
-.dark [data-issue-type="Epic"]    { color: #fcd34d !important; background: #1c1500 !important; }
-
-/* ── External-dependency badge dark mode override ────────────────────────── */
-/* orange-400 text on orange-950 background */
-.dark [data-external="true"] { color: #fb923c !important; background: #431407 !important; }
 
 /* ── EpicGroupNode dark mode — overlay darkens the per-epic tint ─────────── */
 .dark .react-flow__node-epicGroupNode > div > div:first-child {

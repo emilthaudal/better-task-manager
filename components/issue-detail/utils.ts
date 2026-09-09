@@ -3,7 +3,10 @@ export function avatarInitials(name: string): string {
 }
 
 export function avatarColor(name: string): string {
-  const colors = ["#6366f1", "#8b5cf6", "#ec4899", "#f59e0b", "#10b981", "#0ea5e9", "#f97316"];
+  const colors = [
+    "var(--avatar-1)", "var(--avatar-2)", "var(--avatar-3)", "var(--avatar-4)",
+    "var(--avatar-5)", "var(--avatar-6)", "var(--avatar-7)",
+  ];
   let hash = 0;
   for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
   return colors[Math.abs(hash) % colors.length];

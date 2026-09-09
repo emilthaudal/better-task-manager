@@ -42,7 +42,7 @@ const PRO_OPTIONS = { hideAttribution: true } as const;
 
 /** Amber ring style applied to nodes on the critical path. */
 const CRITICAL_NODE_STYLE: React.CSSProperties = {
-  outline: "2px solid #f59e0b",
+  outline: "2px solid var(--accent-critical)",
   outlineOffset: "2px",
   borderRadius: "12px",
 };
@@ -109,8 +109,8 @@ export default function GraphView({ issues, latestIssues, onNodeSelect, selected
 
   // Stable nodeColor callback — avoids MiniMap re-rendering on every render
   const miniMapNodeColor = useCallback((n: AnyNode) => {
-    if (n.type === "issueNode") return n.data.bgColor ?? "#e2e8f0";
-    return "#e2e8f0";
+    if (n.type === "issueNode") return n.data.bgColor ?? "var(--graph-node-fallback)";
+    return "var(--graph-node-fallback)";
   }, []);
 
   // Build the ELK layout once — when initial issues first arrive.
@@ -443,7 +443,7 @@ export default function GraphView({ issues, latestIssues, onNodeSelect, selected
         <Controls />
         <MiniMap
           nodeColor={miniMapNodeColor}
-          maskColor="rgba(248,250,252,0.7)"
+          maskColor="var(--graph-minimap-mask)"
           className="!border-slate-200 dark:!border-slate-700"
         />
       </ReactFlow>
