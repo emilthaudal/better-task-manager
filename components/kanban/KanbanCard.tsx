@@ -161,6 +161,11 @@ export default function KanbanCard({
       {...listeners}
       {...attributes}
       onClick={onClick}
+      // Prevents the browser's default click-to-focus scrollIntoView nudge —
+      // without this, starting a drag near a sticky column header shifts the
+      // whole board by a couple of pixels as the browser "helpfully" scrolls
+      // the newly-focused card fully into view. Keyboard focus (Tab) is unaffected.
+      onMouseDown={(e) => e.preventDefault()}
       role="button"
       tabIndex={0}
       onKeyDown={(e) => {
