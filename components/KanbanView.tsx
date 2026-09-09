@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { JiraIssue, JiraIssueType } from "@/lib/jira";
 import { STATUS_COLORS, EPIC_COLORS, UNASSIGNED_EPIC_COLOR, UNASSIGNED_EPIC_KEY } from "@/lib/graphConstants";
 
@@ -44,13 +44,17 @@ function isBoardable(issuetype: JiraIssueType): boolean {
 function findEpicRef(
   issue: JiraIssue,
   issueMap: Map<string, JiraIssue>,
-): { key: string; summary: string } | null {
+): { key: string; summary: string; isDone: boolean } | null {
   let current: JiraIssue | undefined = issue;
   while (current) {
     const parent = current.fields.parent;
     if (!parent) return null;
     if (parent.fields.issuetype.name === "Epic") {
-      return { key: parent.key, summary: parent.fields.summary };
+      return {
+        key: parent.key,
+        summary: parent.fields.summary,
+        isDone: parent.fields.status.statusCategory.key === "done",
+      };
     }
     current = issueMap.get(parent.key);
   }
@@ -77,6 +81,8 @@ interface EpicGroup {
   color: { tint: string; header: string; text: string; border: string };
   total: number;
   byStatus: Map<string, JiraIssue[]>;
+  /** Epic's own status is "Done" — as opposed to all its children merely being done. */
+  isDone: boolean;
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -91,6 +97,11 @@ export default function KanbanView({ issues, onIssueSelect, selectedKey }: Kanba
   const boardIssues = useMemo(() => issues.filter((i) => isBoardable(i.fields.issuetype)), [issues]);
   const issueMap = useMemo(() => new Map(boardIssues.map((i) => [i.key, i])), [boardIssues]);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  // Epics the user has explicitly expanded/collapsed — once touched, a group's
+  // done-ness no longer drives its collapsed state, so an intentional "let me
+  // look at this finished epic" choice doesn't get clobbered by the
+  // auto-collapse effect below on the next render or poll.
+  const userToggledRef = useRef<Set<string>>(new Set());
 
   // Global column set — every status that has at least one issue anywhere on
   // the board gets a column, shared by every epic group below (so a status
@@ -134,6 +145,7 @@ export default function KanbanView({ issues, onIssueSelect, selectedKey }: Kanba
           color: UNASSIGNED_EPIC_COLOR,
           total: 0,
           byStatus: new Map(),
+          isDone: epicRef?.isDone ?? false,
         };
         groups.set(key, group);
       }
@@ -158,6 +170,21 @@ export default function KanbanView({ issues, onIssueSelect, selectedKey }: Kanba
     return ordered;
   }, [boardIssues, issueMap]);
 
+  // Done epics start collapsed so finished work doesn't crowd the board —
+  // opt in per-epic (via toggleCollapsed) to look at one anyway.
+  useEffect(() => {
+    setCollapsed((prev) => {
+      let next: Set<string> | null = null;
+      for (const group of epicGroups) {
+        if (group.isDone && !userToggledRef.current.has(group.key) && !prev.has(group.key)) {
+          if (!next) next = new Set(prev);
+          next.add(group.key);
+        }
+      }
+      return next ?? prev;
+    });
+  }, [epicGroups]);
+
   if (boardIssues.length === 0) {
     return (
       <div className="flex flex-1 items-center justify-center text-slate-400 dark:text-slate-500 text-sm">
@@ -167,6 +194,7 @@ export default function KanbanView({ issues, onIssueSelect, selectedKey }: Kanba
   }
 
   function toggleCollapsed(key: string) {
+    userToggledRef.current.add(key);
     setCollapsed((prev) => {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key);
@@ -222,13 +250,18 @@ export default function KanbanView({ issues, onIssueSelect, selectedKey }: Kanba
             return (
               <div key={group.key} className="contents">
                 <div
-                  className="flex items-center gap-2 px-3 py-2 mt-3 rounded-md bg-slate-200/70 dark:bg-slate-800/70 hover:bg-slate-200 dark:hover:bg-slate-800"
+                  className={[
+                    "flex items-center gap-2 px-3 py-2 mt-3 rounded-md hover:bg-slate-200 dark:hover:bg-slate-800",
+                    group.isDone
+                      ? "bg-slate-100/70 dark:bg-slate-800/40"
+                      : "bg-slate-200/70 dark:bg-slate-800/70",
+                  ].join(" ")}
                   style={{ gridColumn: `1 / span ${columns.length}` }}
                 >
                   <button
                     type="button"
                     onClick={() => toggleCollapsed(group.key)}
-                    className="flex items-center gap-2 min-w-0 flex-1 text-left"
+                    className={["flex items-center gap-2 min-w-0 flex-1 text-left", group.isDone ? "opacity-70" : ""].join(" ")}
                   >
                     <span
                       className="text-slate-400 dark:text-slate-500 text-[10px] shrink-0 transition-transform"
@@ -249,13 +282,28 @@ export default function KanbanView({ issues, onIssueSelect, selectedKey }: Kanba
                           e.stopPropagation();
                           onIssueSelect?.(group.key);
                         }}
-                        className="text-[13px] font-semibold text-slate-700 dark:text-slate-200 truncate hover:underline hover:text-indigo-600 dark:hover:text-indigo-400"
+                        className={[
+                          "text-[13px] font-semibold truncate hover:underline hover:text-indigo-600 dark:hover:text-indigo-400",
+                          group.isDone ? "text-slate-500 dark:text-slate-400 line-through decoration-slate-400/60" : "text-slate-700 dark:text-slate-200",
+                        ].join(" ")}
                       >
                         {group.summary}
                       </span>
                     ) : (
                       <span className="text-[13px] font-semibold text-slate-700 dark:text-slate-200 truncate">
                         {group.summary}
+                      </span>
+                    )}
+                    {group.isDone && (
+                      <span
+                        className="flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-md tracking-wide shrink-0"
+                        style={{ color: STATUS_COLORS.done, background: "rgba(34,197,94,0.12)" }}
+                        title="Epic is done"
+                      >
+                        <svg width="9" height="9" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                          <path d="M3 8.5 6.2 12 13 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                        Done
                       </span>
                     )}
                   </button>

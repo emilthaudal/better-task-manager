@@ -177,7 +177,10 @@ export interface JiraIssue {
     status: JiraStatus;
     issuetype: JiraIssueType;
     assignee: JiraUser | null;
-    parent?: { id: string; key: string; fields: { summary: string; issuetype: JiraIssueType } };
+    // Jira always includes summary/status/issuetype on a parent link
+    // regardless of the requested `fields` param — these are fixed fields
+    // on the parent reference, not controlled by the search's field list.
+    parent?: { id: string; key: string; fields: { summary: string; issuetype: JiraIssueType; status: JiraStatus } };
     subtasks?: Array<{
       id: string;
       key: string;
