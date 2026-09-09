@@ -283,6 +283,491 @@ html[data-theme="tokyo-night"] {
   --graph-minimap-mask: rgba(26, 27, 38, 0.7);
 }
 
+/* ── Nord ─────────────────────────────────────────────────────────── */
+html[data-theme="nord"] {
+  --background: #2e3440;
+  --foreground: #eceff4;
+
+  --card: #3b4252;
+  --card-foreground: #eceff4;
+  --popover: #3b4252;
+  --popover-foreground: #eceff4;
+
+  --primary: #88c0d0;
+  --primary-foreground: #2e3440;
+
+  --secondary: #b48ead;
+  --secondary-foreground: #2e3440;
+
+  --muted: #434c5e;
+  --muted-foreground: #9aa5c9;
+  --accent: #434c5e;
+  --accent-foreground: #eceff4;
+  --destructive: #bf616a;
+  --destructive-foreground: #2e3440;
+  --border: #4c566a;
+  --input: #4c566a;
+  --ring: #88c0d0;
+
+  --status-todo: #9aa5c9;
+  --status-todo-text: #d8dee9;
+  --status-progress: #81a1c1;
+  --status-progress-text: #81a1c1;
+  --status-done: #a3be8c;
+  --status-done-text: #a3be8c;
+  --status-done-bg: rgba(163,190,140,0.18);
+
+  --edge-blocks: #bf616a;
+  --edge-subtask: #81a1c1;
+  --edge-relates: #9aa5c9;
+  --edge-clones: #b48ead;
+  --edge-default: #9aa5c9;
+  --edge-label-bg: #3b4252;
+
+  --type-story-color: #88c0d0;
+  --type-story-bg: rgba(136,192,208,0.15);
+  --type-bug-color: #bf616a;
+  --type-bug-bg: rgba(191,97,106,0.15);
+  --type-task-color: #81a1c1;
+  --type-task-bg: rgba(129,161,193,0.15);
+  --type-epic-color: #ebcb8b;
+  --type-epic-bg: rgba(235,203,139,0.15);
+  --type-default-color: #9aa5c9;
+  --type-default-bg: rgba(154,165,201,0.15);
+
+  --epic-1: #81a1c1;
+  --epic-2: #a3be8c;
+  --epic-3: #ebcb8b;
+  --epic-4: #bf616a;
+  --epic-5: #88c0d0;
+  --epic-6: #b48ead;
+  --epic-7: #d08770;
+  --epic-unassigned: #9aa5c9;
+  --epic-text-on-accent: #2e3440;
+  --epic-tint-opacity: 16%;
+
+  --story-border: #88c0d0;
+  --story-header-text: #88c0d0;
+  --story-tint: rgba(136,192,208,0.06);
+  --story-divider: rgba(136,192,208,0.15);
+
+  --accent-external: #d08770;
+  --accent-blocked: #bf616a;
+  --accent-done-check: #a3be8c;
+  --accent-epic-standalone: #ebcb8b;
+  --accent-focus-ring: #88c0d0;
+  --accent-focus-ring-shadow: rgba(136,192,208,0.25);
+  --accent-focus-ring-hover: #8fbcbb;
+  --accent-critical: #ebcb8b;
+
+  --badge-cross-out-color: #d08770;
+  --badge-cross-out-bg: rgba(208,135,112,0.15);
+  --badge-cross-in-color: #bf616a;
+  --badge-cross-in-bg: rgba(191,97,106,0.15);
+  --badge-cross-story-out-bg: #d08770;
+  --badge-cross-story-in-bg: #bf616a;
+  --badge-on-solid: #2e3440;
+
+  --avatar-1: #81a1c1;
+  --avatar-2: #b48ead;
+  --avatar-3: #bf616a;
+  --avatar-4: #ebcb8b;
+  --avatar-5: #a3be8c;
+  --avatar-6: #88c0d0;
+  --avatar-7: #d08770;
+
+  --graph-node-fallback: #434c5e;
+  --graph-minimap-mask: rgba(46,52,64,0.7);
+}
+
+/* ── Catppuccin Mocha ─────────────────────────────────────────────────────────── */
+html[data-theme="catppuccin-mocha"] {
+  --background: #1e1e2e;
+  --foreground: #cdd6f4;
+
+  --card: #313244;
+  --card-foreground: #cdd6f4;
+  --popover: #313244;
+  --popover-foreground: #cdd6f4;
+
+  --primary: #cba6f7;
+  --primary-foreground: #1e1e2e;
+
+  --secondary: #f5c2e7;
+  --secondary-foreground: #1e1e2e;
+
+  --muted: #45475a;
+  --muted-foreground: #9399b2;
+  --accent: #45475a;
+  --accent-foreground: #cdd6f4;
+  --destructive: #f38ba8;
+  --destructive-foreground: #1e1e2e;
+  --border: #45475a;
+  --input: #45475a;
+  --ring: #cba6f7;
+
+  --status-todo: #9399b2;
+  --status-todo-text: #bac2de;
+  --status-progress: #89b4fa;
+  --status-progress-text: #89b4fa;
+  --status-done: #a6e3a1;
+  --status-done-text: #a6e3a1;
+  --status-done-bg: rgba(166,227,161,0.18);
+
+  --edge-blocks: #f38ba8;
+  --edge-subtask: #89b4fa;
+  --edge-relates: #9399b2;
+  --edge-clones: #cba6f7;
+  --edge-default: #9399b2;
+  --edge-label-bg: #313244;
+
+  --type-story-color: #89dceb;
+  --type-story-bg: rgba(137,220,235,0.15);
+  --type-bug-color: #f38ba8;
+  --type-bug-bg: rgba(243,139,168,0.15);
+  --type-task-color: #89b4fa;
+  --type-task-bg: rgba(137,180,250,0.15);
+  --type-epic-color: #f9e2af;
+  --type-epic-bg: rgba(249,226,175,0.15);
+  --type-default-color: #9399b2;
+  --type-default-bg: rgba(147,153,178,0.15);
+
+  --epic-1: #89b4fa;
+  --epic-2: #a6e3a1;
+  --epic-3: #f9e2af;
+  --epic-4: #f38ba8;
+  --epic-5: #89dceb;
+  --epic-6: #cba6f7;
+  --epic-7: #fab387;
+  --epic-unassigned: #9399b2;
+  --epic-text-on-accent: #1e1e2e;
+  --epic-tint-opacity: 16%;
+
+  --story-border: #89dceb;
+  --story-header-text: #89dceb;
+  --story-tint: rgba(137,220,235,0.06);
+  --story-divider: rgba(137,220,235,0.15);
+
+  --accent-external: #fab387;
+  --accent-blocked: #f38ba8;
+  --accent-done-check: #a6e3a1;
+  --accent-epic-standalone: #f9e2af;
+  --accent-focus-ring: #cba6f7;
+  --accent-focus-ring-shadow: rgba(203,166,247,0.25);
+  --accent-focus-ring-hover: #b4befe;
+  --accent-critical: #f9e2af;
+
+  --badge-cross-out-color: #fab387;
+  --badge-cross-out-bg: rgba(250,179,135,0.15);
+  --badge-cross-in-color: #f38ba8;
+  --badge-cross-in-bg: rgba(243,139,168,0.15);
+  --badge-cross-story-out-bg: #fab387;
+  --badge-cross-story-in-bg: #f38ba8;
+  --badge-on-solid: #1e1e2e;
+
+  --avatar-1: #89b4fa;
+  --avatar-2: #cba6f7;
+  --avatar-3: #f38ba8;
+  --avatar-4: #f9e2af;
+  --avatar-5: #a6e3a1;
+  --avatar-6: #89dceb;
+  --avatar-7: #fab387;
+
+  --graph-node-fallback: #45475a;
+  --graph-minimap-mask: rgba(30,30,46,0.7);
+}
+
+/* ── Dracula ─────────────────────────────────────────────────────────── */
+html[data-theme="dracula"] {
+  --background: #282a36;
+  --foreground: #f8f8f2;
+
+  --card: #313442;
+  --card-foreground: #f8f8f2;
+  --popover: #313442;
+  --popover-foreground: #f8f8f2;
+
+  --primary: #bd93f9;
+  --primary-foreground: #282a36;
+
+  --secondary: #ff79c6;
+  --secondary-foreground: #282a36;
+
+  --muted: #44475a;
+  --muted-foreground: #9aa5d1;
+  --accent: #44475a;
+  --accent-foreground: #f8f8f2;
+  --destructive: #ff5555;
+  --destructive-foreground: #282a36;
+  --border: #44475a;
+  --input: #44475a;
+  --ring: #bd93f9;
+
+  --status-todo: #9aa5d1;
+  --status-todo-text: #dee0f3;
+  --status-progress: #8be9fd;
+  --status-progress-text: #8be9fd;
+  --status-done: #50fa7b;
+  --status-done-text: #50fa7b;
+  --status-done-bg: rgba(80,250,123,0.18);
+
+  --edge-blocks: #ff5555;
+  --edge-subtask: #8be9fd;
+  --edge-relates: #9aa5d1;
+  --edge-clones: #bd93f9;
+  --edge-default: #9aa5d1;
+  --edge-label-bg: #313442;
+
+  --type-story-color: #8be9fd;
+  --type-story-bg: rgba(139,233,253,0.15);
+  --type-bug-color: #ff5555;
+  --type-bug-bg: rgba(255,85,85,0.15);
+  --type-task-color: #8be9fd;
+  --type-task-bg: rgba(139,233,253,0.15);
+  --type-epic-color: #f1fa8c;
+  --type-epic-bg: rgba(241,250,140,0.15);
+  --type-default-color: #9aa5d1;
+  --type-default-bg: rgba(154,165,209,0.15);
+
+  --epic-1: #8be9fd;
+  --epic-2: #50fa7b;
+  --epic-3: #f1fa8c;
+  --epic-4: #ff5555;
+  --epic-5: #8be9fd;
+  --epic-6: #bd93f9;
+  --epic-7: #ffb86c;
+  --epic-unassigned: #9aa5d1;
+  --epic-text-on-accent: #282a36;
+  --epic-tint-opacity: 16%;
+
+  --story-border: #8be9fd;
+  --story-header-text: #8be9fd;
+  --story-tint: rgba(139,233,253,0.06);
+  --story-divider: rgba(139,233,253,0.15);
+
+  --accent-external: #ffb86c;
+  --accent-blocked: #ff5555;
+  --accent-done-check: #50fa7b;
+  --accent-epic-standalone: #f1fa8c;
+  --accent-focus-ring: #bd93f9;
+  --accent-focus-ring-shadow: rgba(189,147,249,0.25);
+  --accent-focus-ring-hover: #ff79c6;
+  --accent-critical: #f1fa8c;
+
+  --badge-cross-out-color: #ffb86c;
+  --badge-cross-out-bg: rgba(255,184,108,0.15);
+  --badge-cross-in-color: #ff5555;
+  --badge-cross-in-bg: rgba(255,85,85,0.15);
+  --badge-cross-story-out-bg: #ffb86c;
+  --badge-cross-story-in-bg: #ff5555;
+  --badge-on-solid: #282a36;
+
+  --avatar-1: #8be9fd;
+  --avatar-2: #bd93f9;
+  --avatar-3: #ff5555;
+  --avatar-4: #f1fa8c;
+  --avatar-5: #50fa7b;
+  --avatar-6: #8be9fd;
+  --avatar-7: #ffb86c;
+
+  --graph-node-fallback: #44475a;
+  --graph-minimap-mask: rgba(40,42,54,0.7);
+}
+
+/* ── Gruvbox Dark ─────────────────────────────────────────────────────────── */
+html[data-theme="gruvbox-dark"] {
+  --background: #282828;
+  --foreground: #ebdbb2;
+
+  --card: #3c3836;
+  --card-foreground: #ebdbb2;
+  --popover: #3c3836;
+  --popover-foreground: #ebdbb2;
+
+  --primary: #fe8019;
+  --primary-foreground: #282828;
+
+  --secondary: #d3869b;
+  --secondary-foreground: #282828;
+
+  --muted: #504945;
+  --muted-foreground: #a89984;
+  --accent: #504945;
+  --accent-foreground: #ebdbb2;
+  --destructive: #fb4934;
+  --destructive-foreground: #282828;
+  --border: #665c54;
+  --input: #665c54;
+  --ring: #fe8019;
+
+  --status-todo: #a89984;
+  --status-todo-text: #d5c4a1;
+  --status-progress: #83a598;
+  --status-progress-text: #83a598;
+  --status-done: #b8bb26;
+  --status-done-text: #b8bb26;
+  --status-done-bg: rgba(184,187,38,0.18);
+
+  --edge-blocks: #fb4934;
+  --edge-subtask: #83a598;
+  --edge-relates: #a89984;
+  --edge-clones: #d3869b;
+  --edge-default: #a89984;
+  --edge-label-bg: #3c3836;
+
+  --type-story-color: #8ec07c;
+  --type-story-bg: rgba(142,192,124,0.15);
+  --type-bug-color: #fb4934;
+  --type-bug-bg: rgba(251,73,52,0.15);
+  --type-task-color: #83a598;
+  --type-task-bg: rgba(131,165,152,0.15);
+  --type-epic-color: #fabd2f;
+  --type-epic-bg: rgba(250,189,47,0.15);
+  --type-default-color: #a89984;
+  --type-default-bg: rgba(168,153,132,0.15);
+
+  --epic-1: #83a598;
+  --epic-2: #b8bb26;
+  --epic-3: #fabd2f;
+  --epic-4: #fb4934;
+  --epic-5: #8ec07c;
+  --epic-6: #d3869b;
+  --epic-7: #fe8019;
+  --epic-unassigned: #a89984;
+  --epic-text-on-accent: #282828;
+  --epic-tint-opacity: 16%;
+
+  --story-border: #8ec07c;
+  --story-header-text: #8ec07c;
+  --story-tint: rgba(142,192,124,0.06);
+  --story-divider: rgba(142,192,124,0.15);
+
+  --accent-external: #fe8019;
+  --accent-blocked: #fb4934;
+  --accent-done-check: #b8bb26;
+  --accent-epic-standalone: #fabd2f;
+  --accent-focus-ring: #fe8019;
+  --accent-focus-ring-shadow: rgba(254,128,25,0.25);
+  --accent-focus-ring-hover: #fabd2f;
+  --accent-critical: #fabd2f;
+
+  --badge-cross-out-color: #fe8019;
+  --badge-cross-out-bg: rgba(254,128,25,0.15);
+  --badge-cross-in-color: #fb4934;
+  --badge-cross-in-bg: rgba(251,73,52,0.15);
+  --badge-cross-story-out-bg: #fe8019;
+  --badge-cross-story-in-bg: #fb4934;
+  --badge-on-solid: #282828;
+
+  --avatar-1: #83a598;
+  --avatar-2: #d3869b;
+  --avatar-3: #fb4934;
+  --avatar-4: #fabd2f;
+  --avatar-5: #b8bb26;
+  --avatar-6: #8ec07c;
+  --avatar-7: #fe8019;
+
+  --graph-node-fallback: #504945;
+  --graph-minimap-mask: rgba(40,40,40,0.7);
+}
+
+/* ── Solarized Light ─────────────────────────────────────────────────────────── */
+html[data-theme="solarized-light"] {
+  --background: #fdf6e3;
+  --foreground: #657b83;
+
+  --card: #eee8d5;
+  --card-foreground: #657b83;
+  --popover: #eee8d5;
+  --popover-foreground: #657b83;
+
+  --primary: #268bd2;
+  --primary-foreground: #fdf6e3;
+
+  --secondary: #6c71c4;
+  --secondary-foreground: #fdf6e3;
+
+  --muted: #eee8d5;
+  --muted-foreground: #93a1a1;
+  --accent: #eee8d5;
+  --accent-foreground: #657b83;
+  --destructive: #dc322f;
+  --destructive-foreground: #fdf6e3;
+  --border: #dfd8bf;
+  --input: #dfd8bf;
+  --ring: #268bd2;
+
+  --status-todo: #93a1a1;
+  --status-todo-text: #586e75;
+  --status-progress: #268bd2;
+  --status-progress-text: #268bd2;
+  --status-done: #859900;
+  --status-done-text: #859900;
+  --status-done-bg: rgba(133,153,0,0.16);
+
+  --edge-blocks: #dc322f;
+  --edge-subtask: #268bd2;
+  --edge-relates: #93a1a1;
+  --edge-clones: #6c71c4;
+  --edge-default: #93a1a1;
+  --edge-label-bg: #eee8d5;
+
+  --type-story-color: #2aa198;
+  --type-story-bg: rgba(42,161,152,0.12);
+  --type-bug-color: #dc322f;
+  --type-bug-bg: rgba(220,50,47,0.12);
+  --type-task-color: #268bd2;
+  --type-task-bg: rgba(38,139,210,0.12);
+  --type-epic-color: #b58900;
+  --type-epic-bg: rgba(181,137,0,0.12);
+  --type-default-color: #93a1a1;
+  --type-default-bg: rgba(147,161,161,0.14);
+
+  --epic-1: #268bd2;
+  --epic-2: #859900;
+  --epic-3: #b58900;
+  --epic-4: #dc322f;
+  --epic-5: #2aa198;
+  --epic-6: #6c71c4;
+  --epic-7: #cb4b16;
+  --epic-unassigned: #93a1a1;
+  --epic-text-on-accent: #fdf6e3;
+  --epic-tint-opacity: 10%;
+
+  --story-border: #2aa198;
+  --story-header-text: #2aa198;
+  --story-tint: rgba(42,161,152,0.06);
+  --story-divider: rgba(42,161,152,0.15);
+
+  --accent-external: #cb4b16;
+  --accent-blocked: #dc322f;
+  --accent-done-check: #859900;
+  --accent-epic-standalone: #b58900;
+  --accent-focus-ring: #268bd2;
+  --accent-focus-ring-shadow: rgba(38,139,210,0.18);
+  --accent-focus-ring-hover: #2aa198;
+  --accent-critical: #b58900;
+
+  --badge-cross-out-color: #cb4b16;
+  --badge-cross-out-bg: rgba(203,75,22,0.12);
+  --badge-cross-in-color: #dc322f;
+  --badge-cross-in-bg: rgba(220,50,47,0.12);
+  --badge-cross-story-out-bg: #cb4b16;
+  --badge-cross-story-in-bg: #dc322f;
+  --badge-on-solid: #fdf6e3;
+
+  --avatar-1: #268bd2;
+  --avatar-2: #6c71c4;
+  --avatar-3: #dc322f;
+  --avatar-4: #b58900;
+  --avatar-5: #859900;
+  --avatar-6: #2aa198;
+  --avatar-7: #cb4b16;
+
+  --graph-node-fallback: #eee8d5;
+  --graph-minimap-mask: rgba(253,246,227,0.7);
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

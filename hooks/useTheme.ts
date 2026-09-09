@@ -2,7 +2,15 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-export type Theme = "light" | "dark" | "tokyo-night";
+export type Theme =
+  | "light"
+  | "dark"
+  | "tokyo-night"
+  | "nord"
+  | "catppuccin-mocha"
+  | "dracula"
+  | "gruvbox-dark"
+  | "solarized-light";
 
 export interface ThemeInfo {
   value: Theme;
@@ -18,12 +26,17 @@ export const THEMES: ThemeInfo[] = [
   { value: "light", label: "Light", isDark: false, swatch: ["#ffffff", "#6366f1", "#e2e8f0"] },
   { value: "dark", label: "Dark", isDark: true, swatch: ["#0f172a", "#818cf8", "#334155"] },
   { value: "tokyo-night", label: "Tokyo Night", isDark: true, swatch: ["#1a1b26", "#7aa2f7", "#bb9af7"] },
+  { value: "nord", label: "Nord", isDark: true, swatch: ["#2e3440", "#88c0d0", "#b48ead"] },
+  { value: "catppuccin-mocha", label: "Catppuccin Mocha", isDark: true, swatch: ["#1e1e2e", "#cba6f7", "#f5c2e7"] },
+  { value: "dracula", label: "Dracula", isDark: true, swatch: ["#282a36", "#bd93f9", "#ff79c6"] },
+  { value: "gruvbox-dark", label: "Gruvbox Dark", isDark: true, swatch: ["#282828", "#fe8019", "#b8bb26"] },
+  { value: "solarized-light", label: "Solarized Light", isDark: false, swatch: ["#fdf6e3", "#268bd2", "#cb4b16"] },
 ];
 
 const STORAGE_KEY = "theme";
 
 function isTheme(value: string | null): value is Theme {
-  return value === "light" || value === "dark" || value === "tokyo-night";
+  return THEMES.some((t) => t.value === value);
 }
 
 function getInitialTheme(): Theme {
