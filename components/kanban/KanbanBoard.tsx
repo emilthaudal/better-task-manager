@@ -12,7 +12,7 @@ import {
 } from "@dnd-kit/core";
 import type { JiraIssue, JiraIssueType, JiraStatus } from "@/lib/jira";
 import { STATUS_COLORS, EPIC_COLORS, UNASSIGNED_EPIC_COLOR, UNASSIGNED_EPIC_KEY } from "@/lib/graphConstants";
-import { moveIssue } from "@/hooks/useIssueMutations";
+import { moveIssue, createIssue, fetchCreateIssueTypes } from "@/hooks/useIssueMutations";
 import KanbanColumn from "./KanbanColumn";
 import { KanbanCardOverlay } from "./KanbanCard";
 import { useToasts, ToastStack } from "./Toast";
@@ -84,9 +84,10 @@ interface KanbanBoardProps {
   issues: JiraIssue[];
   onIssueSelect?: (key: string) => void;
   selectedKey?: string | null;
+  projectKey: string;
 }
 
-export default function KanbanBoard({ issues, onIssueSelect, selectedKey }: KanbanBoardProps) {
+export default function KanbanBoard({ issues, onIssueSelect, selectedKey, projectKey }: KanbanBoardProps) {
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   // Epics the user has explicitly expanded/collapsed — once touched, a group's
   // done-ness no longer drives its collapsed state, so an intentional "let me
@@ -145,6 +146,13 @@ export default function KanbanBoard({ issues, onIssueSelect, selectedKey }: Kanb
       return a.statusName.localeCompare(b.statusName);
     });
   }, [boardIssues]);
+
+  // Quick-create always lands in the "To Do"-category column, matching where
+  // Jira's own create screen puts a fresh issue for almost every workflow.
+  const firstTodoColumnId = useMemo(
+    () => columns.find((c) => c.statusCategory === "new")?.statusId ?? columns[0]?.statusId,
+    [columns],
+  );
 
   const epicGroups: EpicGroup[] = useMemo(() => {
     const groups = new Map<string, EpicGroup>();
@@ -272,6 +280,65 @@ export default function KanbanBoard({ issues, onIssueSelect, selectedKey }: Kanb
     }
   }
 
+  const issueTypesRef = useRef<Promise<JiraIssueType[]> | null>(null);
+  function loadIssueTypes(): Promise<JiraIssueType[]> {
+    if (!issueTypesRef.current) {
+      issueTypesRef.current = fetchCreateIssueTypes(projectKey);
+    }
+    return issueTypesRef.current;
+  }
+
+  async function handleCreate(epicKey: string, summary: string) {
+    const types = await loadIssueTypes();
+    const defaultType = types.find((t) => t.name === "Task") ?? types[0];
+    if (!defaultType) {
+      push("This project has no issue types available to create.");
+      return;
+    }
+
+    const group = epicGroups.find((g) => g.key === epicKey);
+    const todoColumn = columns.find((c) => c.statusCategory === "new") ?? columns[0];
+
+    try {
+      const created = await createIssue({
+        projectKey,
+        issueTypeId: defaultType.id,
+        summary,
+        parentKey: epicKey === UNASSIGNED_EPIC_KEY ? undefined : epicKey,
+      });
+
+      // Build a reasonable placeholder immediately — the next 30s poll fills in
+      // any field Jira computed differently (e.g. a workflow's real initial status).
+      const placeholder: JiraIssue = {
+        id: created.id,
+        key: created.key,
+        fields: {
+          summary,
+          status: {
+            id: todoColumn?.statusId ?? "0",
+            name: todoColumn?.statusName ?? "To Do",
+            statusCategory: { id: 0, key: todoColumn?.statusCategory ?? "new", name: todoColumn?.statusCategory ?? "new" },
+          },
+          issuetype: defaultType,
+          assignee: null,
+          parent:
+            epicKey !== UNASSIGNED_EPIC_KEY && group
+              ? {
+                  id: epicKey,
+                  key: epicKey,
+                  fields: { summary: group.summary, issuetype: { id: "", name: "Epic", subtask: false }, status: { id: "", name: "", statusCategory: { id: 0, key: group.isDone ? "done" : "new", name: "" } } },
+                }
+              : undefined,
+          issuelinks: [],
+        },
+      };
+      setLocalIssues((prev) => [placeholder, ...prev]);
+    } catch (err) {
+      push(err instanceof Error ? err.message : "Failed to create issue.");
+      throw err; // let QuickAddRow know the submit failed so it keeps the draft
+    }
+  }
+
   if (boardIssues.length === 0) {
     return (
       <div className="flex flex-1 items-center justify-center text-slate-400 dark:text-slate-500 text-sm">
@@ -380,7 +447,7 @@ export default function KanbanBoard({ issues, onIssueSelect, selectedKey }: Kanb
                         {group.isDone && (
                           <span
                             className="flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-md tracking-wide shrink-0"
-                            style={{ color: STATUS_COLORS.done, background: "rgba(34,197,94,0.12)" }}
+                            style={{ color: STATUS_COLORS.done, background: "var(--status-done-bg)" }}
                             title="Epic is done"
                           >
                             <svg width="9" height="9" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -404,6 +471,7 @@ export default function KanbanBoard({ issues, onIssueSelect, selectedKey }: Kanb
                           selectedKey={selectedKey}
                           onIssueSelect={onIssueSelect}
                           pendingKeys={pendingKeys}
+                          onCreate={col.statusId === firstTodoColumnId ? (summary) => handleCreate(group.key, summary) : undefined}
                         />
                       ))}
                   </div>

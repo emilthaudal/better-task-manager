@@ -260,6 +260,7 @@ export default function ProjectGraphPage() {
                   issues={boardData.issues}
                   onIssueSelect={handleNodeSelect}
                   selectedKey={selectedKey}
+                  projectKey={projectKey}
                 />
               )}
             </>

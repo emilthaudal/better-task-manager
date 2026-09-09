@@ -3,6 +3,7 @@
 import { useDroppable } from "@dnd-kit/core";
 import type { JiraIssue } from "@/lib/jira";
 import KanbanCard from "./KanbanCard";
+import QuickAddRow from "./QuickAddRow";
 
 interface KanbanColumnProps {
   /** Droppable id: `${epicKey}::${statusId}` — scopes drag-and-drop to one swimlane, matching Jira's own board behavior. */
@@ -11,9 +12,11 @@ interface KanbanColumnProps {
   selectedKey?: string | null;
   onIssueSelect?: (key: string) => void;
   pendingKeys: Set<string>;
+  /** Present only on the first "To Do"-category column of each swimlane. */
+  onCreate?: (summary: string) => Promise<void>;
 }
 
-export default function KanbanColumn({ id, issues, selectedKey, onIssueSelect, pendingKeys }: KanbanColumnProps) {
+export default function KanbanColumn({ id, issues, selectedKey, onIssueSelect, pendingKeys, onCreate }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id });
 
   return (
@@ -24,6 +27,7 @@ export default function KanbanColumn({ id, issues, selectedKey, onIssueSelect, p
         isOver ? "bg-indigo-50 dark:bg-indigo-950/40 ring-1 ring-inset ring-indigo-300 dark:ring-indigo-700" : "bg-slate-100 dark:bg-slate-900",
       ].join(" ")}
     >
+      {onCreate && <QuickAddRow onSubmit={onCreate} />}
       {issues.map((issue) => (
         <KanbanCard
           key={issue.key}

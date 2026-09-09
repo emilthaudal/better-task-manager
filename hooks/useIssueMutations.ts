@@ -1,4 +1,4 @@
-import type { JiraTransition } from "@/lib/jira";
+import type { JiraIssueType, JiraTransition } from "@/lib/jira";
 
 interface PermissionsResponse {
   transitions: JiraTransition[];
@@ -35,4 +35,31 @@ export async function moveIssue(issueKey: string, targetStatusId: string): Promi
     const body = await r.json().catch(() => null);
     throw new Error(body?.error ?? `Failed to move issue (${r.status})`);
   }
+}
+
+export async function fetchCreateIssueTypes(projectKey: string): Promise<JiraIssueType[]> {
+  const r = await fetch(`/api/jira/issue-types?project=${encodeURIComponent(projectKey)}`);
+  if (!r.ok) throw new Error(`Failed to load issue types (${r.status})`);
+  return r.json() as Promise<JiraIssueType[]>;
+}
+
+export interface CreateIssuePayload {
+  projectKey: string;
+  issueTypeId: string;
+  summary: string;
+  parentKey?: string;
+}
+
+/** Creates an issue and returns its key. Lands wherever the project's workflow puts a new issue — usually the first column. */
+export async function createIssue(payload: CreateIssuePayload): Promise<{ id: string; key: string }> {
+  const r = await fetch("/api/jira/issue", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!r.ok) {
+    const body = await r.json().catch(() => null);
+    throw new Error(body?.error ?? `Failed to create issue (${r.status})`);
+  }
+  return r.json() as Promise<{ id: string; key: string }>;
 }

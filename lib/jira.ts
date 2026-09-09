@@ -448,6 +448,19 @@ export async function updateIssue(
   });
 }
 
+/** Issue types this project's create screen allows, excluding subtasks and epics (those need a parent/no parent respectively). */
+export async function getCreateIssueTypes(
+  projectKey: string,
+  session?: SessionData,
+): Promise<JiraIssueType[]> {
+  const data = await jiraFetch<{ projects: Array<{ issuetypes: JiraIssueType[] }> }>(
+    `/issue/createmeta?projectKeys=${encodeURIComponent(projectKey)}`,
+    session,
+  );
+  const types = data.projects[0]?.issuetypes ?? [];
+  return types.filter((t) => !t.subtask && t.name !== "Epic");
+}
+
 export interface CreateIssueInput {
   projectKey: string;
   issueTypeId: string;
