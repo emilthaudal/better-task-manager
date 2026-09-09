@@ -1,10 +1,8 @@
 "use client";
 
-import type { ReactNode } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import type { JiraIssue, JiraUser } from "@/lib/jira";
 import { STATUS_COLORS, ISSUE_TYPE_LABEL, ISSUE_TYPE_FALLBACK } from "@/lib/graphConstants";
-import CardMenu from "./CardMenu";
 import AssigneePicker, { avatarColor, avatarInitials } from "./AssigneePicker";
 
 function formatCreated(iso: string | undefined): string | null {
@@ -20,12 +18,10 @@ const CARD_BASE_CLASS =
 /** The card's visual body, shared between the in-list draggable card and the floating DragOverlay clone. */
 export function KanbanCardBody({
   issue,
-  menu,
   onAssign,
   teamMembers = [],
 }: {
   issue: JiraIssue;
-  menu?: ReactNode;
   onAssign?: (user: JiraUser | null) => void;
   teamMembers?: JiraUser[];
 }) {
@@ -45,7 +41,6 @@ export function KanbanCardBody({
           {issue.key}
         </span>
         <div className="flex items-center gap-0.5 shrink-0">
-          {menu}
           {onAssign ? (
             <AssigneePicker issue={issue} onAssign={onAssign} teamMembers={teamMembers} />
           ) : issue.fields.assignee ? (
@@ -124,9 +119,6 @@ interface KanbanCardProps {
   onClick: () => void;
   /** True while this card's own move is in flight — dims it and blocks re-dragging until it resolves. */
   pending?: boolean;
-  onEdit?: () => void;
-  onCloseIssue?: () => void;
-  onDelete?: () => void;
   onAssign?: (user: JiraUser | null) => void;
   teamMembers?: JiraUser[];
   /** True while any card on the board is being dragged — suppresses hover repaint on cards the pointer sweeps past mid-drag. */
@@ -138,9 +130,6 @@ export default function KanbanCard({
   selected,
   onClick,
   pending,
-  onEdit,
-  onCloseIssue,
-  onDelete,
   onAssign,
   teamMembers,
   dragActive,
@@ -149,11 +138,6 @@ export default function KanbanCard({
     id: issue.key,
     disabled: pending,
   });
-
-  const menu =
-    onEdit && onCloseIssue && onDelete ? (
-      <CardMenu onEdit={onEdit} onClose={onCloseIssue} onDelete={onDelete} />
-    ) : null;
 
   return (
     <div
@@ -198,7 +182,7 @@ export default function KanbanCard({
             ].join(" "),
       ].join(" ")}
     >
-      <KanbanCardBody issue={issue} menu={menu} onAssign={onAssign} teamMembers={teamMembers} />
+      <KanbanCardBody issue={issue} onAssign={onAssign} teamMembers={teamMembers} />
     </div>
   );
 }

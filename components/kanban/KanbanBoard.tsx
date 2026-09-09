@@ -12,18 +12,10 @@ import {
 } from "@dnd-kit/core";
 import type { JiraIssue, JiraIssueType, JiraStatus, JiraUser } from "@/lib/jira";
 import { STATUS_COLORS, EPIC_COLORS, UNASSIGNED_EPIC_COLOR, UNASSIGNED_EPIC_KEY } from "@/lib/graphConstants";
-import {
-  moveIssue,
-  createIssue,
-  fetchPermissions,
-  transitionIssueById,
-  deleteIssueRequest,
-  assignIssue,
-} from "@/hooks/useIssueMutations";
+import { moveIssue, createIssue, assignIssue } from "@/hooks/useIssueMutations";
 import KanbanColumn from "./KanbanColumn";
 import { KanbanCardOverlay } from "./KanbanCard";
 import { useToasts, ToastStack } from "./Toast";
-import EditIssueDialog from "./EditIssueDialog";
 import CreateIssueDialog from "./CreateIssueDialog";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -114,7 +106,6 @@ export default function KanbanBoard({ issues, onIssueSelect, selectedKey, projec
   const revertSnapshotRef = useRef<Map<string, JiraIssue>>(new Map());
   const [activeIssue, setActiveIssue] = useState<JiraIssue | null>(null);
   const { toasts, push, dismiss } = useToasts();
-  const [editingKey, setEditingKey] = useState<string | null>(null);
   const [createEpicKey, setCreateEpicKey] = useState<string | null>(null);
 
   useEffect(() => {
@@ -365,28 +356,6 @@ export default function KanbanBoard({ issues, onIssueSelect, selectedKey, projec
     setLocalIssues((prev) => [placeholder, ...prev]);
   }
 
-  async function handleCloseIssue(issueKey: string) {
-    pendingRef.current.add(issueKey);
-    setPendingKeys(new Set(pendingRef.current));
-    try {
-      const { transitions } = await fetchPermissions(issueKey);
-      const doneTransition = transitions.find((t) => t.to.statusCategory.key === "done" && t.isAvailable !== false);
-      if (!doneTransition) {
-        push("No transition to a Done status is available to you for this issue.");
-        return;
-      }
-      await transitionIssueById(issueKey, doneTransition.id);
-      setLocalIssues((prev) =>
-        prev.map((i) => (i.key === issueKey ? { ...i, fields: { ...i.fields, status: doneTransition.to } } : i)),
-      );
-    } catch (err) {
-      push(err instanceof Error ? err.message : "Failed to close issue.");
-    } finally {
-      pendingRef.current.delete(issueKey);
-      setPendingKeys(new Set(pendingRef.current));
-    }
-  }
-
   async function handleAssign(issueKey: string, user: JiraUser | null) {
     const original = issueMap.get(issueKey);
     if (!original) return;
@@ -405,41 +374,6 @@ export default function KanbanBoard({ issues, onIssueSelect, selectedKey, projec
       setPendingKeys(new Set(pendingRef.current));
     }
   }
-
-  async function handleDeleteIssue(issueKey: string) {
-    if (!window.confirm(`Delete ${issueKey}? This can't be undone.`)) return;
-    pendingRef.current.add(issueKey);
-    setPendingKeys(new Set(pendingRef.current));
-    try {
-      await deleteIssueRequest(issueKey);
-      setLocalIssues((prev) => prev.filter((i) => i.key !== issueKey));
-    } catch (err) {
-      push(err instanceof Error ? err.message : "Failed to delete issue.");
-    } finally {
-      pendingRef.current.delete(issueKey);
-      setPendingKeys(new Set(pendingRef.current));
-    }
-  }
-
-  function handleSaved(issueKey: string, patch: { summary?: string; status?: JiraStatus; assignee?: JiraIssue["fields"]["assignee"] }) {
-    setLocalIssues((prev) =>
-      prev.map((i) =>
-        i.key === issueKey
-          ? {
-              ...i,
-              fields: {
-                ...i.fields,
-                ...(patch.summary ? { summary: patch.summary } : {}),
-                ...(patch.status ? { status: patch.status } : {}),
-                ...(patch.assignee !== undefined ? { assignee: patch.assignee } : {}),
-              },
-            }
-          : i,
-      ),
-    );
-  }
-
-  const editingIssue = editingKey ? issueMap.get(editingKey) : undefined;
 
   if (boardIssues.length === 0) {
     return (
@@ -580,9 +514,6 @@ export default function KanbanBoard({ issues, onIssueSelect, selectedKey, projec
                           onIssueSelect={onIssueSelect}
                           pendingKeys={pendingKeys}
                           onOpenCreate={col.statusId === firstTodoColumnId ? () => setCreateEpicKey(group.key) : undefined}
-                          onEditIssue={setEditingKey}
-                          onCloseIssue={handleCloseIssue}
-                          onDeleteIssue={handleDeleteIssue}
                           onAssignIssue={handleAssign}
                           teamMembers={teamMembers}
                           dragActive={activeIssue !== null}
@@ -601,15 +532,6 @@ export default function KanbanBoard({ issues, onIssueSelect, selectedKey, projec
       </DragOverlay>
 
       <ToastStack toasts={toasts} onDismiss={dismiss} />
-
-      {editingIssue && (
-        <EditIssueDialog
-          issue={editingIssue}
-          onClose={() => setEditingKey(null)}
-          onSaved={(patch) => handleSaved(editingIssue.key, patch)}
-          onError={push}
-        />
-      )}
 
       {createEpicKey && (
         <CreateIssueDialog

@@ -14,9 +14,6 @@ interface KanbanColumnProps {
   pendingKeys: Set<string>;
   /** Present only on the first "To Do"-category column of each swimlane. */
   onOpenCreate?: () => void;
-  onEditIssue?: (key: string) => void;
-  onCloseIssue?: (key: string) => void;
-  onDeleteIssue?: (key: string) => void;
   onAssignIssue?: (key: string, user: JiraUser | null) => void;
   teamMembers?: JiraUser[];
   dragActive?: boolean;
@@ -29,9 +26,6 @@ export default function KanbanColumn({
   onIssueSelect,
   pendingKeys,
   onOpenCreate,
-  onEditIssue,
-  onCloseIssue,
-  onDeleteIssue,
   onAssignIssue,
   teamMembers,
   dragActive,
@@ -54,9 +48,6 @@ export default function KanbanColumn({
           selected={selectedKey === issue.key}
           onClick={() => onIssueSelect?.(issue.key)}
           pending={pendingKeys.has(issue.key)}
-          onEdit={onEditIssue ? () => onEditIssue(issue.key) : undefined}
-          onCloseIssue={onCloseIssue ? () => onCloseIssue(issue.key) : undefined}
-          onDelete={onDeleteIssue ? () => onDeleteIssue(issue.key) : undefined}
           onAssign={onAssignIssue ? (user) => onAssignIssue(issue.key, user) : undefined}
           teamMembers={teamMembers}
           dragActive={dragActive}

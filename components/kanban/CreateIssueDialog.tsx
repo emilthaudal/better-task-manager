@@ -5,13 +5,10 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
-  DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { JiraIssueType } from "@/lib/jira";
@@ -26,7 +23,7 @@ interface CreateIssueDialogProps {
   onCreate: (input: { summary: string; issueType: JiraIssueType; description?: string }) => Promise<void>;
 }
 
-/** Lightweight create dialog — title, type, and optional description. No modal-within-modal ceremony, just enough to match Jira's own create form without its full field sprawl. */
+/** Lightweight create dialog — title, type, and optional description. Styled after Linear's quick-create: the title field is the hero, metadata lives in small pill chips, no field labels or boxed borders. */
 export default function CreateIssueDialog({ epicSummary, projectKey, onClose, onCreate }: CreateIssueDialogProps) {
   const [types, setTypes] = useState<JiraIssueType[] | null>(null);
   const [summary, setSummary] = useState("");
@@ -66,74 +63,74 @@ export default function CreateIssueDialog({ epicSummary, projectKey, onClose, on
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>New issue</DialogTitle>
-          {epicSummary && <DialogDescription>In {epicSummary}</DialogDescription>}
-        </DialogHeader>
+      <DialogContent className="gap-0 p-0 sm:max-w-lg">
+        <DialogDescription className="sr-only">
+          Create a new issue{epicSummary ? ` in ${epicSummary}` : ""}
+        </DialogDescription>
 
-        <div className="flex flex-col gap-5">
-          <div className="grid grid-cols-[1fr_auto] gap-3">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="create-title">Title</Label>
-              <Input
-                id="create-title"
-                ref={titleRef}
-                value={summary}
-                onChange={(e) => setSummary(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSubmit();
-                  }
-                }}
-                placeholder="Issue title…"
-              />
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <Label>Type</Label>
-              <Select value={issueTypeId ?? undefined} onValueChange={setIssueTypeId} disabled={!types}>
-                <SelectTrigger className="w-[130px]">
-                  <SelectValue placeholder={types ? "Type" : "Loading…"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {types?.map((t) => {
-                    const info = ISSUE_TYPE_LABEL[t.name] ?? { short: t.name, ...ISSUE_TYPE_FALLBACK };
-                    return (
-                      <SelectItem key={t.id} value={t.id}>
-                        <span className="size-2 rounded-full shrink-0" style={{ background: info.color }} />
-                        {t.name}
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="create-description" className="justify-between">
-              Description <span className="text-xs font-normal text-muted-foreground">optional</span>
-            </Label>
-            <Textarea
-              id="create-description"
-              rows={3}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Add more detail…"
-            />
-          </div>
+        <div className="flex items-center gap-1.5 px-5 pt-4 pb-1 text-sm text-muted-foreground">
+          {epicSummary && <span className="max-w-[240px] truncate">{epicSummary}</span>}
+          {epicSummary && <span aria-hidden>›</span>}
+          <DialogTitle className="text-sm leading-none font-normal text-muted-foreground">New issue</DialogTitle>
         </div>
 
-        <DialogFooter>
-          <Button variant="ghost" onClick={onClose}>
+        <div className="flex flex-col px-5 pb-2">
+          <Input
+            id="create-title"
+            ref={titleRef}
+            value={summary}
+            onChange={(e) => setSummary(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSubmit();
+              }
+            }}
+            placeholder="Issue title"
+            className="h-auto border-0 bg-transparent px-0 py-1 text-xl font-medium shadow-none placeholder:text-muted-foreground/50 focus-visible:ring-0"
+          />
+          <Textarea
+            id="create-description"
+            rows={2}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Add description…"
+            className="min-h-9 border-0 bg-transparent px-0 py-1 text-sm shadow-none placeholder:text-muted-foreground/40 focus-visible:ring-0"
+          />
+        </div>
+
+        <div className="flex items-center gap-2 px-5 pb-4">
+          <Select value={issueTypeId ?? undefined} onValueChange={setIssueTypeId} disabled={!types}>
+            <SelectTrigger className="h-7 w-fit gap-1 rounded-full border-border/60 bg-transparent px-2.5 text-xs font-medium shadow-none hover:bg-accent">
+              <SelectValue placeholder={types ? "Type" : "Loading…"} />
+            </SelectTrigger>
+            <SelectContent>
+              {types?.map((t) => {
+                const info = ISSUE_TYPE_LABEL[t.name] ?? { short: t.name, ...ISSUE_TYPE_FALLBACK };
+                return (
+                  <SelectItem key={t.id} value={t.id}>
+                    <span className="size-2 rounded-full shrink-0" style={{ background: info.color }} />
+                    {t.name}
+                  </SelectItem>
+                );
+              })}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex items-center justify-end gap-1 px-4 py-3">
+          <Button variant="ghost" size="sm" onClick={onClose} className="text-muted-foreground">
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={!summary.trim() || !issueTypeId || submitting}>
+          <Button
+            size="sm"
+            onClick={handleSubmit}
+            disabled={!summary.trim() || !issueTypeId || submitting}
+            className="rounded-full px-4"
+          >
             {submitting ? "Creating…" : "Create issue"}
           </Button>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );
