@@ -36,9 +36,9 @@ export default function QuickAddRow({ onSubmit }: QuickAddRowProps) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex items-center gap-1.5 text-[12.5px] font-semibold text-slate-400 dark:text-slate-500 border border-dashed border-slate-300 dark:border-slate-600 rounded-lg px-2.5 py-1.5 hover:text-slate-600 dark:hover:text-slate-300 hover:border-slate-400 dark:hover:border-slate-500 hover:bg-white dark:hover:bg-slate-800 transition-colors"
+        className="flex items-center gap-1.5 text-[12.5px] font-medium text-slate-400 dark:text-slate-500 rounded-md px-2 py-1.5 hover:bg-slate-200/60 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
       >
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M12 5v14M5 12h14" />
         </svg>
         Add issue
@@ -47,7 +47,7 @@ export default function QuickAddRow({ onSubmit }: QuickAddRowProps) {
   }
 
   return (
-    <div className="rounded-lg border border-indigo-300 dark:border-indigo-600 bg-white dark:bg-slate-800 p-2 shadow-[0_0_0_3px_rgba(99,102,241,0.12)]">
+    <div className="rounded-lg border border-slate-200/80 dark:border-slate-700/80 bg-white dark:bg-slate-800 p-2.5 shadow-[0_1px_3px_rgba(0,0,0,0.05)] focus-within:border-indigo-300 dark:focus-within:border-indigo-600 focus-within:ring-2 focus-within:ring-indigo-100 dark:focus-within:ring-indigo-950">
       <input
         autoFocus
         value={value}
@@ -58,14 +58,14 @@ export default function QuickAddRow({ onSubmit }: QuickAddRowProps) {
           if (e.key === "Escape") close();
         }}
         placeholder="Issue title…"
-        className="w-full text-[13px] bg-transparent outline-none text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500"
+        className="w-full text-[12.5px] font-medium bg-transparent outline-none text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 placeholder:font-normal"
       />
-      <div className="flex items-center gap-1.5 mt-2">
+      <div className="flex items-center gap-3 mt-2">
         <button
           type="button"
           onClick={submit}
           disabled={!value.trim() || submitting}
-          className="text-[11.5px] font-semibold px-2.5 py-1 rounded-md bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:hover:bg-indigo-600 text-white transition-colors"
+          className="text-[11.5px] font-semibold px-2.5 py-1 rounded-md bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:hover:bg-indigo-600 text-white transition-colors"
         >
           {submitting ? "Creating…" : "Create"}
         </button>
@@ -73,7 +73,7 @@ export default function QuickAddRow({ onSubmit }: QuickAddRowProps) {
           type="button"
           onClick={close}
           disabled={submitting}
-          className="text-[11.5px] font-semibold px-2.5 py-1 rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+          className="text-[11.5px] font-medium text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
         >
           Cancel
         </button>
