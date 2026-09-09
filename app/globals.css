@@ -181,6 +181,108 @@ html.dark {
   --graph-minimap-mask: rgba(15, 23, 42, 0.7);
 }
 
+/* ── Tokyo Night theme ────────────────────────────────────────────────────
+   Applied via html[data-theme="tokyo-night"] (set by useTheme, alongside
+   the .dark class so existing dark: Tailwind utility classes keep working).
+   Palette from folke/tokyonight.nvim ("night" variant). */
+html[data-theme="tokyo-night"] {
+  --background: #1a1b26;
+  --foreground: #c0caf5;
+
+  --card: #1f2335;
+  --card-foreground: #c0caf5;
+  --popover: #1f2335;
+  --popover-foreground: #c0caf5;
+
+  --primary: #7aa2f7;
+  --primary-foreground: #1a1b26;
+
+  --secondary: #bb9af7;
+  --secondary-foreground: #1a1b26;
+
+  --muted: #292e42;
+  --muted-foreground: #737aa2;
+  --accent: #292e42;
+  --accent-foreground: #c0caf5;
+  --destructive: #f7768e;
+  --destructive-foreground: #1a1b26;
+  --border: #292e42;
+  --input: #292e42;
+  --ring: #7aa2f7;
+
+  /* ── Theme color tokens — Tokyo Night ─────────────────────────────────── */
+
+  --status-todo: #565f89;
+  --status-todo-text: #a9b1d6;
+  --status-progress: #7aa2f7;
+  --status-progress-text: #7aa2f7;
+  --status-done: #9ece6a;
+  --status-done-text: #9ece6a;
+  --status-done-bg: rgba(158, 206, 106, 0.18);
+
+  --edge-blocks: #f7768e;
+  --edge-subtask: #7aa2f7;
+  --edge-relates: #565f89;
+  --edge-clones: #bb9af7;
+  --edge-default: #565f89;
+  --edge-label-bg: #1f2335;
+
+  --type-story-color: #7dcfff;
+  --type-story-bg: rgba(125, 207, 255, 0.15);
+  --type-bug-color: #f7768e;
+  --type-bug-bg: rgba(247, 118, 142, 0.15);
+  --type-task-color: #7aa2f7;
+  --type-task-bg: rgba(122, 162, 247, 0.15);
+  --type-epic-color: #e0af68;
+  --type-epic-bg: rgba(224, 175, 104, 0.15);
+  --type-default-color: #737aa2;
+  --type-default-bg: rgba(115, 122, 162, 0.15);
+
+  --epic-1: #7aa2f7; /* blue */
+  --epic-2: #9ece6a; /* green */
+  --epic-3: #e0af68; /* yellow */
+  --epic-4: #f7768e; /* red */
+  --epic-5: #7dcfff; /* cyan */
+  --epic-6: #bb9af7; /* magenta */
+  --epic-7: #ff9e64; /* orange */
+  --epic-unassigned: #565f89;
+  --epic-text-on-accent: #1a1b26;
+  --epic-tint-opacity: 16%;
+
+  --story-border: #7dcfff;
+  --story-header-text: #7dcfff;
+  --story-tint: rgba(125, 207, 255, 0.06);
+  --story-divider: rgba(125, 207, 255, 0.15);
+
+  --accent-external: #ff9e64;
+  --accent-blocked: #f7768e;
+  --accent-done-check: #9ece6a;
+  --accent-epic-standalone: #e0af68;
+  --accent-focus-ring: #7aa2f7;
+  --accent-focus-ring-shadow: rgba(122, 162, 247, 0.25);
+  --accent-focus-ring-hover: #7dcfff;
+  --accent-critical: #e0af68;
+
+  --badge-cross-out-color: #e0af68;
+  --badge-cross-out-bg: rgba(224, 175, 104, 0.15);
+  --badge-cross-in-color: #f7768e;
+  --badge-cross-in-bg: rgba(247, 118, 142, 0.15);
+  --badge-cross-story-out-bg: #ff9e64;
+  --badge-cross-story-in-bg: #f7768e;
+  --badge-on-solid: #1a1b26;
+
+  --avatar-1: #7aa2f7;
+  --avatar-2: #bb9af7;
+  --avatar-3: #f7768e;
+  --avatar-4: #e0af68;
+  --avatar-5: #9ece6a;
+  --avatar-6: #7dcfff;
+  --avatar-7: #ff9e64;
+
+  --graph-node-fallback: #292e42;
+  --graph-minimap-mask: rgba(26, 27, 38, 0.7);
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

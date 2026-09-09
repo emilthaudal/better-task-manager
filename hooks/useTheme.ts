@@ -2,49 +2,72 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-export type Theme = "light" | "dark";
+export type Theme = "light" | "dark" | "tokyo-night";
+
+export interface ThemeInfo {
+  value: Theme;
+  label: string;
+  /** Whether this theme is dark-family — drives the `dark` class so existing
+   *  `dark:` Tailwind utility classes throughout the app stay correct. */
+  isDark: boolean;
+  /** Small swatch colors shown next to the theme name in the picker. */
+  swatch: [string, string, string];
+}
+
+export const THEMES: ThemeInfo[] = [
+  { value: "light", label: "Light", isDark: false, swatch: ["#ffffff", "#6366f1", "#e2e8f0"] },
+  { value: "dark", label: "Dark", isDark: true, swatch: ["#0f172a", "#818cf8", "#334155"] },
+  { value: "tokyo-night", label: "Tokyo Night", isDark: true, swatch: ["#1a1b26", "#7aa2f7", "#bb9af7"] },
+];
 
 const STORAGE_KEY = "theme";
+
+function isTheme(value: string | null): value is Theme {
+  return value === "light" || value === "dark" || value === "tokyo-night";
+}
 
 function getInitialTheme(): Theme {
   if (typeof window === "undefined") return "light";
   const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored === "dark" || stored === "light") return stored;
+  if (isTheme(stored)) return stored;
   // Respect OS preference if no explicit choice stored
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
 function applyTheme(theme: Theme) {
   const root = document.documentElement;
-  if (theme === "dark") {
-    root.classList.add("dark");
+  const info = THEMES.find((t) => t.value === theme) ?? THEMES[0];
+  root.classList.toggle("dark", info.isDark);
+  // "light" and "dark" reuse the plain :root / html.dark palettes — no
+  // data-theme needed. Named palettes (tokyo-night, ...) set it so their
+  // `[data-theme="..."]` override block in globals.css takes effect.
+  if (theme === "light" || theme === "dark") {
+    root.removeAttribute("data-theme");
   } else {
-    root.classList.remove("dark");
+    root.setAttribute("data-theme", theme);
   }
 }
 
 /**
- * Hook that manages the light/dark theme.
+ * Hook that manages the app theme (light / dark / tokyo-night, ...).
  * - Reads the initial theme from localStorage (or OS preference).
- * - Applies the `dark` class to `<html>` whenever the theme changes.
+ * - Applies the `dark` class + `data-theme` attribute to `<html>` whenever
+ *   the theme changes.
  * - Persists the user's choice to localStorage.
  */
-export function useTheme(): { theme: Theme; toggle: () => void } {
+export function useTheme(): { theme: Theme; setTheme: (theme: Theme) => void } {
   // Initializer runs once on the client — avoids a setState-in-effect lint error.
-  const [theme, setTheme] = useState<Theme>(getInitialTheme);
+  const [theme, setThemeState] = useState<Theme>(getInitialTheme);
 
-  // Sync the <html> class whenever theme changes (including after hydration).
+  // Sync the <html> class/attribute whenever theme changes (including after hydration).
   useEffect(() => {
     applyTheme(theme);
   }, [theme]);
 
-  const toggle = useCallback(() => {
-    setTheme((prev) => {
-      const next: Theme = prev === "light" ? "dark" : "light";
-      localStorage.setItem(STORAGE_KEY, next);
-      return next;
-    });
+  const setTheme = useCallback((next: Theme) => {
+    localStorage.setItem(STORAGE_KEY, next);
+    setThemeState(next);
   }, []);
 
-  return { theme, toggle };
+  return { theme, setTheme };
 }
