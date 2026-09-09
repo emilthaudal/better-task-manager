@@ -15,17 +15,19 @@ function formatCreated(iso: string | undefined): string | null {
 }
 
 const CARD_BASE_CLASS =
-  "text-left rounded-lg border bg-white dark:bg-slate-800 p-2.5 shrink-0 shadow-[0_1px_3px_rgba(0,0,0,0.05)]";
+  "text-left rounded-lg border bg-card p-2.5 shrink-0 shadow-[0_1px_3px_rgba(0,0,0,0.05)]";
 
 /** The card's visual body, shared between the in-list draggable card and the floating DragOverlay clone. */
 export function KanbanCardBody({
   issue,
   menu,
   onAssign,
+  teamMembers = [],
 }: {
   issue: JiraIssue;
   menu?: ReactNode;
   onAssign?: (user: JiraUser | null) => void;
+  teamMembers?: JiraUser[];
 }) {
   const typeInfo = ISSUE_TYPE_LABEL[issue.fields.issuetype.name] ?? {
     short: issue.fields.issuetype.name,
@@ -39,13 +41,13 @@ export function KanbanCardBody({
   return (
     <>
       <div className="flex items-center justify-between gap-2 mb-1.5">
-        <span className="text-[11px] font-mono font-semibold text-slate-400 dark:text-slate-500 truncate">
+        <span className="text-[11px] font-mono font-semibold text-muted-foreground truncate">
           {issue.key}
         </span>
         <div className="flex items-center gap-0.5 shrink-0">
           {menu}
           {onAssign ? (
-            <AssigneePicker issue={issue} onAssign={onAssign} />
+            <AssigneePicker issue={issue} onAssign={onAssign} teamMembers={teamMembers} />
           ) : issue.fields.assignee ? (
             <span
               className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white shrink-0"
@@ -56,7 +58,7 @@ export function KanbanCardBody({
             </span>
           ) : (
             <span
-              className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500"
+              className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 bg-accent text-muted-foreground"
               title="Unassigned"
             >
               <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
@@ -69,7 +71,7 @@ export function KanbanCardBody({
 
       <div className="flex items-start gap-1.5 mb-2">
         <span className="w-2 h-2 rounded-full shrink-0 mt-1" style={{ background: dotColor }} />
-        <span className="text-[12.5px] font-medium leading-snug line-clamp-3 text-slate-800 dark:text-slate-100">
+        <span className="text-[12.5px] font-medium leading-snug line-clamp-3 text-foreground">
           {issue.fields.summary}
         </span>
       </div>
@@ -94,7 +96,7 @@ export function KanbanCardBody({
             </span>
           )}
           {created && (
-            <span className="text-[10px] text-slate-400 dark:text-slate-500 shrink-0" title="Created">
+            <span className="text-[10px] text-muted-foreground shrink-0" title="Created">
               {created}
             </span>
           )}
@@ -108,7 +110,7 @@ export function KanbanCardBody({
 export function KanbanCardOverlay({ issue }: { issue: JiraIssue }) {
   return (
     <div
-      className={[CARD_BASE_CLASS, "border-indigo-300 dark:border-indigo-600 rotate-2 shadow-xl cursor-grabbing"].join(" ")}
+      className={[CARD_BASE_CLASS, "border-primary rotate-2 shadow-xl cursor-grabbing"].join(" ")}
       style={{ width: 236 }}
     >
       <KanbanCardBody issue={issue} />
@@ -126,6 +128,9 @@ interface KanbanCardProps {
   onCloseIssue?: () => void;
   onDelete?: () => void;
   onAssign?: (user: JiraUser | null) => void;
+  teamMembers?: JiraUser[];
+  /** True while any card on the board is being dragged — suppresses hover repaint on cards the pointer sweeps past mid-drag. */
+  dragActive?: boolean;
 }
 
 export default function KanbanCard({
@@ -137,6 +142,8 @@ export default function KanbanCard({
   onCloseIssue,
   onDelete,
   onAssign,
+  teamMembers,
+  dragActive,
 }: KanbanCardProps) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: issue.key,
@@ -165,14 +172,17 @@ export default function KanbanCard({
       }}
       className={[
         CARD_BASE_CLASS,
-        "group cursor-grab active:cursor-grabbing transition-[box-shadow,border-color,transform] duration-150",
-        "hover:-translate-y-0.5 hover:shadow-[0_0_0_2px_var(--accent-focus-ring-hover),_0_6px_16px_var(--accent-focus-ring-shadow)]",
-        selected
-          ? "border-indigo-300 dark:border-indigo-600 shadow-[0_0_0_2px_var(--accent-focus-ring)]"
-          : "border-slate-200/80 dark:border-slate-700/80",
+        "group cursor-grab active:cursor-grabbing",
+        dragActive
+          ? "border-border"
+          : [
+              "transition-[box-shadow,border-color,transform] duration-150",
+              "hover:-translate-y-0.5 hover:shadow-[0_0_0_2px_var(--accent-focus-ring-hover),_0_6px_16px_var(--accent-focus-ring-shadow)]",
+              selected ? "border-primary shadow-[0_0_0_2px_var(--accent-focus-ring)]" : "border-border",
+            ].join(" "),
       ].join(" ")}
     >
-      <KanbanCardBody issue={issue} menu={menu} onAssign={onAssign} />
+      <KanbanCardBody issue={issue} menu={menu} onAssign={onAssign} teamMembers={teamMembers} />
     </div>
   );
 }

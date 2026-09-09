@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { AlertCircle, User as UserIcon } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -8,7 +9,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { JiraIssue, JiraTransition, JiraUser } from "@/lib/jira";
 import { adfToPlainText, textToAdf } from "@/lib/adf";
@@ -113,36 +119,39 @@ export default function EditIssueDialog({ issue, onClose, onSaved, onError }: Ed
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <span className="text-[12px] font-mono font-semibold text-muted-foreground">{issue.key}</span>
+            <Badge variant="outline" className="font-mono text-[11px] font-semibold text-muted-foreground">
+              {issue.key}
+            </Badge>
             Edit issue
           </DialogTitle>
         </DialogHeader>
 
         {loading ? (
-          <div className="py-8 text-center text-sm text-muted-foreground">Loading…</div>
-        ) : (
           <div className="flex flex-col gap-4">
+            <Skeleton className="h-9 w-full" />
+            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-9 w-full" />
+          </div>
+        ) : (
+          <div className="flex flex-col gap-5">
             <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
-                Title
-              </label>
+              <Label htmlFor="edit-title">Title</Label>
               {canEditSummary ? (
-                <input
-                  value={summary}
-                  onChange={(e) => setSummary(e.target.value)}
-                  className="text-sm rounded-md border border-border bg-muted px-3 py-2 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900"
-                />
+                <Input id="edit-title" value={summary} onChange={(e) => setSummary(e.target.value)} />
               ) : (
                 <p className="text-sm text-muted-foreground">{summary}</p>
               )}
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
-                Description
-              </label>
+              <Label htmlFor="edit-description">Description</Label>
               {canEditDescription ? (
-                <Textarea rows={4} value={description} onChange={(e) => setDescription(e.target.value)} />
+                <Textarea
+                  id="edit-description"
+                  rows={4}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                />
               ) : (
                 <p className="text-sm text-muted-foreground whitespace-pre-wrap">
                   {description || "No description."}
@@ -150,86 +159,72 @@ export default function EditIssueDialog({ issue, onClose, onSaved, onError }: Ed
               )}
             </div>
 
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
-                Status
-              </label>
-              {transitions.length > 0 ? (
-                <Select value={transitionId ?? undefined} onValueChange={setTransitionId}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder={issue.fields.status.name} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {transitions.map((t) => (
-                      <SelectItem key={t.id} value={t.id} disabled={t.isAvailable === false}>
-                        {t.name} → {t.to.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  {issue.fields.status.name} — no other status is available to you.
-                </p>
-              )}
-            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1.5">
+                <Label>Status</Label>
+                {transitions.length > 0 ? (
+                  <Select value={transitionId ?? undefined} onValueChange={setTransitionId}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder={issue.fields.status.name} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {transitions.map((t) => (
+                        <SelectItem key={t.id} value={t.id} disabled={t.isAvailable === false}>
+                          {t.to.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <p className="text-sm text-muted-foreground py-1.5">{issue.fields.status.name}</p>
+                )}
+              </div>
 
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
-                Assignee
-              </label>
-              {canEditAssignee ? (
-                <Select
-                  value={assigneeAccountId ?? UNASSIGNED_VALUE}
-                  onValueChange={(v) => setAssigneeAccountId(v === UNASSIGNED_VALUE ? null : v)}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Unassigned" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={UNASSIGNED_VALUE}>Unassigned</SelectItem>
-                    {assignableUsers.map((u) => (
-                      <SelectItem key={u.accountId} value={u.accountId}>
-                        {u.displayName}
+              <div className="flex flex-col gap-1.5">
+                <Label>Assignee</Label>
+                {canEditAssignee ? (
+                  <Select
+                    value={assigneeAccountId ?? UNASSIGNED_VALUE}
+                    onValueChange={(v) => setAssigneeAccountId(v === UNASSIGNED_VALUE ? null : v)}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Unassigned" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={UNASSIGNED_VALUE}>
+                        <UserIcon className="opacity-50" /> Unassigned
                       </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  {issue.fields.assignee?.displayName ?? "Unassigned"}
-                </p>
-              )}
+                      {assignableUsers.map((u) => (
+                        <SelectItem key={u.accountId} value={u.accountId}>
+                          {u.displayName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <p className="text-sm text-muted-foreground py-1.5">
+                    {issue.fields.assignee?.displayName ?? "Unassigned"}
+                  </p>
+                )}
+              </div>
             </div>
 
             {issue.fields.priority && (
-              <div className="flex items-center gap-2 text-[11.5px] text-muted-foreground">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="12" cy="12" r="9" />
-                  <path d="M12 8v5M12 16h.01" />
-                </svg>
+              <p className="flex items-center gap-1.5 text-[12px] text-muted-foreground">
+                <AlertCircle className="size-3.5 opacity-70" />
                 Priority ({issue.fields.priority.name}) isn&apos;t editable from this board yet.
-              </div>
+              </p>
             )}
           </div>
         )}
 
         <DialogFooter>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-[13px] font-semibold px-3 py-1.5 rounded-md text-muted-foreground hover:bg-accent transition-colors"
-          >
+          <Button variant="ghost" onClick={onClose}>
             Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={loading || saving}
-            className="text-[13px] font-semibold px-3.5 py-1.5 rounded-md bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white transition-colors"
-          >
+          </Button>
+          <Button onClick={handleSave} disabled={loading || saving}>
             {saving ? "Saving…" : "Save changes"}
-          </button>
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -10,20 +10,21 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import type { JiraIssue, JiraIssueType, JiraStatus } from "@/lib/jira";
+import type { JiraIssue, JiraIssueType, JiraStatus, JiraUser } from "@/lib/jira";
 import { STATUS_COLORS, EPIC_COLORS, UNASSIGNED_EPIC_COLOR, UNASSIGNED_EPIC_KEY } from "@/lib/graphConstants";
 import {
   moveIssue,
   createIssue,
-  fetchCreateIssueTypes,
   fetchPermissions,
   transitionIssueById,
   deleteIssueRequest,
+  assignIssue,
 } from "@/hooks/useIssueMutations";
 import KanbanColumn from "./KanbanColumn";
 import { KanbanCardOverlay } from "./KanbanCard";
 import { useToasts, ToastStack } from "./Toast";
 import EditIssueDialog from "./EditIssueDialog";
+import CreateIssueDialog from "./CreateIssueDialog";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -113,6 +114,7 @@ export default function KanbanBoard({ issues, onIssueSelect, selectedKey, projec
   const [activeIssue, setActiveIssue] = useState<JiraIssue | null>(null);
   const { toasts, push, dismiss } = useToasts();
   const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [createEpicKey, setCreateEpicKey] = useState<string | null>(null);
 
   useEffect(() => {
     setLocalIssues((prev) => {
@@ -128,6 +130,17 @@ export default function KanbanBoard({ issues, onIssueSelect, selectedKey, projec
 
   const boardIssues = useMemo(() => localIssues.filter((i) => isBoardable(i.fields.issuetype)), [localIssues]);
   const issueMap = useMemo(() => new Map(boardIssues.map((i) => [i.key, i])), [boardIssues]);
+
+  // Everyone already assigned to something on this board — the assignee picker's
+  // default suggestions, so it doesn't dump the whole org on you before you search.
+  const teamMembers = useMemo(() => {
+    const byId = new Map<string, JiraUser>();
+    for (const issue of boardIssues) {
+      const a = issue.fields.assignee;
+      if (a) byId.set(a.accountId, a);
+    }
+    return Array.from(byId.values()).sort((a, b) => a.displayName.localeCompare(b.displayName));
+  }, [boardIssues]);
 
   // Global column set — every status that has at least one issue anywhere on
   // the board gets a column, shared by every epic group below (so a status
@@ -289,63 +302,47 @@ export default function KanbanBoard({ issues, onIssueSelect, selectedKey, projec
     }
   }
 
-  const issueTypesRef = useRef<Promise<JiraIssueType[]> | null>(null);
-  function loadIssueTypes(): Promise<JiraIssueType[]> {
-    if (!issueTypesRef.current) {
-      issueTypesRef.current = fetchCreateIssueTypes(projectKey);
-    }
-    return issueTypesRef.current;
-  }
-
-  async function handleCreate(epicKey: string, summary: string) {
-    const types = await loadIssueTypes();
-    const defaultType = types.find((t) => t.name === "Task") ?? types[0];
-    if (!defaultType) {
-      push("This project has no issue types available to create.");
-      return;
-    }
-
+  async function handleCreate(
+    epicKey: string,
+    input: { summary: string; issueType: JiraIssueType; description?: string },
+  ) {
     const group = epicGroups.find((g) => g.key === epicKey);
     const todoColumn = columns.find((c) => c.statusCategory === "new") ?? columns[0];
 
-    try {
-      const created = await createIssue({
-        projectKey,
-        issueTypeId: defaultType.id,
-        summary,
-        parentKey: epicKey === UNASSIGNED_EPIC_KEY ? undefined : epicKey,
-      });
+    const created = await createIssue({
+      projectKey,
+      issueTypeId: input.issueType.id,
+      summary: input.summary,
+      description: input.description,
+      parentKey: epicKey === UNASSIGNED_EPIC_KEY ? undefined : epicKey,
+    });
 
-      // Build a reasonable placeholder immediately — the next 30s poll fills in
-      // any field Jira computed differently (e.g. a workflow's real initial status).
-      const placeholder: JiraIssue = {
-        id: created.id,
-        key: created.key,
-        fields: {
-          summary,
-          status: {
-            id: todoColumn?.statusId ?? "0",
-            name: todoColumn?.statusName ?? "To Do",
-            statusCategory: { id: 0, key: todoColumn?.statusCategory ?? "new", name: todoColumn?.statusCategory ?? "new" },
-          },
-          issuetype: defaultType,
-          assignee: null,
-          parent:
-            epicKey !== UNASSIGNED_EPIC_KEY && group
-              ? {
-                  id: epicKey,
-                  key: epicKey,
-                  fields: { summary: group.summary, issuetype: { id: "", name: "Epic", subtask: false }, status: { id: "", name: "", statusCategory: { id: 0, key: group.isDone ? "done" : "new", name: "" } } },
-                }
-              : undefined,
-          issuelinks: [],
+    // Build a reasonable placeholder immediately — the next 30s poll fills in
+    // any field Jira computed differently (e.g. a workflow's real initial status).
+    const placeholder: JiraIssue = {
+      id: created.id,
+      key: created.key,
+      fields: {
+        summary: input.summary,
+        status: {
+          id: todoColumn?.statusId ?? "0",
+          name: todoColumn?.statusName ?? "To Do",
+          statusCategory: { id: 0, key: todoColumn?.statusCategory ?? "new", name: todoColumn?.statusCategory ?? "new" },
         },
-      };
-      setLocalIssues((prev) => [placeholder, ...prev]);
-    } catch (err) {
-      push(err instanceof Error ? err.message : "Failed to create issue.");
-      throw err; // let QuickAddRow know the submit failed so it keeps the draft
-    }
+        issuetype: input.issueType,
+        assignee: null,
+        parent:
+          epicKey !== UNASSIGNED_EPIC_KEY && group
+            ? {
+                id: epicKey,
+                key: epicKey,
+                fields: { summary: group.summary, issuetype: { id: "", name: "Epic", subtask: false }, status: { id: "", name: "", statusCategory: { id: 0, key: group.isDone ? "done" : "new", name: "" } } },
+              }
+            : undefined,
+        issuelinks: [],
+      },
+    };
+    setLocalIssues((prev) => [placeholder, ...prev]);
   }
 
   async function handleCloseIssue(issueKey: string) {
@@ -364,6 +361,25 @@ export default function KanbanBoard({ issues, onIssueSelect, selectedKey, projec
       );
     } catch (err) {
       push(err instanceof Error ? err.message : "Failed to close issue.");
+    } finally {
+      pendingRef.current.delete(issueKey);
+      setPendingKeys(new Set(pendingRef.current));
+    }
+  }
+
+  async function handleAssign(issueKey: string, user: JiraUser | null) {
+    const original = issueMap.get(issueKey);
+    if (!original) return;
+    pendingRef.current.add(issueKey);
+    setPendingKeys(new Set(pendingRef.current));
+    setLocalIssues((prev) =>
+      prev.map((i) => (i.key === issueKey ? { ...i, fields: { ...i.fields, assignee: user } } : i)),
+    );
+    try {
+      await assignIssue(issueKey, user?.accountId ?? null);
+    } catch (err) {
+      setLocalIssues((prev) => prev.map((i) => (i.key === issueKey ? original : i)));
+      push(err instanceof Error ? err.message : "Failed to assign issue.");
     } finally {
       pendingRef.current.delete(issueKey);
       setPendingKeys(new Set(pendingRef.current));
@@ -407,7 +423,7 @@ export default function KanbanBoard({ issues, onIssueSelect, selectedKey, projec
 
   if (boardIssues.length === 0) {
     return (
-      <div className="flex flex-1 items-center justify-center text-slate-400 dark:text-slate-500 text-sm">
+      <div className="flex flex-1 items-center justify-center text-muted-foreground text-sm">
         No issues to display.
       </div>
     );
@@ -420,7 +436,7 @@ export default function KanbanBoard({ issues, onIssueSelect, selectedKey, projec
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <div className="flex-1 min-h-0 overflow-auto bg-white dark:bg-slate-950 px-4 pb-4">
+      <div className="flex-1 min-h-0 overflow-auto bg-popover px-4 pb-4">
         {/* flex + justify-center centers the panel when it's narrower than the viewport;
             w-fit + min-w-full let the row grow past 100% and fall back to natural
             left-aligned scrolling (instead of clipping) once the board overflows.
@@ -446,14 +462,14 @@ export default function KanbanBoard({ issues, onIssueSelect, selectedKey, projec
                 return (
                   <div
                     key={col.statusId}
-                    className="sticky top-0 z-20 flex items-center gap-2 px-3 py-2.5 bg-slate-100 dark:bg-slate-900 border-b border-slate-200/80 dark:border-slate-700/80"
+                    className="sticky top-0 z-20 flex items-center gap-2 px-3 py-2.5 bg-muted border-b border-border"
                     style={i < columns.length - 1 ? { marginRight: -COL_GAP } : undefined}
                   >
                     <span className="w-2 h-2 rounded-full shrink-0" style={{ background: dotColor }} />
-                    <span className="text-[13px] font-bold text-slate-700 dark:text-slate-200 truncate">
+                    <span className="text-[13px] font-bold text-foreground truncate">
                       {col.statusName}
                     </span>
-                    <span className="ml-auto text-[11px] font-semibold text-slate-400 dark:text-slate-500 bg-slate-200/70 dark:bg-slate-800 px-1.5 py-0.5 rounded-md tabular-nums shrink-0">
+                    <span className="ml-auto text-[11px] font-semibold text-muted-foreground bg-accent/70 px-1.5 py-0.5 rounded-md tabular-nums shrink-0">
                       {col.count}
                     </span>
                   </div>
@@ -467,10 +483,10 @@ export default function KanbanBoard({ issues, onIssueSelect, selectedKey, projec
                   <div key={group.key} className="contents">
                     <div
                       className={[
-                        "flex items-center gap-2 px-3 py-2 mt-3 rounded-md hover:bg-slate-200 dark:hover:bg-slate-800",
+                        "flex items-center gap-2 px-3 py-2 mt-3 rounded-md hover:bg-accent",
                         group.isDone
-                          ? "bg-slate-100/70 dark:bg-slate-800/40"
-                          : "bg-slate-200/70 dark:bg-slate-800/70",
+                          ? "bg-accent/50"
+                          : "bg-accent/70",
                       ].join(" ")}
                       style={{ gridColumn: `1 / span ${columns.length}` }}
                     >
@@ -480,7 +496,7 @@ export default function KanbanBoard({ issues, onIssueSelect, selectedKey, projec
                         className={["flex items-center gap-2 min-w-0 flex-1 text-left", group.isDone ? "opacity-70" : ""].join(" ")}
                       >
                         <span
-                          className="text-slate-400 dark:text-slate-500 text-[10px] shrink-0 transition-transform"
+                          className="text-muted-foreground text-[10px] shrink-0 transition-transform"
                           style={{ transform: isCollapsed ? "rotate(-90deg)" : undefined }}
                         >
                           ▾
@@ -499,14 +515,14 @@ export default function KanbanBoard({ issues, onIssueSelect, selectedKey, projec
                               onIssueSelect?.(group.key);
                             }}
                             className={[
-                              "text-[13px] font-semibold truncate hover:underline hover:text-indigo-600 dark:hover:text-indigo-400",
-                              group.isDone ? "text-slate-500 dark:text-slate-400 line-through decoration-slate-400/60" : "text-slate-700 dark:text-slate-200",
+                              "text-[13px] font-semibold truncate hover:underline hover:text-primary",
+                              group.isDone ? "text-muted-foreground line-through decoration-slate-400/60" : "text-foreground",
                             ].join(" ")}
                           >
                             {group.summary}
                           </span>
                         ) : (
-                          <span className="text-[13px] font-semibold text-slate-700 dark:text-slate-200 truncate">
+                          <span className="text-[13px] font-semibold text-foreground truncate">
                             {group.summary}
                           </span>
                         )}
@@ -523,7 +539,7 @@ export default function KanbanBoard({ issues, onIssueSelect, selectedKey, projec
                           </span>
                         )}
                       </button>
-                      <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 tabular-nums shrink-0">
+                      <span className="text-[11px] font-semibold text-muted-foreground tabular-nums shrink-0">
                         {group.total}
                       </span>
                     </div>
@@ -537,10 +553,13 @@ export default function KanbanBoard({ issues, onIssueSelect, selectedKey, projec
                           selectedKey={selectedKey}
                           onIssueSelect={onIssueSelect}
                           pendingKeys={pendingKeys}
-                          onCreate={col.statusId === firstTodoColumnId ? (summary) => handleCreate(group.key, summary) : undefined}
+                          onOpenCreate={col.statusId === firstTodoColumnId ? () => setCreateEpicKey(group.key) : undefined}
                           onEditIssue={setEditingKey}
                           onCloseIssue={handleCloseIssue}
                           onDeleteIssue={handleDeleteIssue}
+                          onAssignIssue={handleAssign}
+                          teamMembers={teamMembers}
+                          dragActive={activeIssue !== null}
                         />
                       ))}
                   </div>
@@ -563,6 +582,26 @@ export default function KanbanBoard({ issues, onIssueSelect, selectedKey, projec
           onClose={() => setEditingKey(null)}
           onSaved={(patch) => handleSaved(editingIssue.key, patch)}
           onError={push}
+        />
+      )}
+
+      {createEpicKey && (
+        <CreateIssueDialog
+          projectKey={projectKey}
+          epicSummary={
+            createEpicKey === UNASSIGNED_EPIC_KEY
+              ? null
+              : (epicGroups.find((g) => g.key === createEpicKey)?.summary ?? null)
+          }
+          onClose={() => setCreateEpicKey(null)}
+          onCreate={async (input) => {
+            try {
+              await handleCreate(createEpicKey, input);
+            } catch (err) {
+              push(err instanceof Error ? err.message : "Failed to create issue.");
+              throw err;
+            }
+          }}
         />
       )}
     </DndContext>
