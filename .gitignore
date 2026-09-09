@@ -53,3 +53,10 @@ tests/screenshots/output/*.png
 # Dolt database files (added by bd init)
 .dolt/
 *.db
+
+# beads local secrets and Dolt backup churn (never commit — contains a key)
+.beads/.beads-credential-key
+.beads/backup/LOCK
+.beads/backup/manifest
+.beads/backup/*.darc
+.beads/export-state.json
