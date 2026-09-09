@@ -2,29 +2,10 @@
 
 import type { ReactNode } from "react";
 import { useDraggable } from "@dnd-kit/core";
-import type { JiraIssue } from "@/lib/jira";
+import type { JiraIssue, JiraUser } from "@/lib/jira";
 import { STATUS_COLORS, ISSUE_TYPE_LABEL, ISSUE_TYPE_FALLBACK } from "@/lib/graphConstants";
 import CardMenu from "./CardMenu";
-
-function avatarInitials(name: string): string {
-  return name
-    .split(" ")
-    .slice(0, 2)
-    .map((w) => w[0])
-    .join("")
-    .toUpperCase();
-}
-
-/** Deterministic hue per assignee so different people get visibly different avatar colors. */
-function avatarColor(name: string): string {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = (hash << 5) - hash + name.charCodeAt(i);
-    hash |= 0;
-  }
-  const hue = Math.abs(hash) % 360;
-  return `hsl(${hue}, 55%, 45%)`;
-}
+import AssigneePicker, { avatarColor, avatarInitials } from "./AssigneePicker";
 
 function formatCreated(iso: string | undefined): string | null {
   if (!iso) return null;
@@ -37,7 +18,15 @@ const CARD_BASE_CLASS =
   "text-left rounded-lg border bg-white dark:bg-slate-800 p-2.5 shrink-0 shadow-[0_1px_3px_rgba(0,0,0,0.05)]";
 
 /** The card's visual body, shared between the in-list draggable card and the floating DragOverlay clone. */
-export function KanbanCardBody({ issue, menu }: { issue: JiraIssue; menu?: ReactNode }) {
+export function KanbanCardBody({
+  issue,
+  menu,
+  onAssign,
+}: {
+  issue: JiraIssue;
+  menu?: ReactNode;
+  onAssign?: (user: JiraUser | null) => void;
+}) {
   const typeInfo = ISSUE_TYPE_LABEL[issue.fields.issuetype.name] ?? {
     short: issue.fields.issuetype.name,
     ...ISSUE_TYPE_FALLBACK,
@@ -53,25 +42,29 @@ export function KanbanCardBody({ issue, menu }: { issue: JiraIssue; menu?: React
         <span className="text-[11px] font-mono font-semibold text-slate-400 dark:text-slate-500 truncate">
           {issue.key}
         </span>
-        {menu}
-        {issue.fields.assignee ? (
-          <span
-            className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white shrink-0"
-            style={{ background: avatarColor(issue.fields.assignee.displayName) }}
-            title={issue.fields.assignee.displayName}
-          >
-            {avatarInitials(issue.fields.assignee.displayName)}
-          </span>
-        ) : (
-          <span
-            className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500"
-            title="Unassigned"
-          >
-            <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
-              <path d="M12 12c2.7 0 4.9-2.2 4.9-4.9S14.7 2.2 12 2.2 7.1 4.4 7.1 7.1 9.3 12 12 12Zm0 2.4c-3.3 0-9.8 1.6-9.8 4.9v2.5h19.6v-2.5c0-3.3-6.5-4.9-9.8-4.9Z" />
-            </svg>
-          </span>
-        )}
+        <div className="flex items-center gap-0.5 shrink-0">
+          {menu}
+          {onAssign ? (
+            <AssigneePicker issue={issue} onAssign={onAssign} />
+          ) : issue.fields.assignee ? (
+            <span
+              className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white shrink-0"
+              style={{ background: avatarColor(issue.fields.assignee.displayName) }}
+              title={issue.fields.assignee.displayName}
+            >
+              {avatarInitials(issue.fields.assignee.displayName)}
+            </span>
+          ) : (
+            <span
+              className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500"
+              title="Unassigned"
+            >
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
+                <path d="M12 12c2.7 0 4.9-2.2 4.9-4.9S14.7 2.2 12 2.2 7.1 4.4 7.1 7.1 9.3 12 12 12Zm0 2.4c-3.3 0-9.8 1.6-9.8 4.9v2.5h19.6v-2.5c0-3.3-6.5-4.9-9.8-4.9Z" />
+              </svg>
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="flex items-start gap-1.5 mb-2">
@@ -132,9 +125,19 @@ interface KanbanCardProps {
   onEdit?: () => void;
   onCloseIssue?: () => void;
   onDelete?: () => void;
+  onAssign?: (user: JiraUser | null) => void;
 }
 
-export default function KanbanCard({ issue, selected, onClick, pending, onEdit, onCloseIssue, onDelete }: KanbanCardProps) {
+export default function KanbanCard({
+  issue,
+  selected,
+  onClick,
+  pending,
+  onEdit,
+  onCloseIssue,
+  onDelete,
+  onAssign,
+}: KanbanCardProps) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: issue.key,
     disabled: pending,
@@ -169,7 +172,7 @@ export default function KanbanCard({ issue, selected, onClick, pending, onEdit, 
           : "border-slate-200/80 dark:border-slate-700/80",
       ].join(" ")}
     >
-      <KanbanCardBody issue={issue} menu={menu} />
+      <KanbanCardBody issue={issue} menu={menu} onAssign={onAssign} />
     </div>
   );
 }
