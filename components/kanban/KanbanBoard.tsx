@@ -437,6 +437,12 @@ export default function KanbanBoard({ issues, onIssueSelect, selectedKey, projec
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
+      // dnd-kit auto-scrolls the nearest scrollable ancestor whenever the pointer
+      // is within ~20% of its edge — with a sticky column header eating into the
+      // visible height, almost any drag near the top of the board falls inside
+      // that band, showing up as an unwanted few-pixel pan the instant you pick
+      // a card up. The board is short enough that auto-scroll isn't needed.
+      autoScroll={false}
     >
       <div className="flex-1 min-h-0 overflow-auto bg-popover px-4 pb-4">
         {/* flex + justify-center centers the panel when it's narrower than the viewport;
