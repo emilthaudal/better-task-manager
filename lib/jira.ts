@@ -56,21 +56,44 @@ async function resolveAuth(
   };
 }
 
+export interface JiraFetchOptions {
+  method?: "GET" | "POST" | "PUT" | "DELETE";
+  body?: unknown;
+  session?: SessionData;
+  signal?: AbortSignal;
+}
+
+/**
+ * Mutating requests (POST/PUT/DELETE) are never retried — a retried write
+ * could double-create an issue or double-fire a transition. Only GET reads
+ * retry on transient failures.
+ */
 export async function jiraFetch<T>(
   path: string,
-  session?: SessionData,
-  signal?: AbortSignal,
+  sessionOrOptions?: SessionData | JiraFetchOptions,
+  maybeSignal?: AbortSignal,
 ): Promise<T> {
+  const options: JiraFetchOptions =
+    sessionOrOptions && "method" in sessionOrOptions
+      ? sessionOrOptions
+      : { session: sessionOrOptions as SessionData | undefined, signal: maybeSignal };
+  const { method = "GET", body, session, signal } = options;
+
   const { authHeader, baseUrl } = await resolveAuth(session);
   const url = `${baseUrl}${path}`;
-  const headers = {
+  const headers: Record<string, string> = {
     Authorization: authHeader,
     Accept: "application/json",
   };
+  if (body !== undefined) {
+    headers["Content-Type"] = "application/json";
+  }
 
+  const isMutation = method !== "GET";
+  const maxAttempts = isMutation ? 1 : MAX_ATTEMPTS;
   let lastError: Error | undefined;
 
-  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
     // If the caller has already aborted, bail immediately without retrying
     if (signal?.aborted) {
       throw new Error(`Jira request aborted for ${path}`);
@@ -79,7 +102,12 @@ export async function jiraFetch<T>(
     let res: Response;
 
     try {
-      res = await fetch(url, { headers, signal });
+      res = await fetch(url, {
+        method,
+        headers,
+        body: body !== undefined ? JSON.stringify(body) : undefined,
+        signal,
+      });
     } catch (networkErr) {
       // AbortError from the signal — propagate immediately, never retry
       if (networkErr instanceof Error && networkErr.name === "AbortError") throw networkErr;
@@ -95,7 +123,11 @@ export async function jiraFetch<T>(
     }
 
     if (res.ok) {
-      return res.json() as Promise<T>;
+      if (res.status === 204) {
+        return undefined as T;
+      }
+      const text = await res.text();
+      return (text ? JSON.parse(text) : undefined) as T;
     }
 
     const text = await res.text();
@@ -339,4 +371,129 @@ export async function getSubtasks(
     session,
     signal,
   );
+}
+
+// ── Write API ────────────────────────────────────────────────────────────────
+
+export interface JiraTransition {
+  id: string;
+  name: string;
+  to: JiraStatus;
+  /** false when the user's role/workflow rules block this transition — Jira still lists it, greyed out. */
+  isAvailable?: boolean;
+}
+
+export interface JiraFieldMeta {
+  required: boolean;
+  name: string;
+  operations: string[]; // e.g. ["set"], ["add", "remove", "set"]
+}
+
+export interface JiraEditMeta {
+  fields: Record<string, JiraFieldMeta>;
+}
+
+/** Fetch the transitions currently available to this user for an issue, honouring workflow + permissions. */
+export async function getIssueTransitions(
+  issueKey: string,
+  session?: SessionData,
+): Promise<JiraTransition[]> {
+  const data = await jiraFetch<{ transitions: JiraTransition[] }>(
+    `/issue/${encodeURIComponent(issueKey)}/transitions`,
+    session,
+  );
+  return data.transitions;
+}
+
+/** Fetch which fields this user may edit on an issue — absent fields are read-only for them. */
+export async function getIssueEditMeta(
+  issueKey: string,
+  session?: SessionData,
+): Promise<JiraEditMeta> {
+  return jiraFetch<JiraEditMeta>(`/issue/${encodeURIComponent(issueKey)}/editmeta`, session);
+}
+
+/** Whether this user holds the DELETE_ISSUE permission for a specific issue's project. */
+export async function canDeleteIssue(issueKey: string, session?: SessionData): Promise<boolean> {
+  const data = await jiraFetch<{ permissions: Record<string, { havePermission: boolean }> }>(
+    `/mypermissions?issueKey=${encodeURIComponent(issueKey)}&permissions=DELETE_ISSUE`,
+    session,
+  );
+  return data.permissions.DELETE_ISSUE?.havePermission ?? false;
+}
+
+/** Move an issue to a new status by transition id (from getIssueTransitions). */
+export async function transitionIssue(
+  issueKey: string,
+  transitionId: string,
+  session?: SessionData,
+): Promise<void> {
+  await jiraFetch<void>(`/issue/${encodeURIComponent(issueKey)}/transitions`, {
+    method: "POST",
+    body: { transition: { id: transitionId } },
+    session,
+  });
+}
+
+/** Update fields on an issue. Only pass fields the caller's editmeta says are editable. */
+export async function updateIssue(
+  issueKey: string,
+  fields: Record<string, unknown>,
+  session?: SessionData,
+): Promise<void> {
+  await jiraFetch<void>(`/issue/${encodeURIComponent(issueKey)}`, {
+    method: "PUT",
+    body: { fields },
+    session,
+  });
+}
+
+export interface CreateIssueInput {
+  projectKey: string;
+  issueTypeId: string;
+  summary: string;
+  description?: string;
+  assigneeAccountId?: string;
+  parentKey?: string;
+}
+
+/** Create a new issue. Returns the new issue's id and key. */
+export async function createIssue(
+  input: CreateIssueInput,
+  session?: SessionData,
+): Promise<{ id: string; key: string }> {
+  const fields: Record<string, unknown> = {
+    project: { key: input.projectKey },
+    issuetype: { id: input.issueTypeId },
+    summary: input.summary,
+  };
+  if (input.description) {
+    fields.description = {
+      type: "doc",
+      version: 1,
+      content: [
+        { type: "paragraph", content: [{ type: "text", text: input.description }] },
+      ],
+    };
+  }
+  if (input.assigneeAccountId) {
+    fields.assignee = { accountId: input.assigneeAccountId };
+  }
+  if (input.parentKey) {
+    fields.parent = { key: input.parentKey };
+  }
+
+  return jiraFetch<{ id: string; key: string }>("/issue", {
+    method: "POST",
+    body: { fields },
+    session,
+  });
+}
+
+/** Permanently delete an issue. Irreversible — Jira does not support undo via this endpoint. */
+export async function deleteIssue(issueKey: string, session?: SessionData): Promise<void> {
+  await jiraFetch<void>(`/issue/${encodeURIComponent(issueKey)}`, {
+    method: "DELETE",
+    session,
+  });
 }
