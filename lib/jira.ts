@@ -285,6 +285,29 @@ export async function getEpics(
   );
 }
 
+/**
+ * Fetch every non-subtask issue in a project, regardless of epic — used for
+ * the kanban board view, which (unlike the dependency graph) must show all
+ * work items, including those under a done/closed epic or with no epic at all.
+ *
+ * Done issues resolved more than a week ago are excluded server-side (via
+ * JQL) rather than fetched and filtered client-side — a long-lived project
+ * can accumulate thousands of closed issues, and there's no reason to pull
+ * that whole history down just to show a recent-activity board.
+ */
+export async function getProjectIssues(
+  projectKey: string,
+  session?: SessionData,
+  signal?: AbortSignal,
+): Promise<JiraIssue[]> {
+  return searchIssues(
+    `project = "${projectKey}" AND issuetype != Epic AND (statusCategory != Done OR resolutiondate >= -7d) ORDER BY created DESC`,
+    ["summary", "status", "issuetype", "assignee", "parent", "subtasks", "issuelinks", "priority", "labels", "created"],
+    session,
+    signal,
+  );
+}
+
 /** Fetch all issues that are direct children of an epic (one level). */
 export async function getEpicChildren(
   epicKey: string,

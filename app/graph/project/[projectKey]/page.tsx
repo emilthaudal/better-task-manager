@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import GraphView from "@/components/GraphView";
-import EpicTimelineView from "@/components/EpicTimelineView";
+import KanbanView from "@/components/KanbanView";
 import ViewTabs from "@/components/ViewTabs";
 import type { ViewTab } from "@/components/ViewTabs";
 import IssueDetailPanel from "@/components/IssueDetailPanel";
@@ -12,6 +12,7 @@ import { GraphLoadingState, GraphErrorState, GraphEmptyState } from "@/component
 import type { JiraIssue } from "@/lib/jira";
 import type { StreamMessage } from "@/lib/streamTypes";
 import { useJiraBaseUrl } from "@/hooks/useJiraBaseUrl";
+import { useBoardIssues } from "@/hooks/useBoardIssues";
 
 const POLL_INTERVAL_MS = 30_000;
 
@@ -44,6 +45,12 @@ export default function ProjectGraphPage() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<ViewTab>("graph");
+
+  // Board data is independent of the epic-scoped graph data — it
+  // covers every issue in the project (including those under a done epic or
+  // with no epic at all), so it's fetched separately and lazily, only once
+  // the Kanban tab is opened.
+  const boardData = useBoardIssues(projectKey, activeView === "kanban");
 
   const isMountedRef = useRef(true);
   const abortRef = useRef<AbortController | null>(null);
@@ -186,44 +193,76 @@ export default function ProjectGraphPage() {
       <GraphPageHeader
         chipKey={projectKey}
         chipLabel="All Epics"
-        issueCount={expandProgress === null ? issues.length : undefined}
-        lastUpdated={expandProgress === null ? lastUpdated : null}
-        loading={loading}
-        error={error}
+        issueCount={
+          activeView === "kanban"
+            ? boardData.issues.length
+            : expandProgress === null
+              ? issues.length
+              : undefined
+        }
+        lastUpdated={
+          activeView === "kanban"
+            ? boardData.lastUpdated
+            : expandProgress === null
+              ? lastUpdated
+              : null
+        }
+        loading={activeView === "kanban" ? boardData.loading : loading}
+        error={activeView === "kanban" ? boardData.error : error}
       />
 
       <ViewTabs activeTab={activeView} onTabChange={handleViewChange} />
 
-      {/* Graph / Timeline + detail panel */}
+      {/* Graph + detail panel */}
       <div className="flex flex-1 min-h-0 relative">
-        {/* Left pane — graph or timeline */}
+        {/* Left pane — graph */}
         <div className={`flex flex-col relative ${selectedKey ? "w-[75%]" : "w-full"} transition-[width] duration-200`}>
-          {/* Loading overlay */}
-          {(loading || expandProgress !== null) && (
-            <GraphLoadingState progress={expandProgress} label="Loading epics…" />
+          {activeView !== "kanban" && (
+            <>
+              {/* Loading overlay */}
+              {(loading || expandProgress !== null) && (
+                <GraphLoadingState progress={expandProgress} label="Loading epics…" />
+              )}
+
+              {error && <GraphErrorState message={error} heading="Failed to load epics" />}
+
+              {!loading && !error && issues.length === 0 && expandProgress === null && (
+                <GraphEmptyState message="No epics found for this project." />
+              )}
+
+              {!loading && !error && issues.length > 0 && activeView === "graph" && (
+                <GraphView
+                  issues={issues}
+                  latestIssues={latestIssues}
+                  onNodeSelect={handleNodeSelect}
+                  selectedKey={selectedKey}
+                />
+              )}
+            </>
           )}
 
-          {error && <GraphErrorState message={error} heading="Failed to load epics" />}
+          {activeView === "kanban" && (
+            <>
+              {boardData.loading && (
+                <GraphLoadingState progress={null} label="Loading board…" />
+              )}
 
-          {!loading && !error && issues.length === 0 && expandProgress === null && (
-            <GraphEmptyState message="No epics found for this project." />
-          )}
+              {boardData.error && (
+                <GraphErrorState message={boardData.error} heading="Failed to load board" />
+              )}
 
-          {!loading && !error && issues.length > 0 && activeView === "graph" && (
-            <GraphView
-              issues={issues}
-              latestIssues={latestIssues}
-              onNodeSelect={handleNodeSelect}
-              selectedKey={selectedKey}
-            />
-          )}
+              {!boardData.loading && !boardData.error && boardData.issues.length === 0 && (
+                <GraphEmptyState message="No issues found for this project." />
+              )}
 
-          {!loading && !error && issues.length > 0 && activeView === "timeline" && (
-            <EpicTimelineView
-              issues={issues}
-              onEpicSelect={handleNodeSelect}
-              selectedKey={selectedKey}
-            />
+              {!boardData.loading && !boardData.error && boardData.issues.length > 0 && (
+                <KanbanView
+                  issues={boardData.issues}
+                  onIssueSelect={handleNodeSelect}
+                  selectedKey={selectedKey}
+                />
+              )}
+            </>
           )}
         </div>
 

@@ -48,16 +48,31 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  let closed = false;
+
   const stream = new ReadableStream({
+    // Set when the client aborts (e.g. a new poll supersedes this stream) —
+    // guards every enqueue/close below so we don't throw "Controller is
+    // already closed" into the epic-expand loop or the outer catch.
+    cancel() {
+      closed = true;
+    },
     async start(controller) {
+      const safeEnqueue = (msg: StreamMessage) => {
+        if (closed) return;
+        try {
+          controller.enqueue(encode(msg));
+        } catch {
+          closed = true;
+        }
+      };
+
       try {
         // ── 1. Fetch all open epics ───────────────────────────────────────────
         const epics = await getEpics(project, session);
 
         // Send epics immediately so the client can render the graph skeleton
-        controller.enqueue(
-          encode({ type: "epics", issues: epics, total: epics.length }),
-        );
+        safeEnqueue({ type: "epics", issues: epics, total: epics.length });
 
         // ── 2. Expand each epic's children + subtasks (throttled) ─────────────
         let expanded = 0;
@@ -74,15 +89,13 @@ export async function GET(req: NextRequest) {
               const subtasks = await getSubtasks(nonSubtaskKeys, session, signal);
 
               expanded++;
-              controller.enqueue(
-                encode({
-                  type: "children",
-                  epicKey: epic.key,
-                  issues: [...children, ...subtasks],
-                  expanded,
-                  total: epics.length,
-                }),
-              );
+              safeEnqueue({
+                type: "children",
+                epicKey: epic.key,
+                issues: [...children, ...subtasks],
+                expanded,
+                total: epics.length,
+              });
             } catch (err) {
               expanded++;
               const isTimeout =
@@ -95,24 +108,28 @@ export async function GET(req: NextRequest) {
                   : "Unknown error";
 
               console.warn(`[project-stream] Failed to expand ${epic.key}: ${message}`);
-              controller.enqueue(
-                encode({ type: "error", epicKey: epic.key, error: message }),
-              );
+              safeEnqueue({ type: "error", epicKey: epic.key, error: message });
             }
           }),
           EXPAND_CONCURRENCY,
         );
 
-        controller.enqueue(encode({ type: "done" }));
+        safeEnqueue({ type: "done" });
       } catch (err) {
         // Top-level failure (e.g. getEpics itself failed) — send an error line
         // then close. The client will treat this as a fatal error.
         const message = err instanceof Error ? err.message : "Unknown error";
         console.error(`[project-stream] Fatal error for project ${project}: ${message}`);
-        controller.enqueue(encode({ type: "error", epicKey: "", error: message }));
-        controller.enqueue(encode({ type: "done" }));
+        safeEnqueue({ type: "error", epicKey: "", error: message });
+        safeEnqueue({ type: "done" });
       } finally {
-        controller.close();
+        if (!closed) {
+          try {
+            controller.close();
+          } catch {
+            // Already closed by the client aborting — nothing to do.
+          }
+        }
       }
     },
   });

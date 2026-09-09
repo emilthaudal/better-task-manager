@@ -1,6 +1,6 @@
 "use client";
 
-export type ViewTab = "graph" | "timeline";
+export type ViewTab = "graph" | "kanban";
 
 interface ViewTabsProps {
   activeTab: ViewTab;
@@ -8,8 +8,8 @@ interface ViewTabsProps {
 }
 
 /**
- * Two-tab toggle bar for switching between the dependency graph view and the
- * timeline/roadmap view on the project graph page.
+ * Tab toggle bar for switching between the dependency graph and kanban board
+ * views on the project graph page.
  */
 export default function ViewTabs({ activeTab, onTabChange }: ViewTabsProps) {
   return (
@@ -21,10 +21,10 @@ export default function ViewTabs({ activeTab, onTabChange }: ViewTabsProps) {
         onClick={() => onTabChange("graph")}
       />
       <TabButton
-        label="Timeline"
-        icon={<TimelineIcon />}
-        active={activeTab === "timeline"}
-        onClick={() => onTabChange("timeline")}
+        label="Kanban"
+        icon={<KanbanIcon />}
+        active={activeTab === "kanban"}
+        onClick={() => onTabChange("kanban")}
       />
     </div>
   );
@@ -68,15 +68,12 @@ function GraphIcon() {
   );
 }
 
-function TimelineIcon() {
+function KanbanIcon() {
   return (
     <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
-      <line x1="1" y1="4" x2="12" y2="4" stroke="currentColor" strokeWidth="1.2" strokeOpacity="0.4" />
-      <line x1="1" y1="7" x2="12" y2="7" stroke="currentColor" strokeWidth="1.2" strokeOpacity="0.4" />
-      <line x1="1" y1="10" x2="12" y2="10" stroke="currentColor" strokeWidth="1.2" strokeOpacity="0.4" />
-      <rect x="2" y="2.5" width="5" height="3" rx="1" fill="currentColor" fillOpacity="0.85" />
-      <rect x="6" y="5.5" width="5" height="3" rx="1" fill="currentColor" fillOpacity="0.6" />
-      <rect x="3" y="8.5" width="7" height="3" rx="1" fill="currentColor" fillOpacity="0.75" />
+      <rect x="1" y="1.5" width="3.2" height="10" rx="0.8" stroke="currentColor" strokeWidth="1.2" />
+      <rect x="4.9" y="1.5" width="3.2" height="6.5" rx="0.8" stroke="currentColor" strokeWidth="1.2" />
+      <rect x="8.8" y="1.5" width="3.2" height="8.5" rx="0.8" stroke="currentColor" strokeWidth="1.2" />
     </svg>
   );
 }

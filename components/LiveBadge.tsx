@@ -12,7 +12,7 @@ interface LiveBadgeProps {
  * Ticks every second while `lastUpdated` is set.
  */
 export default function LiveBadge({ lastUpdated }: LiveBadgeProps) {
-  const seconds = useSecondsTick(lastUpdated !== null);
+  const seconds = useSecondsTick(lastUpdated?.getTime() ?? null);
 
   const label =
     seconds < 5
