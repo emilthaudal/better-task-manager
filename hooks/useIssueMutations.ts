@@ -98,6 +98,7 @@ export interface CreateIssuePayload {
   projectKey: string;
   issueTypeId: string;
   summary: string;
+  description?: string;
   parentKey?: string;
 }
 
