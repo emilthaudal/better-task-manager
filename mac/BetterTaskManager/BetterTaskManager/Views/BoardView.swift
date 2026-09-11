@@ -55,10 +55,6 @@ struct BoardView: View {
         }
         .animation(.snappy(duration: 0.25), value: viewModel.moveError)
         .frame(minWidth: 720, minHeight: 520)
-        // The toolbar owns the top edge outright. Left on automatic it fades its
-        // background in and out as the board scrolls under it, which reads as the
-        // title area changing colour mid-scroll against the app-drawn gradient.
-        .toolbarBackgroundVisibility(.visible, for: .windowToolbar)
         .navigationTitle(project.name)
         .navigationSubtitle(project.key)
         .toolbar {
@@ -114,10 +110,6 @@ struct BoardView: View {
                 .padding(layout.outerPadding)
                 .padding(.leading, leadingInset)
             }
-            // The now-always-visible toolbar background already masks content
-            // scrolling under it; a scroll edge effect on top of it is a second
-            // treatment of the same edge.
-            .scrollEdgeEffectHidden(true, for: .top)
         }
         .padding(.horizontal, 20)
     }
