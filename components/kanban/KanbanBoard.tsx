@@ -23,6 +23,14 @@ import CreateIssueDialog from "./CreateIssueDialog";
 /** Category order — matches Jira's default board layout (To Do → In Progress → Done). */
 const CATEGORY_ORDER: Record<string, number> = { new: 0, indeterminate: 1, done: 2 };
 
+/**
+ * Jira reports a blocked status as plain "indeterminate", so it would sort
+ * alphabetically ahead of "In Progress" — but parked work is a detour off
+ * in-progress work, not a step before it. Keep in sync with isParkedStatus
+ * in mac/.../Models/BoardGrouping.swift.
+ */
+const PARKED_STATUS_PREFIXES = ["blocked", "on hold", "waiting", "paused", "impediment"];
+
 const COL_WIDTH = 260;
 const COL_GAP = 12;
 
@@ -30,6 +38,11 @@ const COL_GAP = 12;
 
 function isBoardable(issuetype: JiraIssueType): boolean {
   return !issuetype.subtask && issuetype.name !== "Epic";
+}
+
+function isParkedStatus(statusName: string): boolean {
+  const name = statusName.trim().toLowerCase();
+  return PARKED_STATUS_PREFIXES.some((prefix) => name.startsWith(prefix));
 }
 
 /**
@@ -159,6 +172,8 @@ export default function KanbanBoard({ issues, onIssueSelect, selectedKey, projec
     return Array.from(byStatus.values()).sort((a, b) => {
       const catDiff = (CATEGORY_ORDER[a.statusCategory] ?? 1) - (CATEGORY_ORDER[b.statusCategory] ?? 1);
       if (catDiff !== 0) return catDiff;
+      const parkedDiff = Number(isParkedStatus(a.statusName)) - Number(isParkedStatus(b.statusName));
+      if (parkedDiff !== 0) return parkedDiff;
       return a.statusName.localeCompare(b.statusName);
     });
   }, [boardIssues]);

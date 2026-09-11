@@ -28,6 +28,16 @@ private func findEpicRef(for issue: JiraIssue, issueMap: [String: JiraIssue]) ->
 
 private let categoryOrder: [String: Int] = ["new": 0, "indeterminate": 1, "done": 2]
 
+/// Jira reports a blocked status as plain "indeterminate", so it would sort alphabetically
+/// ahead of "In Progress" — but parked work is a detour off in-progress work, not a step
+/// before it. Keep in sync with isParkedStatus in KanbanBoard.tsx.
+private let parkedStatusPrefixes = ["blocked", "on hold", "waiting", "paused", "impediment"]
+
+private func isParkedStatus(_ statusName: String) -> Bool {
+    let name = statusName.trimmingCharacters(in: .whitespaces).lowercased()
+    return parkedStatusPrefixes.contains { name.hasPrefix($0) }
+}
+
 struct BoardColumn: Identifiable, Hashable {
     let statusId: String
     let statusName: String
@@ -92,8 +102,9 @@ func buildBoardData(from issues: [JiraIssue]) -> BoardData {
         }
     }
     let columns = columnsByStatus.values.sorted { a, b in
-        let catDiff = (categoryOrder[a.statusCategory] ?? 1) - (categoryOrder[b.statusCategory] ?? 1)
-        if catDiff != 0 { return catDiff < 0 }
+        let aRank = (categoryOrder[a.statusCategory] ?? 1, isParkedStatus(a.statusName) ? 1 : 0)
+        let bRank = (categoryOrder[b.statusCategory] ?? 1, isParkedStatus(b.statusName) ? 1 : 0)
+        if aRank != bRank { return aRank < bRank }
         return a.statusName.localizedCaseInsensitiveCompare(b.statusName) == .orderedAscending
     }
 

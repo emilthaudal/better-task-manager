@@ -6,6 +6,7 @@ import Testing
 private func issue(
     key: String,
     statusId: String,
+    statusName: String? = nil,
     statusCategory: String = "new",
     parentKey: String? = nil,
     parentType: String = "Epic",
@@ -31,7 +32,7 @@ private func issue(
         "summary": "\(key) summary",
         \(parent)
         "issuetype": {"id": "1", "name": "Task", "subtask": false},
-        "status": {"id": "\(statusId)", "name": "Status \(statusId)", "statusCategory": {"id": 2, "key": "\(statusCategory)", "name": "Cat"}},
+        "status": {"id": "\(statusId)", "name": "\(statusName ?? "Status \(statusId)")", "statusCategory": {"id": 2, "key": "\(statusCategory)", "name": "Cat"}},
         "assignee": null, "subtasks": [], "created": "2026-01-01T00:00:00.000+0000"
       }
     }
@@ -82,6 +83,58 @@ struct BoardDropRulesTests {
         ])
         #expect(data.canMove(issueKey: "AB-1", toEpic: "AB-100", toStatus: "20"))
         #expect(!data.canMove(issueKey: "AB-1", toEpic: "AB-50", toStatus: "20"))
+    }
+}
+
+@Suite("Board column order")
+struct BoardColumnOrderTests {
+    private func columnNames(_ issues: [String]) throws -> [String] {
+        try board(issues).columns.map(\.statusName)
+    }
+
+    @Test func ordersColumnsByStatusCategory() throws {
+        let names = try columnNames([
+            issue(key: "AB-1", statusId: "30", statusName: "Done", statusCategory: "done"),
+            issue(key: "AB-2", statusId: "10", statusName: "To Do", statusCategory: "new"),
+            issue(key: "AB-3", statusId: "20", statusName: "In Progress", statusCategory: "indeterminate"),
+        ])
+        #expect(names == ["To Do", "In Progress", "Done"])
+    }
+
+    @Test func placesBlockedAfterInProgressDespiteAlphabeticalOrder() throws {
+        let names = try columnNames([
+            issue(key: "AB-1", statusId: "10", statusName: "To Do", statusCategory: "new"),
+            issue(key: "AB-2", statusId: "15", statusName: "Blocked", statusCategory: "indeterminate"),
+            issue(key: "AB-3", statusId: "20", statusName: "In Progress", statusCategory: "indeterminate"),
+            issue(key: "AB-4", statusId: "30", statusName: "Done", statusCategory: "done"),
+        ])
+        #expect(names == ["To Do", "In Progress", "Blocked", "Done"])
+    }
+
+    @Test func treatsOtherParkedStatusNamesTheSameWay() throws {
+        let names = try columnNames([
+            issue(key: "AB-1", statusId: "20", statusName: "On Hold", statusCategory: "indeterminate"),
+            issue(key: "AB-2", statusId: "21", statusName: "Waiting for customer", statusCategory: "indeterminate"),
+            issue(key: "AB-3", statusId: "22", statusName: "Code Review", statusCategory: "indeterminate"),
+        ])
+        #expect(names == ["Code Review", "On Hold", "Waiting for customer"])
+    }
+
+    /// Prefix matching, not substring — "Unblocked" is forward motion, not a detour.
+    @Test func doesNotParkAStatusThatMerelyContainsBlocked() throws {
+        let names = try columnNames([
+            issue(key: "AB-1", statusId: "20", statusName: "Unblocked", statusCategory: "indeterminate"),
+            issue(key: "AB-2", statusId: "21", statusName: "In Progress", statusCategory: "indeterminate"),
+        ])
+        #expect(names == ["In Progress", "Unblocked"])
+    }
+
+    @Test func keepsAlphabeticalOrderWithinTheSameRank() throws {
+        let names = try columnNames([
+            issue(key: "AB-1", statusId: "20", statusName: "Review", statusCategory: "indeterminate"),
+            issue(key: "AB-2", statusId: "21", statusName: "In Progress", statusCategory: "indeterminate"),
+        ])
+        #expect(names == ["In Progress", "Review"])
     }
 }
 
