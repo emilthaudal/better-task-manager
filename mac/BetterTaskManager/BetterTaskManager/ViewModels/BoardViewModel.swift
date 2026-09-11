@@ -23,8 +23,15 @@ final class BoardViewModel {
     private var serverIssues: [JiraIssue] = []
 
     let outbox: MoveOutbox
+    private let fetchIssues: (String) async throws -> [JiraIssue]
 
-    init(outbox: MoveOutbox? = nil) {
+    init(
+        outbox: MoveOutbox? = nil,
+        fetchIssues: @escaping (String) async throws -> [JiraIssue] = {
+            try await APIClient.shared.fetchBoardIssues(project: $0)
+        }
+    ) {
+        self.fetchIssues = fetchIssues
         self.outbox = outbox ?? MoveOutbox(store: .applicationSupport()) { issueKey, statusID in
             try await APIClient.shared.moveIssue(issueKey: issueKey, toStatusId: statusID)
         }
@@ -34,7 +41,15 @@ final class BoardViewModel {
         }
         self.outbox.onOutcome = { [weak self] outcome in
             guard let self else { return }
-            if case let .rolledBack(move, message) = outcome {
+            switch outcome {
+            case let .succeeded(move):
+                // Jira has taken the move, but the last poll still reports the old
+                // status. Fold the accepted one in before the queue entry goes away,
+                // or the card drops back to where it started until the next poll.
+                if let index = serverIssues.firstIndex(where: { $0.key == move.issueKey }) {
+                    serverIssues[index].fields.status = move.targetStatus
+                }
+            case let .rolledBack(move, message):
                 moveError = "Couldn't move \(move.issueKey) to \(move.targetStatus.name): \(message)"
             }
             rederive()
@@ -98,13 +113,13 @@ final class BoardViewModel {
         }
     }
 
-    private func load(project: String, silent: Bool) async {
+    func load(project: String, silent: Bool) async {
         if !silent {
             isLoading = true
             errorMessage = nil
         }
         do {
-            serverIssues = try await APIClient.shared.fetchBoardIssues(project: project)
+            serverIssues = try await fetchIssues(project)
             rederive()
             // Only now can the outbox tell a move Jira already applied from one it
             // never received, so a queue restored from disk waits for this first poll

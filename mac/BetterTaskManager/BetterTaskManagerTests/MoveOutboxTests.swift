@@ -51,7 +51,7 @@ struct MoveOutboxTests {
         let recorder = TransitionRecorder()
         let outbox = makeOutbox(store: temporaryStore(), recorder: recorder)
         var outcomes: [String] = []
-        outbox.onOutcome = { if case let .succeeded(key) = $0 { outcomes.append(key) } }
+        outbox.onOutcome = { if case let .succeeded(move) = $0 { outcomes.append(move.issueKey) } }
 
         outbox.enqueue(issueKey: "AB-1", from: todo, to: inProgress)
         #expect(outbox.pending["AB-1"]?.targetStatus.id == "20")
@@ -200,7 +200,7 @@ struct MoveOutboxTests {
         let outbox = makeOutbox(store: store, recorder: recorder)
         outbox.serverStatusID = { _ in "20" }
         var outcomes: [String] = []
-        outbox.onOutcome = { if case let .succeeded(key) = $0 { outcomes.append(key) } }
+        outbox.onOutcome = { if case let .succeeded(move) = $0 { outcomes.append(move.issueKey) } }
 
         outbox.startWorker()
         await outbox.waitUntilIdle()

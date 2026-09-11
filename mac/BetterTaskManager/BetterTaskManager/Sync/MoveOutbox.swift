@@ -1,7 +1,9 @@
 import Foundation
 
 enum MoveOutcome {
-    case succeeded(issueKey: String)
+    /// Carries the settled move, not just its key: the owner has to fold the accepted
+    /// status into its own snapshot before the queue entry disappears.
+    case succeeded(PendingMove)
     case rolledBack(PendingMove, message: String)
 }
 
@@ -107,14 +109,14 @@ final class MoveOutbox {
         // already applied, and Jira offers no transition into the status an issue is
         // already in — so re-attempting it would look like a permission failure.
         if serverStatusID?(move.issueKey) == move.targetStatus.id {
-            settle(move.issueKey, .succeeded(issueKey: move.issueKey))
+            settle(move.issueKey, .succeeded(move))
             return
         }
 
         do {
             try await transition(move.issueKey, move.targetStatus.id)
             guard isCurrent(move) else { return }
-            settle(move.issueKey, .succeeded(issueKey: move.issueKey))
+            settle(move.issueKey, .succeeded(move))
         } catch {
             guard isCurrent(move), var current = pending[move.issueKey] else { return }
             current.attempts += 1
