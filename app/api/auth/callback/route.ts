@@ -63,15 +63,18 @@ export async function GET(req: NextRequest) {
   }
 
   // Validate the CSRF state param via HMAC.
-  // The login route generated state as "<nonce>.<hmac>" where hmac = HMAC-SHA256(nonce, SESSION_SECRET).
-  // We recompute the HMAC here and compare — no cookie or server-side storage needed.
-  const dotIndex = state.lastIndexOf(".");
-  const nonce = dotIndex !== -1 ? state.slice(0, dotIndex) : "";
-  const receivedHmac = dotIndex !== -1 ? state.slice(dotIndex + 1) : "";
+  // The login route generated state as "<nonce>.<client>.<hmac>" where
+  // hmac = HMAC-SHA256("<nonce>.<client>", SESSION_SECRET). We recompute the
+  // HMAC here and compare — no cookie or server-side storage needed.
+  const firstDot = state.indexOf(".");
+  const lastDot = state.lastIndexOf(".");
+  const nonce = firstDot !== -1 ? state.slice(0, firstDot) : "";
+  const client = firstDot !== -1 && lastDot !== firstDot ? state.slice(firstDot + 1, lastDot) : "web";
+  const receivedHmac = lastDot !== -1 ? state.slice(lastDot + 1) : "";
 
   const sessionSecret =
     process.env.SESSION_SECRET ?? "dev-only-secret-replace-in-production-32ch";
-  const expectedHmac = await hmacSign(nonce, sessionSecret);
+  const expectedHmac = await hmacSign(`${nonce}.${client}`, sessionSecret);
 
   if (!nonce || !safeEqual(receivedHmac, expectedHmac)) {
     return NextResponse.redirect(`${appUrl}/login?error=invalid_state`);
@@ -161,8 +164,16 @@ export async function GET(req: NextRequest) {
       },
     );
 
-    const setSessionUrl = `${appUrl}/api/auth/set-session?t=${encodeURIComponent(handoffToken)}`;
-    const response = NextResponse.redirect(setSessionUrl, { status: 302 });
+    // The native app's ASWebAuthenticationSession is watching for a redirect to
+    // this custom scheme — it ends the auth session right here and hands the
+    // token to /api/auth/native-session itself, so there's no browser involved
+    // and no cross-site cookie-drop problem to work around.
+    const targetUrl =
+      client === "native"
+        ? `bettertaskmanager://auth-callback?t=${encodeURIComponent(handoffToken)}`
+        : `${appUrl}/api/auth/set-session?t=${encodeURIComponent(handoffToken)}`;
+
+    const response = NextResponse.redirect(targetUrl, { status: 302 });
     response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
     response.headers.set("Pragma", "no-cache");
     return response;
