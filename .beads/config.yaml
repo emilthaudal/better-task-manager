@@ -52,3 +52,9 @@
 # - linear.api-key
 # - github.org
 # - github.repo
+
+sync.remote: "git+https://github.com/emilthaudal/better-task-manager.git"
+repos:
+  primary: "."
+  additional:
+    - "/Users/emtb/.beads-planning"
