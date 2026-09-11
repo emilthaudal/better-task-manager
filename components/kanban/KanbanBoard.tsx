@@ -12,7 +12,7 @@ import {
 } from "@dnd-kit/core";
 import type { JiraIssue, JiraIssueType, JiraStatus, JiraUser } from "@/lib/jira";
 import { STATUS_COLORS, EPIC_COLORS, UNASSIGNED_EPIC_COLOR, UNASSIGNED_EPIC_KEY } from "@/lib/graphConstants";
-import { moveIssue, createIssue, assignIssue, fetchProjectStatuses } from "@/hooks/useIssueMutations";
+import { moveIssue, createIssue, assignIssue } from "@/hooks/useIssueMutations";
 import KanbanColumn from "./KanbanColumn";
 import { KanbanCardOverlay } from "./KanbanCard";
 import { useToasts, ToastStack } from "./Toast";
@@ -108,26 +108,6 @@ export default function KanbanBoard({ issues, onIssueSelect, selectedKey, projec
   const { toasts, push, dismiss } = useToasts();
   const [createEpicKey, setCreateEpicKey] = useState<string | null>(null);
 
-  // The board only ever loads recently-active issues (see getProjectIssues),
-  // so a status with nothing recent in it — most commonly "Done" once
-  // everything there has aged out — would otherwise never get a column,
-  // leaving no drop target to close a card onto. Fetch the workflow's full
-  // status set separately so every status always renders a column.
-  const [workflowStatuses, setWorkflowStatuses] = useState<JiraStatus[]>([]);
-  useEffect(() => {
-    let cancelled = false;
-    fetchProjectStatuses(projectKey)
-      .then((fetched) => {
-        if (!cancelled) setWorkflowStatuses(fetched);
-      })
-      .catch(() => {
-        // Non-fatal — the board still works with whatever statuses the loaded issues carry.
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [projectKey]);
-
   useEffect(() => {
     setLocalIssues((prev) => {
       if (pendingRef.current.size === 0) return issues;
@@ -159,10 +139,7 @@ export default function KanbanBoard({ issues, onIssueSelect, selectedKey, projec
   // Global column set — every status that has at least one issue anywhere on
   // the board gets a column, shared by every epic group below (so a status
   // with zero issues *for a given epic* still shows as an empty cell rather
-  // than the columns shifting between epics). Any workflow status with zero
-  // *loaded* issues (typically "Done" once its issues have aged past the
-  // board's recent-activity window) is still included at count 0, so there's
-  // always a column to drag a card onto.
+  // than the columns shifting between epics).
   const columns: Column[] = useMemo(() => {
     const byStatus = new Map<string, Column>();
     for (const issue of boardIssues) {
@@ -179,22 +156,12 @@ export default function KanbanBoard({ issues, onIssueSelect, selectedKey, projec
         });
       }
     }
-    for (const status of workflowStatuses) {
-      if (!byStatus.has(status.id)) {
-        byStatus.set(status.id, {
-          statusId: status.id,
-          statusName: status.name,
-          statusCategory: status.statusCategory.key,
-          count: 0,
-        });
-      }
-    }
     return Array.from(byStatus.values()).sort((a, b) => {
       const catDiff = (CATEGORY_ORDER[a.statusCategory] ?? 1) - (CATEGORY_ORDER[b.statusCategory] ?? 1);
       if (catDiff !== 0) return catDiff;
       return a.statusName.localeCompare(b.statusName);
     });
-  }, [boardIssues, workflowStatuses]);
+  }, [boardIssues]);
 
   // Quick-create always lands in the "To Do"-category column, matching where
   // Jira's own create screen puts a fresh issue for almost every workflow.

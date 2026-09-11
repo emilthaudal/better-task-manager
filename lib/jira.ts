@@ -344,34 +344,6 @@ export async function getProjectIssues(
   );
 }
 
-/**
- * Fetch every status reachable in the project's workflows, regardless of
- * whether any issue currently sits in it. The board's column set is derived
- * from currently-loaded issues (see getProjectIssues above) and a status
- * with zero *recent* issues — most commonly the terminal "Done" status once
- * everything in it has aged past the 7-day window — would otherwise never
- * render a column, leaving nothing to drag a card onto to close it.
- */
-export async function getProjectStatuses(
-  projectKey: string,
-  session?: SessionData,
-): Promise<JiraStatus[]> {
-  const byIssueType = await jiraFetch<Array<{ name: string; subtask: boolean; statuses: JiraStatus[] }>>(
-    `/project/${encodeURIComponent(projectKey)}/statuses`,
-    session,
-  );
-  const byId = new Map<string, JiraStatus>();
-  // Skip subtasks and epics — neither is boardable (see isBoardable in KanbanBoard),
-  // so their workflow statuses would only ever render as unreachable empty columns.
-  for (const { name, subtask, statuses } of byIssueType) {
-    if (subtask || name === "Epic") continue;
-    for (const status of statuses) {
-      byId.set(status.id, status);
-    }
-  }
-  return Array.from(byId.values());
-}
-
 /** Fetch all issues that are direct children of an epic (one level). */
 export async function getEpicChildren(
   epicKey: string,

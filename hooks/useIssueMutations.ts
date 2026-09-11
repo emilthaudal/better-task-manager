@@ -1,4 +1,4 @@
-import type { JiraIssue, JiraIssueType, JiraStatus, JiraTransition, JiraUser } from "@/lib/jira";
+import type { JiraIssue, JiraIssueType, JiraTransition, JiraUser } from "@/lib/jira";
 
 export interface PermissionsResponse {
   transitions: JiraTransition[];
@@ -92,13 +92,6 @@ export async function fetchCreateIssueTypes(projectKey: string): Promise<JiraIss
   const r = await fetch(`/api/jira/issue-types?project=${encodeURIComponent(projectKey)}`);
   if (!r.ok) throw new Error(`Failed to load issue types (${r.status})`);
   return r.json() as Promise<JiraIssueType[]>;
-}
-
-/** Every status in the project's workflows, regardless of whether any issue is currently in it — used so the board always has a column to drag a card onto, even a "Done" status with nothing recent in it. */
-export async function fetchProjectStatuses(projectKey: string): Promise<JiraStatus[]> {
-  const r = await fetch(`/api/jira/statuses?project=${encodeURIComponent(projectKey)}`);
-  if (!r.ok) throw new Error(`Failed to load statuses (${r.status})`);
-  return r.json() as Promise<JiraStatus[]>;
 }
 
 export interface CreateIssuePayload {
