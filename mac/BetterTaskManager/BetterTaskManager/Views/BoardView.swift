@@ -193,7 +193,7 @@ struct BoardView: View {
     ) {
         guard let column = columns.first(where: { $0.statusId == difference.destination.collectionID }) else { return }
         for issueKey in difference.sources {
-            Task { await viewModel.move(issueKey: issueKey, toEpic: epicKey, to: column) }
+            viewModel.move(issueKey: issueKey, toEpic: epicKey, to: column)
         }
     }
 

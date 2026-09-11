@@ -6,13 +6,14 @@ struct JiraProject: Decodable, Identifiable, Hashable {
     let name: String
 }
 
-struct JiraStatusCategory: Decodable, Hashable {
+struct JiraStatusCategory: Codable, Hashable {
     let id: Int
     let key: String
     let name: String
 }
 
-struct JiraStatus: Decodable, Hashable {
+/// Encodable as well as decodable: a queued move persists its target status to disk.
+struct JiraStatus: Codable, Hashable {
     let id: String
     let name: String
     let statusCategory: JiraStatusCategory

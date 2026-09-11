@@ -2,7 +2,6 @@ import SwiftUI
 
 struct BoardCardView: View {
     let issue: JiraIssue
-    var isPending = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -51,8 +50,6 @@ struct BoardCardView: View {
                 .strokeBorder(Color(nsColor: .separatorColor), lineWidth: 0.5)
         }
         .shadow(color: .black.opacity(0.12), radius: 2.5, y: 1)
-        .opacity(isPending ? 0.5 : 1)
-        .animation(.snappy(duration: 0.2), value: isPending)
     }
 
     @ViewBuilder

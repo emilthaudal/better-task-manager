@@ -12,15 +12,34 @@ final class BoardViewModel {
     private(set) var collapsedKeys: Set<String> = []
     private var userToggledKeys: Set<String> = []
 
-    /// Issues with a transition in flight. Their optimistic status has to survive the
-    /// poll below until the request resolves, or a refresh landing mid-move snaps the
-    /// card back to where it started and then forward again.
-    private(set) var pendingKeys: Set<String> = []
-
     /// Recomputed only when `issues` changes rather than on every access — the
     /// grouping walk runs over every issue and shouldn't repeat on each SwiftUI
     /// layout pass (e.g. every scroll-driven re-render).
     private(set) var boardData = BoardData(columns: [], epicGroups: [], issuesByKey: [:], epicKeyByIssue: [:])
+
+    /// The last poll result, untouched by queued moves. `issues` is this with the
+    /// outbox overlaid, which makes a rollback nothing more than dropping the queue
+    /// entry — there's no saved-original bookkeeping to get out of step.
+    private var serverIssues: [JiraIssue] = []
+
+    let outbox: MoveOutbox
+
+    init(outbox: MoveOutbox? = nil) {
+        self.outbox = outbox ?? MoveOutbox(store: .applicationSupport()) { issueKey, statusID in
+            try await APIClient.shared.moveIssue(issueKey: issueKey, toStatusId: statusID)
+        }
+
+        self.outbox.serverStatusID = { [weak self] key in
+            self?.serverIssues.first { $0.key == key }?.fields.status.id
+        }
+        self.outbox.onOutcome = { [weak self] outcome in
+            guard let self else { return }
+            if case let .rolledBack(move, message) = outcome {
+                moveError = "Couldn't move \(move.issueKey) to \(move.targetStatus.name): \(message)"
+            }
+            rederive()
+        }
+    }
 
     /// Runs until the enclosing `.task` is cancelled (the view disappearing, or a
     /// retry restarting it under a new task id) — mirrors the web app's 30s poll,
@@ -49,31 +68,32 @@ final class BoardViewModel {
     }
 
     func canMove(issueKey: String, toEpic epicKey: String, toStatus statusId: String) -> Bool {
-        !pendingKeys.contains(issueKey)
-            && boardData.canMove(issueKey: issueKey, toEpic: epicKey, toStatus: statusId)
+        boardData.canMove(issueKey: issueKey, toEpic: epicKey, toStatus: statusId)
     }
 
-    func move(issueKey: String, toEpic epicKey: String, to column: BoardColumn) async {
+    /// Returns as soon as the board reflects the drop. The Jira write is queued and
+    /// reconciled in the background, so a second drag of the same card doesn't have
+    /// to wait for the first one's round trip.
+    func move(issueKey: String, toEpic epicKey: String, to column: BoardColumn) {
         guard canMove(issueKey: issueKey, toEpic: epicKey, toStatus: column.statusId),
-              let original = boardData.issuesByKey[issueKey] else { return }
+              let onScreen = boardData.issuesByKey[issueKey] else { return }
 
-        pendingKeys.insert(issueKey)
-        applyStatus(column.optimisticStatus, to: issueKey)
-
-        do {
-            try await APIClient.shared.moveIssue(issueKey: issueKey, toStatusId: column.statusId)
-        } catch {
-            applyStatus(original.fields.status, to: issueKey)
-            moveError = error.localizedDescription
-        }
-
-        pendingKeys.remove(issueKey)
+        outbox.enqueue(
+            issueKey: issueKey,
+            from: onScreen.fields.status,
+            to: column.optimisticStatus
+        )
+        rederive()
     }
 
-    private func applyStatus(_ status: JiraStatus, to issueKey: String) {
-        guard let index = issues.firstIndex(where: { $0.key == issueKey }) else { return }
+    private func rederive() {
         withAnimation(.snappy(duration: 0.28)) {
-            issues[index].fields.status = status
+            issues = serverIssues.map { issue in
+                guard let move = outbox.pending[issue.key] else { return issue }
+                var overlaid = issue
+                overlaid.fields.status = move.targetStatus
+                return overlaid
+            }
             boardData = buildBoardData(from: issues)
         }
     }
@@ -84,19 +104,18 @@ final class BoardViewModel {
             errorMessage = nil
         }
         do {
-            issues = merge(incoming: try await APIClient.shared.fetchBoardIssues(project: project))
-            boardData = buildBoardData(from: issues)
+            serverIssues = try await APIClient.shared.fetchBoardIssues(project: project)
+            rederive()
+            // Only now can the outbox tell a move Jira already applied from one it
+            // never received, so a queue restored from disk waits for this first poll
+            // rather than re-transitioning a write that had already landed.
+            outbox.startWorker()
             if !silent { errorMessage = nil }
             autoCollapseDoneEpics()
         } catch {
             if !silent { errorMessage = error.localizedDescription }
         }
         if !silent { isLoading = false }
-    }
-
-    private func merge(incoming: [JiraIssue]) -> [JiraIssue] {
-        guard !pendingKeys.isEmpty else { return incoming }
-        return incoming.map { pendingKeys.contains($0.key) ? (boardData.issuesByKey[$0.key] ?? $0) : $0 }
     }
 
     /// Done epics start collapsed so finished work doesn't crowd the board — once a

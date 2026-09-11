@@ -12,7 +12,7 @@ struct BoardColumnView: View {
             // Identified by key rather than Jira's internal id so it matches the
             // `itemID` the enclosing reorder container reports back on a drop.
             ForEach(issues, id: \.key) { issue in
-                BoardCardView(issue: issue, isPending: viewModel.pendingKeys.contains(issue.key))
+                BoardCardView(issue: issue)
             }
             .reorderable(collectionID: column.statusId)
         }
