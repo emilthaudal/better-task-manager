@@ -49,10 +49,13 @@ final class BoardViewModel {
                 if let index = serverIssues.firstIndex(where: { $0.key == move.issueKey }) {
                     serverIssues[index].fields.status = move.targetStatus
                 }
+                // The card is already sitting in the target column, so there is
+                // nothing to animate — only the layer underneath it changed.
+                rederive(animated: false)
             case let .rolledBack(move, message):
                 moveError = "Couldn't move \(move.issueKey) to \(move.targetStatus.name): \(message)"
+                rederive(animated: true)
             }
-            rederive()
         }
     }
 
@@ -98,19 +101,29 @@ final class BoardViewModel {
             from: onScreen.fields.status,
             to: column.optimisticStatus
         )
-        rederive()
+        rederive(animated: true)
     }
 
-    private func rederive() {
-        withAnimation(.snappy(duration: 0.28)) {
-            issues = serverIssues.map { issue in
-                guard let move = outbox.pending[issue.key] else { return issue }
-                var overlaid = issue
-                overlaid.fields.status = move.targetStatus
-                return overlaid
-            }
-            boardData = buildBoardData(from: issues)
+    /// Only animate what the user just did. Animating the 30s poll as well re-lays out
+    /// the whole board on a timer, which lands as a stutter mid-scroll or mid-drag.
+    private func rederive(animated: Bool) {
+        if animated {
+            withAnimation(.snappy(duration: 0.28)) { applyOutboxOverlay() }
+        } else {
+            applyOutboxOverlay()
         }
+    }
+
+    private func applyOutboxOverlay() {
+        // With an empty queue the poll result is already what the board should show,
+        // so don't copy every issue just to change nothing.
+        issues = outbox.pending.isEmpty ? serverIssues : serverIssues.map { issue in
+            guard let move = outbox.pending[issue.key] else { return issue }
+            var overlaid = issue
+            overlaid.fields.status = move.targetStatus
+            return overlaid
+        }
+        boardData = buildBoardData(from: issues)
     }
 
     func load(project: String, silent: Bool) async {
@@ -120,7 +133,7 @@ final class BoardViewModel {
         }
         do {
             serverIssues = try await fetchIssues(project)
-            rederive()
+            rederive(animated: false)
             // Only now can the outbox tell a move Jira already applied from one it
             // never received, so a queue restored from disk waits for this first poll
             // rather than re-transitioning a write that had already landed.
