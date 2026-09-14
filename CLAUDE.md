@@ -1,6 +1,6 @@
-# Project Instructions for AI Agents
+# CLAUDE.md
 
-This file provides instructions and context for AI coding agents working on this project.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:970c3bf2 -->
 ## Beads Issue Tracker

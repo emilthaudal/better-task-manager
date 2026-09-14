@@ -160,6 +160,7 @@ struct BoardView: View {
                 HStack(alignment: .top, spacing: layout.columnSpacing) {
                     ForEach(columns) { column in
                         BoardColumnView(
+                            viewModel: viewModel,
                             column: column,
                             issues: group.byStatus[column.statusId] ?? []
                         )
