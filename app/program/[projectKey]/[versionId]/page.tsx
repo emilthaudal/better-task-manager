@@ -65,17 +65,31 @@ function Summary({ detail, onSelect }: { detail: MilestoneDetail; onSelect: (k: 
           </div>
         </div>
       </div>
-      <div className="flex flex-wrap items-center gap-x-8 gap-y-3">
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-3 xl:gap-x-8">
         <Stat label="Critical path" value={detail.criticalPath.length} unit={detail.criticalPath.length === 1 ? "step" : "steps"} tone="critical" hint="Length of the longest remaining chain of blocked work" />
         <Stat label="Ready now" value={detail.readyNow.length} tone={detail.readyNow.length ? "ready" : undefined} hint="Remaining items whose blockers are all done" />
         <Stat label="Blocks other teams" value={crossTeam} tone={crossTeam ? "cross" : undefined} hint="Remaining items that other teams' work waits on" />
         <Stat label="Needs attention" value={detail.warnings.length} tone={detail.warnings.length ? "warn" : undefined} hint="Sequencing problems found in Jira links" />
+        {top && (
+          <button
+            type="button"
+            onClick={() => onSelect(top.epicKey)}
+            title={`${topEpic?.summary ?? top.epicKey} — gates ${top.downstreamItems} items`}
+            className="flex flex-col gap-1 rounded-lg text-left min-[1400px]:hidden"
+          >
+            <span className="text-[11px] font-medium text-[var(--ms-label-3)]">Biggest blocker</span>
+            <span className="flex items-center gap-1.5 text-[12.5px] text-[var(--ms-label-2)]">
+              <KeyChip issueKey={top.epicKey} critical={top.onCriticalPath} />
+              gates {top.downstreamItems}
+            </span>
+          </button>
+        )}
       </div>
       {top && (
         <button
           type="button"
           onClick={() => onSelect(top.epicKey)}
-          className="group ml-auto flex max-w-[340px] min-w-[240px] flex-col gap-1 rounded-xl bg-[var(--ms-surface)] px-3.5 py-2.5 text-left shadow-[var(--ms-shadow-card)] transition-shadow hover:shadow-[var(--ms-shadow-hover)]"
+          className="group ml-auto hidden max-w-[340px] min-w-[240px] flex-col gap-1 min-[1400px]:flex rounded-xl bg-[var(--ms-surface)] px-3.5 py-2.5 text-left shadow-[var(--ms-shadow-card)] transition-shadow hover:shadow-[var(--ms-shadow-hover)]"
         >
           <span className="flex items-center gap-2 text-[11px] font-medium text-[var(--ms-label-3)]">
             Biggest blocker
@@ -259,6 +273,7 @@ function MilestoneView() {
                 selectedKey={view.item}
                 jiraBaseUrl={jiraBaseUrl}
                 onSelect={select}
+                onShowInTimeline={view.tab === "insights" ? () => setView({ tab: "path" }) : undefined}
               />
             )}
           </main>

@@ -1101,7 +1101,7 @@ html.dark .ms {
 }
 .ms-card:focus-visible { outline-offset: 3px; border-radius: 12px; }
 .ms-edge, .ms-slack { transition: opacity 180ms var(--ms-ease); }
-.ms-canvas[data-focus] .ms-card:not([data-lit]) { opacity: 0.28; }
+.ms-canvas[data-focus] .ms-card:not([data-lit]):not([data-selected]) { opacity: 0.28; }
 .ms-canvas[data-focus] .ms-slack:not([data-lit]) { opacity: 0.15; }
 .ms-canvas[data-focus] .ms-edge:not([data-lit]) { opacity: 0.07; }
 .ms-canvas[data-focus] .ms-edge[data-lit] { stroke-width: 2.5; }

@@ -327,7 +327,11 @@ export default function CriticalPathTimeline({ detail, laneMode, selectedKey, on
   }, [focusSet]);
 
   // Newly mounted (un-culled) nodes need the current highlight too.
-  useLayoutEffect(applyFocus);
+  const applyFocusRef = useRef(applyFocus);
+  useLayoutEffect(() => {
+    applyFocusRef.current = applyFocus;
+    applyFocus();
+  });
 
   const onPointerOver = useCallback(
     (e: React.PointerEvent) => {
@@ -399,6 +403,12 @@ export default function CriticalPathTimeline({ detail, laneMode, selectedKey, on
   // Selecting from elsewhere (inspector, URL, panels) brings the card into view.
   const firstReveal = useRef(true);
   useEffect(() => {
+    // A new selection (often from the keyboard) wins over a pointer that
+    // happens to rest on another card, until the pointer moves again.
+    if (hoverRef.current) {
+      hoverRef.current = null;
+      applyFocusRef.current();
+    }
     // Only a selection present at mount (a shared link) is centred.
     if (selectedKey) reveal(selectedKey, !firstReveal.current);
     firstReveal.current = false;

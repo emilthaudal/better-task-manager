@@ -10,6 +10,8 @@ interface Props {
   selectedKey: string;
   jiraBaseUrl: string;
   onSelect: (key: string | null) => void;
+  /** Offered when the timeline isn't showing — switches to it with this selection. */
+  onShowInTimeline?: () => void;
 }
 
 interface Ref {
@@ -72,7 +74,7 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
   );
 }
 
-export default function MilestoneInspector({ detail, selectedKey, jiraBaseUrl, onSelect }: Props) {
+export default function MilestoneInspector({ detail, selectedKey, jiraBaseUrl, onSelect, onShowInTimeline }: Props) {
   const index = useMemo(() => {
     const critical = new Set(detail.criticalPath.criticalKeys);
     const refs = new Map<string, Ref>();
@@ -251,17 +253,26 @@ export default function MilestoneInspector({ detail, selectedKey, jiraBaseUrl, o
         )}
       </div>
 
-      {jiraBaseUrl && (
-        <div className="border-t border-[var(--ms-sep)] p-3">
-          <a
+      {(jiraBaseUrl || onShowInTimeline) && (
+        <div className="flex gap-2 border-t border-[var(--ms-sep)] p-3">
+          {onShowInTimeline && (item?.schedule || epic || increment) && (
+            <button
+              type="button"
+              onClick={onShowInTimeline}
+              className="flex flex-1 items-center justify-center rounded-lg bg-[var(--ms-accent)] px-3 py-2 text-[13px] font-medium text-white transition-opacity hover:opacity-90"
+            >
+              Show on critical path
+            </button>
+          )}
+          {jiraBaseUrl && <a
             href={`${jiraBaseUrl}/browse/${selectedKey}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center justify-center gap-1 rounded-lg bg-[var(--ms-fill)] px-3 py-2 text-[13px] font-medium text-[var(--ms-accent-text)] transition-colors hover:bg-[var(--ms-sep-strong)]"
+            className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-[var(--ms-fill)] px-3 py-2 text-[13px] font-medium text-[var(--ms-accent-text)] transition-colors hover:bg-[var(--ms-sep-strong)]"
           >
-            Open {selectedKey} in Jira
+            Open in Jira
             <span aria-hidden="true">↗</span>
-          </a>
+          </a>}
         </div>
       )}
     </aside>
