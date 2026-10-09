@@ -11,6 +11,7 @@ struct MilestoneCommandContext {
     var isRefreshing: Bool
     var show: (SidebarItem) -> Void
     var refresh: () -> Void
+    var focusSearch: () -> Void
 }
 
 extension FocusedValues {
@@ -21,6 +22,12 @@ struct MilestoneCommands: Commands {
     @FocusedValue(\.milestoneCommands) private var context
 
     var body: some Commands {
+        CommandGroup(after: .textEditing) {
+            Button("Filter…") { context?.focusSearch() }
+                .keyboardShortcut("f", modifiers: .command)
+                .disabled(context == nil)
+        }
+
         CommandGroup(before: .toolbar) {
             ForEach(Array(MilestoneTab.allCases.enumerated()), id: \.element) { index, tab in
                 Toggle(isOn: Binding(

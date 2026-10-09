@@ -51,6 +51,7 @@ struct MilestoneRootView: View {
     @State private var inspected: InspectorTarget?
     @State private var showInspector = false
     @State private var searchText = ""
+    @FocusState private var isSearchFocused: Bool
     @State private var reloadToken = 0
     @SceneStorage("sidebarSelection") private var storedSelection = ""
     @AppStorage(Config.DefaultsKey.deliveryProjectKey) private var deliveryProjectSetting = Config.defaultDeliveryProjectKey
@@ -76,7 +77,8 @@ struct MilestoneRootView: View {
             selectedMilestoneID: selection?.milestoneID,
             isRefreshing: store.isRefreshing,
             show: { selection = $0 },
-            refresh: { Task { await store.refresh(milestoneID: selection?.milestoneID) } }
+            refresh: { Task { await store.refresh(milestoneID: selection?.milestoneID) } },
+            focusSearch: { isSearchFocused = true }
         )
     }
 
@@ -92,6 +94,7 @@ struct MilestoneRootView: View {
                 }
         }
         .searchable(text: $searchText, placement: .toolbar, prompt: "Filter items, epics, people")
+        .searchFocused($isSearchFocused)
         .toolbar { toolbarContent }
         .environment(\.milestoneNavigator, navigator)
         .environment(\.jiraSiteURL, store.siteURL)

@@ -51,7 +51,7 @@ struct CriticalPathView: View {
     @State private var position = ScrollPosition()
     /// A card to bring into view once the layout and viewport exist, and to re-check
     /// while the inspector slides in and narrows the viewport.
-    @State private var pendingReveal: (key: String, until: Date)?
+    @State private var pendingReveal: (key: String, until: Date, from: CGPoint)?
     @FocusState private var isFocused: Bool
     @Namespace private var glassNamespace
 
@@ -162,7 +162,7 @@ struct CriticalPathView: View {
     // MARK: Reveal & keyboard
 
     private func requestReveal(_ key: String) {
-        pendingReveal = (key, .now.addingTimeInterval(1.2))
+        pendingReveal = (key, .now.addingTimeInterval(1.2), scroll.visible.origin)
         reveal(key)
     }
 
@@ -170,16 +170,23 @@ struct CriticalPathView: View {
     /// card here, because the cards sit inside a scaleEffect (their layout frames
     /// don't move with zoom) and are culled when off screen, so there's no view with
     /// that id to scroll to.
+    ///
+    /// While a reveal is pending the decision is re-made from where the scroll was
+    /// when it was requested: a transiently narrow viewport (window still laying
+    /// out, inspector mid-slide) must not leave the view scrolled for no reason
+    /// once the card turns out to fit.
     private func reveal(_ key: String) {
         guard let node = layout.nodesByKey[key], scroll.visible.width > 0 else { return }
         let frame = CGRect(x: node.frame.minX * zoom, y: node.frame.minY * zoom,
                            width: node.frame.width * zoom, height: node.frame.height * zoom)
-        guard let origin = SwimlaneViewport.revealOrigin(
+        let from = pendingReveal?.key == key ? (pendingReveal?.from ?? scroll.visible.origin) : scroll.visible.origin
+        let origin = SwimlaneViewport.revealOrigin(
             for: frame.insetBy(dx: -12, dy: -12),
-            visible: scroll.visible,
+            visible: CGRect(origin: from, size: scroll.visible.size),
             obstruction: CGSize(width: metrics.laneHeaderWidth * zoom, height: metrics.columnHeaderHeight * zoom),
             contentSize: CGSize(width: layout.size.width * zoom + 40, height: layout.size.height * zoom + 64)
-        ) else { return }
+        ) ?? from
+        guard origin != scroll.visible.origin else { return }
         // `scrollTo(point:)` sets the raw content offset, which starts under the
         // leading/top insets; the visible rect is measured from past them.
         let point = CGPoint(x: origin.x - scroll.insets.leading, y: origin.y - scroll.insets.top)
@@ -527,6 +534,19 @@ private struct LaneHeaderLayer: View {
     var body: some View {
         let x = max(scroll.visible.minX / zoom, 0)
         ZStack(alignment: .topLeading) {
+            // A solid strip under the pinned headers: cards scrolled beneath them
+            // otherwise show through the material and through the gaps between lanes.
+            if x > 0 {
+                HStack(spacing: 0) {
+                    Color(nsColor: .windowBackgroundColor)
+                    LinearGradient(colors: [Color(nsColor: .windowBackgroundColor), Color(nsColor: .windowBackgroundColor).opacity(0)],
+                                   startPoint: .leading, endPoint: .trailing)
+                        .frame(width: 16)
+                }
+                .frame(width: metrics.laneHeaderWidth + 4, height: layout.size.height)
+                .offset(x: x)
+                .allowsHitTesting(false)
+            }
             ForEach(layout.lanes) { lane in
                 LaneHeader(lane: lane)
                     .frame(width: metrics.laneHeaderWidth - 18, height: lane.frame.height)
