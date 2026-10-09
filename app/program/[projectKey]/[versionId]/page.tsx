@@ -10,6 +10,7 @@ import {
   CriticalChainPanel,
   IncrementsPanel,
   ReadyNowPanel,
+  TeamDependencyPanel,
   TeamLoadPanel,
   WarningsPanel,
 } from "@/components/milestone/InsightPanels";
@@ -298,6 +299,7 @@ function MilestoneView() {
                 <div className="ms-fade-up mx-auto grid max-w-[1280px] gap-8 px-8 py-8 xl:grid-cols-[1.15fr_1fr]">
                   <div className="flex min-w-0 flex-col gap-8">
                     <BlockerEpicsPanel detail={data} onSelect={select} />
+                    <TeamDependencyPanel detail={data} />
                     <TeamLoadPanel detail={data} />
                   </div>
                   <div className="flex min-w-0 flex-col gap-8">
