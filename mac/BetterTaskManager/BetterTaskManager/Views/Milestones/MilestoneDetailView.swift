@@ -118,20 +118,27 @@ private struct MilestoneHeader: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(detail.release.name)
                     .font(.title.weight(.bold))
+                    .lineLimit(1)
                 HStack(spacing: 8) {
                     Badge(text: releaseStateLabel(state), systemImage: state.symbol, tint: state.tint)
+                        .fixedSize()
                     Text("Milestone \(detail.release.sequence + 1) · \(pluralized(detail.increments.count, "increment")) · \(pluralized(detail.teams.count, "team"))")
                         .font(.callout)
                         .foregroundStyle(.secondary)
+                        .lineLimit(1)
                 }
                 if let description = detail.release.description, !description.isEmpty {
                     Text(description).font(.callout).foregroundStyle(.secondary).lineLimit(1)
                 }
             }
+            // The title block claims its width first; the stat tiles shrink, then
+            // drop out, as the window narrows — never the other way round.
+            .layoutPriority(1)
             Spacer(minLength: 12)
             ViewThatFits(in: .horizontal) {
                 tiles(remaining: remaining, compact: false)
                 tiles(remaining: remaining, compact: true)
+                Color.clear.frame(width: 0, height: 0)
             }
         }
     }
