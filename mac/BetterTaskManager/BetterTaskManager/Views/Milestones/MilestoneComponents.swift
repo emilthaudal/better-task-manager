@@ -15,7 +15,12 @@ enum InspectorTarget: Hashable {
 /// Lets any row, card or chip deep in the milestone views drive the window's
 /// selection and inspector without threading bindings through every layer.
 struct MilestoneNavigator {
+    /// Selects and shows the inspector.
     var inspect: (InspectorTarget) -> Void = { _ in }
+    /// Selects without opening a hidden inspector — keyboard navigation moves
+    /// through cards without the inspector popping in on every arrow press.
+    var select: (InspectorTarget) -> Void = { _ in }
+    var clearSelection: () -> Void = {}
     var showTeam: (String) -> Void = { _ in }
     var showMilestone: (String) -> Void = { _ in }
     var inspected: InspectorTarget?

@@ -126,6 +126,8 @@ struct MilestoneRootView: View {
                     showInspector = true
                 }
             },
+            select: { target in inspected = target },
+            clearSelection: { withAnimation(.smooth) { inspected = nil } },
             showTeam: { name in
                 guard let id = selection?.milestoneID else { return }
                 selection = .team(milestone: id, name: name)
