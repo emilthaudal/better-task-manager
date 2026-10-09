@@ -13,6 +13,7 @@ import {
   parseViewState,
   samePayload,
   serializeViewState,
+  teamMatrix,
   visibleCards,
   visibleEdges,
 } from "@/lib/milestoneView";
@@ -147,6 +148,28 @@ describe("culling", () => {
     expect(layout.cards.length).toBeGreaterThan(250);
     expect(shown).toBeLessThan(layout.cards.length / 2);
     expect(CARD_HEIGHT).toBeGreaterThan(0);
+  });
+});
+
+describe("teamMatrix", () => {
+  it("counts open cross-team links blocker → blocked, most blocking team first", () => {
+    const d = fixtureDetail("multi");
+    const m = teamMatrix(d);
+    expect(m).not.toBeNull();
+    if (!m) return;
+    const total = Object.values(m.counts).flatMap((row) => Object.values(row)).reduce((a, b) => a + b, 0);
+    const teamOf = new Map(d.items.map((i) => [i.key, i.team]));
+    for (const e of d.epics) teamOf.set(e.key, e.team);
+    const expected = d.dependencies.filter((x) => !x.satisfied && x.crossTeam && teamOf.get(x.from) !== teamOf.get(x.to)).length;
+    expect(total).toBe(expected);
+    const out = (t: string) => Object.values(m.counts[t] ?? {}).reduce((a, b) => a + b, 0);
+    expect(out(m.teams[0] as string)).toBeGreaterThanOrEqual(out(m.teams[m.teams.length - 1] as string));
+    for (const t of m.teams) expect(m.counts[t]?.[t]).toBeUndefined();
+  });
+
+  it("is null when no team waits on another", () => {
+    const d = fixtureDetail("multi");
+    expect(teamMatrix({ ...d, dependencies: d.dependencies.map((x) => ({ ...x, crossTeam: false })) })).toBeNull();
   });
 });
 

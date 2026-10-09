@@ -225,6 +225,43 @@ export function visibleEdges(edges: LaidOutEdge[], rect: Rect | null): LaidOutEd
   });
 }
 
+// ── Cross-team dependency matrix ────────────────────────────────────────────
+
+export interface TeamMatrix {
+  /** Teams in display order: most blocking first. */
+  teams: string[];
+  /** counts[blocker][blocked] = open cross-team links from blocker's work to blocked's. */
+  counts: Record<string, Record<string, number>>;
+  max: number;
+}
+
+/**
+ * Open (unsatisfied) cross-team "blocks" links, aggregated team × team —
+ * who is waiting on whom. Null when there are none.
+ */
+export function teamMatrix(detail: MilestoneDetail): TeamMatrix | null {
+  const teamOf = new Map(detail.items.map((i) => [i.key, i.team]));
+  for (const e of detail.epics) teamOf.set(e.key, e.team);
+  const counts: Record<string, Record<string, number>> = {};
+  const outgoing = new Map<string, number>();
+  const involved = new Set<string>();
+  let max = 0;
+  for (const d of detail.dependencies) {
+    if (d.satisfied || !d.crossTeam) continue;
+    const from = teamOf.get(d.from);
+    const to = teamOf.get(d.to);
+    if (!from || !to || from === to) continue;
+    const row = (counts[from] ??= {});
+    row[to] = (row[to] ?? 0) + 1;
+    max = Math.max(max, row[to]);
+    outgoing.set(from, (outgoing.get(from) ?? 0) + 1);
+    involved.add(from).add(to);
+  }
+  if (involved.size === 0) return null;
+  const teams = [...involved].sort((a, b) => (outgoing.get(b) ?? 0) - (outgoing.get(a) ?? 0) || a.localeCompare(b));
+  return { teams, counts, max };
+}
+
 // ── Payload equality ────────────────────────────────────────────────────────
 
 /** Same content ignoring `generatedAt` — a poll that changed nothing shouldn't re-render. */
