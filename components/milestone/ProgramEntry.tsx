@@ -1,24 +1,24 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 const STORAGE_KEY = "btm:deliveryProject";
 const DEFAULT_PROJECT = "LAD";
 
+function readSavedProject(): string {
+  if (typeof window === "undefined") return DEFAULT_PROJECT;
+  try {
+    return localStorage.getItem(STORAGE_KEY) || DEFAULT_PROJECT;
+  } catch {
+    return DEFAULT_PROJECT;
+  }
+}
+
 /** Entry point to the delivery program: milestones, critical path and blockers. */
 export default function ProgramEntry() {
   const router = useRouter();
-  const [project, setProject] = useState(DEFAULT_PROJECT);
-
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) setProject(saved);
-    } catch {
-      // Storage unavailable — keep the default.
-    }
-  }, []);
+  const [project, setProject] = useState(readSavedProject);
 
   function open(e: React.FormEvent) {
     e.preventDefault();
@@ -45,6 +45,8 @@ export default function ProgramEntry() {
         value={project}
         onChange={(e) => setProject(e.target.value)}
         aria-label="Delivery project key"
+        // The saved key is only known client-side.
+        suppressHydrationWarning
         className="w-20 rounded-lg border border-border bg-background px-2 py-1.5 text-center font-mono text-sm uppercase text-foreground"
       />
       <button
