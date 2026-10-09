@@ -44,7 +44,7 @@ function ReleaseStage({
       href={href}
       aria-label={`${release.name}, milestone ${release.sequence + 1}, ${STAGE_LABEL[stage]}. Open critical path.`}
       className={cn(
-        "group relative flex w-[300px] shrink-0 snap-start flex-col rounded-2xl bg-[var(--ms-surface)] p-5 shadow-[var(--ms-shadow-card)] transition-[transform,box-shadow] duration-300 ease-[var(--ms-ease)] hover:-translate-y-0.5 hover:shadow-[var(--ms-shadow-hover)]",
+        "group relative flex w-[300px] flex-1 shrink-0 snap-start flex-col rounded-2xl bg-[var(--ms-surface)] p-5 shadow-[var(--ms-shadow-card)] transition-[transform,box-shadow] duration-300 ease-[var(--ms-ease)] hover:-translate-y-0.5 hover:shadow-[var(--ms-shadow-hover)]",
         stage === "next" && "outline-2 outline-offset-0 outline-[var(--ms-accent)] outline-solid",
         stage === "empty" && "bg-transparent shadow-[inset_0_0_0_1px_var(--ms-sep-strong)]",
       )}
@@ -146,15 +146,35 @@ export default function ProgramRoadmap({ overview, linkSuffix = "" }: { overview
         <div className="relative -mx-8">
           {/* The delivery line the stages hang from. */}
           <ol className="flex snap-x snap-mandatory gap-5 overflow-x-auto scroll-px-8 px-8 pb-6 pt-1" aria-label="Milestones in delivery order">
-            {overview.releases.map((r, i) => (
-              <li key={r.id} className="ms-fade-up flex" style={{ animationDelay: `${i * 50}ms` }}>
-                <ReleaseStage
-                  release={r}
-                  stage={stageOf(r, i === nextIndex)}
-                  href={`/program/${encodeURIComponent(overview.project.key)}/${r.id}${linkSuffix}`}
-                />
-              </li>
-            ))}
+            {overview.releases.map((r, i) => {
+              const stage = stageOf(r, i === nextIndex);
+              const last = i === overview.releases.length - 1;
+              return (
+                <li key={r.id} className="ms-fade-up flex flex-col" style={{ animationDelay: `${i * 50}ms` }}>
+                  {/* Delivery line: one node per milestone, joined to the next. */}
+                  <div aria-hidden="true" className="mb-3 flex h-4 items-center pl-5">
+                    <span
+                      className={cn(
+                        "h-2.5 w-2.5 shrink-0 rounded-full ring-4 ring-[var(--ms-bg)]",
+                        stage === "released" && "bg-[var(--ms-ready)]",
+                        stage === "overdue" && "bg-[var(--ms-critical)]",
+                        stage === "next" && "bg-[var(--ms-accent)]",
+                        (stage === "planned" || stage === "empty") && "bg-[var(--ms-sep-strong)]",
+                      )}
+                    />
+                    <span className="ml-2 text-[11px] font-medium tabular-nums text-[var(--ms-label-3)]">
+                      {formatDate(r.releaseDate) ?? "No date"}
+                    </span>
+                    {!last && <span className="-mr-5 ml-3 h-px flex-1 bg-[var(--ms-sep-strong)]" />}
+                  </div>
+                  <ReleaseStage
+                    release={r}
+                    stage={stage}
+                    href={`/program/${encodeURIComponent(overview.project.key)}/${r.id}${linkSuffix}`}
+                  />
+                </li>
+              );
+            })}
           </ol>
         </div>
       )}
