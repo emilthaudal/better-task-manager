@@ -24,6 +24,9 @@ struct MilestoneNavigator {
     var showTeam: (String) -> Void = { _ in }
     var showMilestone: (String) -> Void = { _ in }
     var inspected: InspectorTarget?
+    /// Bumped to ask the swimlane to scroll the current selection back into view,
+    /// e.g. when a search jump lands on the card that's already selected.
+    var revealRequest = 0
 }
 
 extension EnvironmentValues {

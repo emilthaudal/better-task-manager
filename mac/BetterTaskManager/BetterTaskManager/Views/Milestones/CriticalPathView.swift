@@ -187,6 +187,12 @@ struct CriticalPathView: View {
             guard let pending = pendingReveal else { return }
             if pending.until < .now { pendingReveal = nil } else { reveal(pending.key) }
         }
+        .onChange(of: navigator.revealRequest) {
+            if let key = selectedKey, layout.nodesByKey[key] != nil {
+                requestReveal(key)
+                isFocused = true
+            }
+        }
         .defaultFocus($isFocused, true)
         .background(Color(nsColor: .windowBackgroundColor))
     }

@@ -52,6 +52,7 @@ struct MilestoneRootView: View {
     @State private var showInspector = false
     @State private var searchText = ""
     @FocusState private var isSearchFocused: Bool
+    @State private var revealRequest = 0
     @State private var reloadToken = 0
     @SceneStorage("sidebarSelection") private var storedSelection = ""
     @AppStorage(Config.DefaultsKey.deliveryProjectKey) private var deliveryProjectSetting = Config.defaultDeliveryProjectKey
@@ -167,7 +168,8 @@ struct MilestoneRootView: View {
                 selection = .team(milestone: id, name: name)
             },
             showMilestone: { id in selection = .milestone(id) },
-            inspected: inspected
+            inspected: inspected,
+            revealRequest: revealRequest
         )
     }
 
@@ -221,6 +223,7 @@ struct MilestoneRootView: View {
             inspected = .item(best.key)
             showInspector = true
         }
+        revealRequest += 1
     }
 
     private func milestoneName(_ id: String) -> String {
