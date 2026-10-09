@@ -137,7 +137,9 @@ final class MilestoneStore {
             // An unchanged poll must not hand the swimlane a new value — that would
             // rebuild its layout (and reset hover state) every 60 seconds for nothing.
             if milestones[id]?.detail.hasSameContent(as: detail) != true {
-                milestones[id] = await LoadedMilestone.prepare(detail)
+                let prepared = await LoadedMilestone.prepare(detail)
+                TeamColors.register(detail.teams.map(\.name) + detail.items.map(\.team))
+                milestones[id] = prepared
             }
             milestoneStates[id] = .loaded
         } catch {

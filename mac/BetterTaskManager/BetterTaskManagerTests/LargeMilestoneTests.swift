@@ -40,6 +40,21 @@ import Testing
         #expect(chains < .seconds(1))
     }
 
+    @MainActor
+    @Test func teamsInOneMilestoneGetDistinctColours() throws {
+        let detail: MilestoneDetail = try loadFixture("milestone-detail-large")
+        let names = detail.teams.map(\.name)
+        TeamColors.reset()
+        TeamColors.register(names)
+        let slots = names.map(TeamColors.slot(for:))
+        #expect(Set(slots).count == names.count)
+        // Registration order doesn't matter: the same set always gets the same colours.
+        TeamColors.reset()
+        TeamColors.register(names.reversed())
+        #expect(names.map(TeamColors.slot(for:)) == slots)
+        TeamColors.reset()
+    }
+
     @Test func unchangedPayloadOnlyDiffersInTimestamp() throws {
         let detail: MilestoneDetail = try loadFixture("milestone-detail-large")
         let restamped = MilestoneDetail(

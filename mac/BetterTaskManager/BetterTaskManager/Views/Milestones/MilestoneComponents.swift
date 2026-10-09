@@ -39,9 +39,37 @@ private let teamPalette: [Color] = [
 /// FNV-1a rather than String.hashValue, which is seeded per process — a team has to
 /// keep its color across launches in the sidebar, lanes and charts.
 func teamColor(_ name: String) -> Color {
-    var hash: UInt64 = 0xcbf2_9ce4_8422_2325
-    for byte in name.utf8 { hash = (hash ^ UInt64(byte)) &* 0x100_0000_01b3 }
-    return teamPalette[Int(hash % UInt64(teamPalette.count))]
+    teamPalette[TeamColors.slot(for: name)]
+}
+
+/// Hashing alone put two of six teams on the same orange. Teams seen together in a
+/// milestone are registered as a group and probe past slots already taken, in name
+/// order, so the same set of teams always gets the same distinct colours.
+enum TeamColors {
+    private static var assigned: [String: Int] = [:]
+
+    static func register(_ names: [String]) {
+        for name in Set(names).sorted() where assigned[name] == nil {
+            let used = Set(assigned.values)
+            var slot = hashSlot(name)
+            for _ in 0..<teamPalette.count where used.contains(slot) {
+                slot = (slot + 1) % teamPalette.count
+            }
+            assigned[name] = slot
+        }
+    }
+
+    static func slot(for name: String) -> Int {
+        assigned[name] ?? hashSlot(name)
+    }
+
+    static func reset() { assigned = [:] }
+
+    private static func hashSlot(_ name: String) -> Int {
+        var hash: UInt64 = 0xcbf2_9ce4_8422_2325
+        for byte in name.utf8 { hash = (hash ^ UInt64(byte)) &* 0x100_0000_01b3 }
+        return Int(hash % UInt64(teamPalette.count))
+    }
 }
 
 func statusTint(_ category: StatusCategory) -> Color {
