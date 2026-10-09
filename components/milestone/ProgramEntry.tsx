@@ -48,7 +48,7 @@ export default function ProgramEntry() {
       </div>
       <div className="min-w-0 flex-1">
         <div className="text-sm font-semibold text-foreground">Delivery milestones</div>
-        <div className="truncate text-xs text-muted-foreground">Critical path, blocker epics and team load per release</div>
+        <div className="text-xs leading-snug text-muted-foreground">Critical path and blockers per release</div>
       </div>
       <input
         value={project}
