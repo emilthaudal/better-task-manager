@@ -54,7 +54,12 @@ export function columnX(level: number): number {
   return LANE_HEADER_WIDTH + COLUMN_GAP / 2 + level * (CARD_WIDTH + COLUMN_GAP);
 }
 
-export function layoutTimeline(detail: MilestoneDetail, mode: LaneMode): TimelineLayout {
+export interface LayoutOptions {
+  /** Keep only lanes whose remaining items pass — e.g. lanes with a filter match. Columns are unaffected. */
+  includeLane?: (members: WorkItem[]) => boolean;
+}
+
+export function layoutTimeline(detail: MilestoneDetail, mode: LaneMode, options: LayoutOptions = {}): TimelineLayout {
   const scheduled = detail.items.filter((i) => i.schedule);
   const epicByKey = new Map(detail.epics.map((e) => [e.key, e]));
 
@@ -91,6 +96,7 @@ export function layoutTimeline(detail: MilestoneDetail, mode: LaneMode): Timelin
 
   for (const id of laneIds) {
     const members = groups.get(id) ?? [];
+    if (options.includeLane && !options.includeLane(members)) continue;
     const byLevel = new Map<number, WorkItem[]>();
     for (const item of members) {
       const level = item.schedule?.earliestStart ?? 0;
