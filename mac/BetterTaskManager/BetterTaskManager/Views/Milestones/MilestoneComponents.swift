@@ -195,7 +195,7 @@ struct KeyChip: View {
     var title: String?
     var status: StatusRef?
     var target: InspectorTarget?
-    var tint: Color = .secondary
+    var isCritical = false
 
     @Environment(\.milestoneNavigator) private var navigator
     @State private var isHovered = false
@@ -204,17 +204,22 @@ struct KeyChip: View {
         Button {
             if let target { navigator.inspect(target) }
         } label: {
+            // Neutral capsules: a list of chips each tinted by team or criticality
+            // turned whole panels pink. Criticality is a glyph, not a fill.
             HStack(spacing: 5) {
                 if let status { StatusDot(status: status, size: 6) }
                 Text(key).font(.caption.monospaced().weight(.medium)).fixedSize()
                 if let title {
                     Text(title).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                 }
+                if isCritical {
+                    Image(systemName: "flame.fill").font(.caption2).foregroundStyle(.red)
+                        .accessibilityLabel("critical")
+                }
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
-            .background(tint.opacity(isHovered && target != nil ? 0.22 : 0.11), in: Capsule())
-            .overlay(Capsule().strokeBorder(tint.opacity(0.18), lineWidth: 0.5))
+            .background(isHovered && target != nil ? AnyShapeStyle(.fill.secondary) : AnyShapeStyle(.fill.tertiary), in: Capsule())
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
@@ -391,7 +396,7 @@ struct MilestoneKeyChip: View {
             title: showTitle ? title : nil,
             status: status,
             target: inspectorTarget(for: key, in: index),
-            tint: critical ? .red : (epic.map { teamColor($0.team) } ?? .secondary)
+            isCritical: critical
         )
         .help(title.map { "\(key) — \($0)" } ?? key)
     }
