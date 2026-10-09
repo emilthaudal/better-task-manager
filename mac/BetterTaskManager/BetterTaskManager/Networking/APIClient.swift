@@ -116,6 +116,25 @@ final class APIClient {
         return try JSONDecoder().decode([JiraIssue].self, from: data)
     }
 
+    func fetchProgram(project: String) async throws -> ProgramOverview {
+        let request = makeRequest(path: "/api/jira/milestones", queryItems: [URLQueryItem(name: "project", value: project)])
+        return try JSONDecoder().decode(ProgramOverview.self, from: try await send(request))
+    }
+
+    func fetchMilestone(versionID: String, project: String) async throws -> MilestoneDetail {
+        let request = makeRequest(
+            path: "/api/jira/milestones/\(versionID)",
+            queryItems: [URLQueryItem(name: "project", value: project)]
+        )
+        return try JSONDecoder().decode(MilestoneDetail.self, from: try await send(request))
+    }
+
+    func fetchSiteURL() async throws -> URL? {
+        struct Response: Decodable { let url: String }
+        let data = try await send(makeRequest(path: "/api/jira/site-url"))
+        return Config.url(from: try JSONDecoder().decode(Response.self, from: data).url)
+    }
+
     func fetchPermissions(issueKey: String) async throws -> IssuePermissions {
         let data = try await send(makeRequest(path: "/api/jira/issue/\(issueKey)/permissions"))
         return try JSONDecoder().decode(IssuePermissions.self, from: data)

@@ -1,0 +1,1744 @@
+{
+  "project": {
+    "key": "LAD",
+    "name": "Logistics Accelerator - Delivery"
+  },
+  "release": {
+    "id": "10141",
+    "name": "B2B Project",
+    "description": "Project customers: quotes, split deliveries, tracking",
+    "released": false,
+    "archived": false,
+    "startDate": "2026-09-01",
+    "releaseDate": "2026-12-15",
+    "overdue": false,
+    "sequence": 1
+  },
+  "increments": [
+    {
+      "key": "LAD-20",
+      "summary": "Project pricing · B2B Project",
+      "status": {
+        "name": "In Progress",
+        "category": "indeterminate"
+      },
+      "team": null,
+      "capabilities": [
+        {
+          "key": "LA-41",
+          "summary": "Project quotes & price agreements",
+          "status": {
+            "name": "To Do",
+            "category": "new"
+          }
+        }
+      ],
+      "teamEpics": [
+        {
+          "key": "CHK-10",
+          "summary": "Quote-based checkout",
+          "status": {
+            "name": "To Do",
+            "category": "new"
+          }
+        },
+        {
+          "key": "PLT-5",
+          "summary": "Price agreement service",
+          "status": {
+            "name": "To Do",
+            "category": "new"
+          }
+        }
+      ],
+      "blocks": [
+        "LAD-21"
+      ],
+      "blockedBy": [],
+      "progress": {
+        "done": 1,
+        "inProgress": 2,
+        "todo": 6,
+        "total": 9
+      },
+      "derivedBlocks": [
+        "LAD-21"
+      ],
+      "derivedBlockedBy": [],
+      "criticalItems": 6,
+      "earliestFinish": 4
+    },
+    {
+      "key": "LAD-21",
+      "summary": "Split deliveries · B2B Project",
+      "status": {
+        "name": "In Progress",
+        "category": "indeterminate"
+      },
+      "team": null,
+      "capabilities": [
+        {
+          "key": "LA-30",
+          "summary": "Foundational Shipment Orchestration",
+          "status": {
+            "name": "To Do",
+            "category": "new"
+          }
+        }
+      ],
+      "teamEpics": [
+        {
+          "key": "AS-500",
+          "summary": "Multi-drop shipment planning",
+          "status": {
+            "name": "To Do",
+            "category": "new"
+          }
+        },
+        {
+          "key": "FUL-12",
+          "summary": "Warehouse wave picking for projects",
+          "status": {
+            "name": "To Do",
+            "category": "new"
+          }
+        }
+      ],
+      "blocks": [],
+      "blockedBy": [
+        "LAD-20"
+      ],
+      "progress": {
+        "done": 2,
+        "inProgress": 1,
+        "todo": 8,
+        "total": 11
+      },
+      "derivedBlocks": [
+        "LAD-22"
+      ],
+      "derivedBlockedBy": [
+        "LAD-20"
+      ],
+      "criticalItems": 5,
+      "earliestFinish": 8
+    },
+    {
+      "key": "LAD-22",
+      "summary": "Project order tracking · B2B Project",
+      "status": {
+        "name": "To Do",
+        "category": "new"
+      },
+      "team": null,
+      "capabilities": [
+        {
+          "key": "LA-33",
+          "summary": "Order Management",
+          "status": {
+            "name": "To Do",
+            "category": "new"
+          }
+        },
+        {
+          "key": "LA-52",
+          "summary": "Customer self-service",
+          "status": {
+            "name": "To Do",
+            "category": "new"
+          }
+        }
+      ],
+      "teamEpics": [
+        {
+          "key": "AS-510",
+          "summary": "Project order timeline",
+          "status": {
+            "name": "To Do",
+            "category": "new"
+          }
+        },
+        {
+          "key": "CHK-14",
+          "summary": "My projects page",
+          "status": {
+            "name": "To Do",
+            "category": "new"
+          }
+        }
+      ],
+      "blocks": [],
+      "blockedBy": [],
+      "progress": {
+        "done": 0,
+        "inProgress": 0,
+        "todo": 3,
+        "total": 3
+      },
+      "derivedBlocks": [],
+      "derivedBlockedBy": [
+        "LAD-21"
+      ],
+      "criticalItems": 0,
+      "earliestFinish": 3
+    },
+    {
+      "key": "LAD-23",
+      "summary": "Invoicing per site · B2B Project",
+      "status": {
+        "name": "To Do",
+        "category": "new"
+      },
+      "team": null,
+      "capabilities": [
+        {
+          "key": "LA-60",
+          "summary": "B2B invoicing",
+          "status": {
+            "name": "To Do",
+            "category": "new"
+          }
+        }
+      ],
+      "teamEpics": [],
+      "blocks": [],
+      "blockedBy": [],
+      "progress": {
+        "done": 0,
+        "inProgress": 0,
+        "todo": 0,
+        "total": 0
+      },
+      "derivedBlocks": [],
+      "derivedBlockedBy": [],
+      "criticalItems": 0,
+      "earliestFinish": null
+    }
+  ],
+  "epics": [
+    {
+      "key": "PLT-5",
+      "summary": "Price agreement service",
+      "status": {
+        "name": "In Progress",
+        "category": "indeterminate"
+      },
+      "team": "Platform",
+      "projectKey": "PLT",
+      "assignee": "Mia Holm",
+      "incrementKeys": [
+        "LAD-20"
+      ],
+      "itemKeys": [
+        "PLT-6",
+        "PLT-7",
+        "PLT-8",
+        "PLT-9",
+        "PLT-15"
+      ],
+      "progress": {
+        "done": 1,
+        "inProgress": 1,
+        "todo": 3,
+        "total": 5
+      },
+      "blocksEpics": [
+        "CHK-10",
+        "AS-500"
+      ],
+      "blockedByEpics": [],
+      "earliestStart": 0,
+      "earliestFinish": 2,
+      "criticalItems": 3,
+      "onCriticalPath": true
+    },
+    {
+      "key": "CHK-10",
+      "summary": "Quote-based checkout",
+      "status": {
+        "name": "In Progress",
+        "category": "indeterminate"
+      },
+      "team": "Checkout",
+      "projectKey": "CHK",
+      "assignee": "Jonas Berg",
+      "incrementKeys": [
+        "LAD-20"
+      ],
+      "itemKeys": [
+        "CHK-11",
+        "CHK-12",
+        "CHK-13",
+        "CHK-16"
+      ],
+      "progress": {
+        "done": 0,
+        "inProgress": 1,
+        "todo": 3,
+        "total": 4
+      },
+      "blocksEpics": [
+        "AS-500",
+        "FUL-12"
+      ],
+      "blockedByEpics": [
+        "PLT-5"
+      ],
+      "earliestStart": 0,
+      "earliestFinish": 4,
+      "criticalItems": 3,
+      "onCriticalPath": true
+    },
+    {
+      "key": "AS-500",
+      "summary": "Multi-drop shipment planning",
+      "status": {
+        "name": "In Progress",
+        "category": "indeterminate"
+      },
+      "team": "Aftersales",
+      "projectKey": "AS",
+      "assignee": "Emil Thaudal Bønnerup",
+      "incrementKeys": [
+        "LAD-21"
+      ],
+      "itemKeys": [
+        "AS-501",
+        "AS-502",
+        "AS-503",
+        "AS-504",
+        "AS-505",
+        "AS-506"
+      ],
+      "progress": {
+        "done": 1,
+        "inProgress": 1,
+        "todo": 4,
+        "total": 6
+      },
+      "blocksEpics": [
+        "FUL-12",
+        "AS-510"
+      ],
+      "blockedByEpics": [
+        "PLT-5",
+        "CHK-10",
+        "FUL-12"
+      ],
+      "earliestStart": 0,
+      "earliestFinish": 8,
+      "criticalItems": 2,
+      "onCriticalPath": true
+    },
+    {
+      "key": "FUL-12",
+      "summary": "Warehouse wave picking for projects",
+      "status": {
+        "name": "To Do",
+        "category": "new"
+      },
+      "team": "Fulfilment",
+      "projectKey": "FUL",
+      "assignee": null,
+      "incrementKeys": [
+        "LAD-21"
+      ],
+      "itemKeys": [
+        "FUL-13",
+        "FUL-14",
+        "FUL-15",
+        "FUL-16",
+        "FUL-17"
+      ],
+      "progress": {
+        "done": 1,
+        "inProgress": 0,
+        "todo": 4,
+        "total": 5
+      },
+      "blocksEpics": [
+        "AS-500"
+      ],
+      "blockedByEpics": [
+        "CHK-10",
+        "AS-500"
+      ],
+      "earliestStart": 0,
+      "earliestFinish": 7,
+      "criticalItems": 3,
+      "onCriticalPath": true
+    },
+    {
+      "key": "AS-510",
+      "summary": "Project order timeline",
+      "status": {
+        "name": "To Do",
+        "category": "new"
+      },
+      "team": "Aftersales",
+      "projectKey": "AS",
+      "assignee": null,
+      "incrementKeys": [
+        "LAD-22"
+      ],
+      "itemKeys": [
+        "AS-511",
+        "AS-512"
+      ],
+      "progress": {
+        "done": 0,
+        "inProgress": 0,
+        "todo": 2,
+        "total": 2
+      },
+      "blocksEpics": [],
+      "blockedByEpics": [
+        "AS-500",
+        "CHK-14"
+      ],
+      "earliestStart": 1,
+      "earliestFinish": 3,
+      "criticalItems": 0,
+      "onCriticalPath": false
+    },
+    {
+      "key": "CHK-14",
+      "summary": "My projects page",
+      "status": {
+        "name": "To Do",
+        "category": "new"
+      },
+      "team": "Checkout",
+      "projectKey": "CHK",
+      "assignee": null,
+      "incrementKeys": [
+        "LAD-22"
+      ],
+      "itemKeys": [
+        "CHK-15"
+      ],
+      "progress": {
+        "done": 0,
+        "inProgress": 0,
+        "todo": 1,
+        "total": 1
+      },
+      "blocksEpics": [
+        "AS-510"
+      ],
+      "blockedByEpics": [],
+      "earliestStart": 0,
+      "earliestFinish": 1,
+      "criticalItems": 0,
+      "onCriticalPath": false
+    }
+  ],
+  "items": [
+    {
+      "key": "PLT-6",
+      "summary": "Price agreement data model",
+      "type": "Task",
+      "status": {
+        "name": "Done",
+        "category": "done"
+      },
+      "assignee": "Mia Holm",
+      "epicKey": "PLT-5",
+      "team": "Platform",
+      "incrementKey": "LAD-20",
+      "points": null,
+      "external": false,
+      "placeholder": false,
+      "blockedBy": [],
+      "blocks": [
+        "PLT-7",
+        "PLT-8"
+      ],
+      "schedule": null
+    },
+    {
+      "key": "PLT-7",
+      "summary": "Agreement CRUD API",
+      "type": "Task",
+      "status": {
+        "name": "In Progress",
+        "category": "indeterminate"
+      },
+      "assignee": "Mia Holm",
+      "epicKey": "PLT-5",
+      "team": "Platform",
+      "incrementKey": "LAD-20",
+      "points": null,
+      "external": false,
+      "placeholder": false,
+      "blockedBy": [
+        "PLT-6"
+      ],
+      "blocks": [
+        "PLT-9",
+        "CHK-11"
+      ],
+      "schedule": {
+        "earliestStart": 0,
+        "earliestFinish": 1,
+        "latestStart": 0,
+        "slack": 0,
+        "critical": true,
+        "ready": true,
+        "downstream": 11,
+        "downstreamTeams": [
+          "Aftersales",
+          "Checkout",
+          "Fulfilment"
+        ]
+      }
+    },
+    {
+      "key": "PLT-8",
+      "summary": "Agreement import from ERP",
+      "type": "Task",
+      "status": {
+        "name": "To Do",
+        "category": "new"
+      },
+      "assignee": null,
+      "epicKey": "PLT-5",
+      "team": "Platform",
+      "incrementKey": "LAD-20",
+      "points": null,
+      "external": false,
+      "placeholder": false,
+      "blockedBy": [
+        "PLT-6"
+      ],
+      "blocks": [
+        "PLT-9"
+      ],
+      "schedule": {
+        "earliestStart": 0,
+        "earliestFinish": 1,
+        "latestStart": 0,
+        "slack": 0,
+        "critical": true,
+        "ready": true,
+        "downstream": 10,
+        "downstreamTeams": [
+          "Aftersales",
+          "Checkout",
+          "Fulfilment"
+        ]
+      }
+    },
+    {
+      "key": "PLT-9",
+      "summary": "Price resolution endpoint",
+      "type": "Task",
+      "status": {
+        "name": "To Do",
+        "category": "new"
+      },
+      "assignee": "Ola Nord",
+      "epicKey": "PLT-5",
+      "team": "Platform",
+      "incrementKey": "LAD-20",
+      "points": null,
+      "external": false,
+      "placeholder": false,
+      "blockedBy": [
+        "PLT-7",
+        "PLT-8"
+      ],
+      "blocks": [
+        "CHK-12",
+        "AS-502"
+      ],
+      "schedule": {
+        "earliestStart": 1,
+        "earliestFinish": 2,
+        "latestStart": 1,
+        "slack": 0,
+        "critical": true,
+        "ready": false,
+        "downstream": 9,
+        "downstreamTeams": [
+          "Aftersales",
+          "Checkout",
+          "Fulfilment"
+        ]
+      }
+    },
+    {
+      "key": "PLT-15",
+      "summary": "Agreement audit log",
+      "type": "Task",
+      "status": {
+        "name": "To Do",
+        "category": "new"
+      },
+      "assignee": null,
+      "epicKey": "PLT-5",
+      "team": "Platform",
+      "incrementKey": "LAD-20",
+      "points": null,
+      "external": false,
+      "placeholder": false,
+      "blockedBy": [],
+      "blocks": [],
+      "schedule": {
+        "earliestStart": 0,
+        "earliestFinish": 1,
+        "latestStart": 7,
+        "slack": 7,
+        "critical": false,
+        "ready": true,
+        "downstream": 0,
+        "downstreamTeams": []
+      }
+    },
+    {
+      "key": "CHK-11",
+      "summary": "Quote cart state",
+      "type": "Story",
+      "status": {
+        "name": "In Progress",
+        "category": "indeterminate"
+      },
+      "assignee": "Jonas Berg",
+      "epicKey": "CHK-10",
+      "team": "Checkout",
+      "incrementKey": "LAD-20",
+      "points": null,
+      "external": false,
+      "placeholder": false,
+      "blockedBy": [
+        "PLT-7"
+      ],
+      "blocks": [
+        "CHK-12"
+      ],
+      "schedule": {
+        "earliestStart": 1,
+        "earliestFinish": 2,
+        "latestStart": 1,
+        "slack": 0,
+        "critical": true,
+        "ready": false,
+        "downstream": 8,
+        "downstreamTeams": [
+          "Aftersales",
+          "Fulfilment"
+        ]
+      }
+    },
+    {
+      "key": "CHK-12",
+      "summary": "Apply agreement prices in cart",
+      "type": "Story",
+      "status": {
+        "name": "To Do",
+        "category": "new"
+      },
+      "assignee": "Jonas Berg",
+      "epicKey": "CHK-10",
+      "team": "Checkout",
+      "incrementKey": "LAD-20",
+      "points": null,
+      "external": false,
+      "placeholder": false,
+      "blockedBy": [
+        "PLT-9",
+        "CHK-11"
+      ],
+      "blocks": [
+        "CHK-13"
+      ],
+      "schedule": {
+        "earliestStart": 2,
+        "earliestFinish": 3,
+        "latestStart": 2,
+        "slack": 0,
+        "critical": true,
+        "ready": false,
+        "downstream": 7,
+        "downstreamTeams": [
+          "Aftersales",
+          "Fulfilment"
+        ]
+      }
+    },
+    {
+      "key": "CHK-13",
+      "summary": "Quote checkout confirmation",
+      "type": "Story",
+      "status": {
+        "name": "To Do",
+        "category": "new"
+      },
+      "assignee": null,
+      "epicKey": "CHK-10",
+      "team": "Checkout",
+      "incrementKey": "LAD-20",
+      "points": null,
+      "external": false,
+      "placeholder": false,
+      "blockedBy": [
+        "CHK-12",
+        "EXT-90"
+      ],
+      "blocks": [
+        "AS-503",
+        "FUL-14"
+      ],
+      "schedule": {
+        "earliestStart": 3,
+        "earliestFinish": 4,
+        "latestStart": 3,
+        "slack": 0,
+        "critical": true,
+        "ready": false,
+        "downstream": 6,
+        "downstreamTeams": [
+          "Aftersales",
+          "Fulfilment"
+        ]
+      }
+    },
+    {
+      "key": "CHK-16",
+      "summary": "Quote PDF export",
+      "type": "Story",
+      "status": {
+        "name": "To Do",
+        "category": "new"
+      },
+      "assignee": "Sara Lind",
+      "epicKey": "CHK-10",
+      "team": "Checkout",
+      "incrementKey": "LAD-20",
+      "points": null,
+      "external": false,
+      "placeholder": false,
+      "blockedBy": [],
+      "blocks": [],
+      "schedule": {
+        "earliestStart": 0,
+        "earliestFinish": 1,
+        "latestStart": 7,
+        "slack": 7,
+        "critical": false,
+        "ready": true,
+        "downstream": 0,
+        "downstreamTeams": []
+      }
+    },
+    {
+      "key": "AS-501",
+      "summary": "Multi-drop address model",
+      "type": "Story",
+      "status": {
+        "name": "Done",
+        "category": "done"
+      },
+      "assignee": "Emil Thaudal Bønnerup",
+      "epicKey": "AS-500",
+      "team": "Aftersales",
+      "incrementKey": "LAD-21",
+      "points": null,
+      "external": false,
+      "placeholder": false,
+      "blockedBy": [],
+      "blocks": [
+        "AS-502"
+      ],
+      "schedule": null
+    },
+    {
+      "key": "AS-502",
+      "summary": "Split order lines by delivery site",
+      "type": "Story",
+      "status": {
+        "name": "In Progress",
+        "category": "indeterminate"
+      },
+      "assignee": "Emil Thaudal Bønnerup",
+      "epicKey": "AS-500",
+      "team": "Aftersales",
+      "incrementKey": "LAD-21",
+      "points": null,
+      "external": false,
+      "placeholder": false,
+      "blockedBy": [
+        "PLT-9",
+        "AS-501"
+      ],
+      "blocks": [
+        "AS-503"
+      ],
+      "schedule": {
+        "earliestStart": 2,
+        "earliestFinish": 3,
+        "latestStart": 3,
+        "slack": 1,
+        "critical": false,
+        "ready": false,
+        "downstream": 5,
+        "downstreamTeams": [
+          "Fulfilment"
+        ]
+      }
+    },
+    {
+      "key": "AS-503",
+      "summary": "Shipment grouping per drop",
+      "type": "Story",
+      "status": {
+        "name": "To Do",
+        "category": "new"
+      },
+      "assignee": "Emil Thaudal Bønnerup",
+      "epicKey": "AS-500",
+      "team": "Aftersales",
+      "incrementKey": "LAD-21",
+      "points": null,
+      "external": false,
+      "placeholder": false,
+      "blockedBy": [
+        "CHK-13",
+        "AS-502"
+      ],
+      "blocks": [
+        "AS-504",
+        "FUL-15"
+      ],
+      "schedule": {
+        "earliestStart": 4,
+        "earliestFinish": 5,
+        "latestStart": 4,
+        "slack": 0,
+        "critical": true,
+        "ready": false,
+        "downstream": 4,
+        "downstreamTeams": [
+          "Fulfilment"
+        ]
+      }
+    },
+    {
+      "key": "AS-504",
+      "summary": "Carrier booking per drop",
+      "type": "Story",
+      "status": {
+        "name": "To Do",
+        "category": "new"
+      },
+      "assignee": null,
+      "epicKey": "AS-500",
+      "team": "Aftersales",
+      "incrementKey": "LAD-21",
+      "points": null,
+      "external": false,
+      "placeholder": false,
+      "blockedBy": [
+        "AS-503"
+      ],
+      "blocks": [
+        "AS-505"
+      ],
+      "schedule": {
+        "earliestStart": 5,
+        "earliestFinish": 6,
+        "latestStart": 6,
+        "slack": 1,
+        "critical": false,
+        "ready": false,
+        "downstream": 1,
+        "downstreamTeams": []
+      }
+    },
+    {
+      "key": "AS-505",
+      "summary": "Delivery notifications per site",
+      "type": "Story",
+      "status": {
+        "name": "To Do",
+        "category": "new"
+      },
+      "assignee": "Kim Dahl",
+      "epicKey": "AS-500",
+      "team": "Aftersales",
+      "incrementKey": "LAD-21",
+      "points": null,
+      "external": false,
+      "placeholder": false,
+      "blockedBy": [
+        "AS-504",
+        "FUL-16"
+      ],
+      "blocks": [],
+      "schedule": {
+        "earliestStart": 7,
+        "earliestFinish": 8,
+        "latestStart": 7,
+        "slack": 0,
+        "critical": true,
+        "ready": false,
+        "downstream": 0,
+        "downstreamTeams": []
+      }
+    },
+    {
+      "key": "AS-506",
+      "summary": "Drop-level tracking events",
+      "type": "Story",
+      "status": {
+        "name": "To Do",
+        "category": "new"
+      },
+      "assignee": "Kim Dahl",
+      "epicKey": "AS-500",
+      "team": "Aftersales",
+      "incrementKey": "LAD-21",
+      "points": null,
+      "external": false,
+      "placeholder": false,
+      "blockedBy": [],
+      "blocks": [
+        "AS-511"
+      ],
+      "schedule": {
+        "earliestStart": 0,
+        "earliestFinish": 1,
+        "latestStart": 5,
+        "slack": 5,
+        "critical": false,
+        "ready": true,
+        "downstream": 2,
+        "downstreamTeams": []
+      }
+    },
+    {
+      "key": "FUL-13",
+      "summary": "Wave template for projects",
+      "type": "Story",
+      "status": {
+        "name": "Done",
+        "category": "done"
+      },
+      "assignee": "Lars Vik",
+      "epicKey": "FUL-12",
+      "team": "Fulfilment",
+      "incrementKey": "LAD-21",
+      "points": null,
+      "external": false,
+      "placeholder": false,
+      "blockedBy": [],
+      "blocks": [
+        "FUL-14"
+      ],
+      "schedule": null
+    },
+    {
+      "key": "FUL-14",
+      "summary": "Reserve stock per project wave",
+      "type": "Story",
+      "status": {
+        "name": "To Do",
+        "category": "new"
+      },
+      "assignee": "Lars Vik",
+      "epicKey": "FUL-12",
+      "team": "Fulfilment",
+      "incrementKey": "LAD-21",
+      "points": null,
+      "external": false,
+      "placeholder": false,
+      "blockedBy": [
+        "CHK-13",
+        "FUL-13"
+      ],
+      "blocks": [
+        "FUL-15"
+      ],
+      "schedule": {
+        "earliestStart": 4,
+        "earliestFinish": 5,
+        "latestStart": 4,
+        "slack": 0,
+        "critical": true,
+        "ready": false,
+        "downstream": 3,
+        "downstreamTeams": [
+          "Aftersales"
+        ]
+      }
+    },
+    {
+      "key": "FUL-15",
+      "summary": "Pick lists per delivery drop",
+      "type": "Story",
+      "status": {
+        "name": "To Do",
+        "category": "new"
+      },
+      "assignee": null,
+      "epicKey": "FUL-12",
+      "team": "Fulfilment",
+      "incrementKey": "LAD-21",
+      "points": null,
+      "external": false,
+      "placeholder": false,
+      "blockedBy": [
+        "AS-503",
+        "FUL-14"
+      ],
+      "blocks": [
+        "FUL-16"
+      ],
+      "schedule": {
+        "earliestStart": 5,
+        "earliestFinish": 6,
+        "latestStart": 5,
+        "slack": 0,
+        "critical": true,
+        "ready": false,
+        "downstream": 2,
+        "downstreamTeams": [
+          "Aftersales"
+        ]
+      }
+    },
+    {
+      "key": "FUL-16",
+      "summary": "Pack & label per drop",
+      "type": "Story",
+      "status": {
+        "name": "To Do",
+        "category": "new"
+      },
+      "assignee": null,
+      "epicKey": "FUL-12",
+      "team": "Fulfilment",
+      "incrementKey": "LAD-21",
+      "points": null,
+      "external": false,
+      "placeholder": false,
+      "blockedBy": [
+        "FUL-15"
+      ],
+      "blocks": [
+        "AS-505"
+      ],
+      "schedule": {
+        "earliestStart": 6,
+        "earliestFinish": 7,
+        "latestStart": 6,
+        "slack": 0,
+        "critical": true,
+        "ready": false,
+        "downstream": 1,
+        "downstreamTeams": [
+          "Aftersales"
+        ]
+      }
+    },
+    {
+      "key": "FUL-17",
+      "summary": "Wave capacity dashboard",
+      "type": "Story",
+      "status": {
+        "name": "To Do",
+        "category": "new"
+      },
+      "assignee": "Lars Vik",
+      "epicKey": "FUL-12",
+      "team": "Fulfilment",
+      "incrementKey": "LAD-21",
+      "points": null,
+      "external": false,
+      "placeholder": false,
+      "blockedBy": [],
+      "blocks": [],
+      "schedule": {
+        "earliestStart": 0,
+        "earliestFinish": 1,
+        "latestStart": 7,
+        "slack": 7,
+        "critical": false,
+        "ready": true,
+        "downstream": 0,
+        "downstreamTeams": []
+      }
+    },
+    {
+      "key": "AS-511",
+      "summary": "Timeline read model",
+      "type": "Story",
+      "status": {
+        "name": "To Do",
+        "category": "new"
+      },
+      "assignee": null,
+      "epicKey": "AS-510",
+      "team": "Aftersales",
+      "incrementKey": "LAD-22",
+      "points": null,
+      "external": false,
+      "placeholder": false,
+      "blockedBy": [
+        "AS-506",
+        "CHK-15"
+      ],
+      "blocks": [
+        "AS-512"
+      ],
+      "schedule": {
+        "earliestStart": 1,
+        "earliestFinish": 2,
+        "latestStart": 6,
+        "slack": 5,
+        "critical": false,
+        "ready": false,
+        "downstream": 1,
+        "downstreamTeams": []
+      }
+    },
+    {
+      "key": "AS-512",
+      "summary": "Timeline API",
+      "type": "Story",
+      "status": {
+        "name": "To Do",
+        "category": "new"
+      },
+      "assignee": null,
+      "epicKey": "AS-510",
+      "team": "Aftersales",
+      "incrementKey": "LAD-22",
+      "points": null,
+      "external": false,
+      "placeholder": false,
+      "blockedBy": [
+        "AS-511"
+      ],
+      "blocks": [],
+      "schedule": {
+        "earliestStart": 2,
+        "earliestFinish": 3,
+        "latestStart": 7,
+        "slack": 5,
+        "critical": false,
+        "ready": false,
+        "downstream": 0,
+        "downstreamTeams": []
+      }
+    },
+    {
+      "key": "CHK-15",
+      "summary": "Projects list page",
+      "type": "Story",
+      "status": {
+        "name": "To Do",
+        "category": "new"
+      },
+      "assignee": "Sara Lind",
+      "epicKey": "CHK-14",
+      "team": "Checkout",
+      "incrementKey": "LAD-22",
+      "points": null,
+      "external": false,
+      "placeholder": false,
+      "blockedBy": [],
+      "blocks": [
+        "AS-511"
+      ],
+      "schedule": {
+        "earliestStart": 0,
+        "earliestFinish": 1,
+        "latestStart": 5,
+        "slack": 5,
+        "critical": false,
+        "ready": true,
+        "downstream": 2,
+        "downstreamTeams": [
+          "Aftersales"
+        ]
+      }
+    },
+    {
+      "key": "EXT-90",
+      "summary": "Finance: credit limit per project",
+      "type": "Story",
+      "status": {
+        "name": "In Progress",
+        "category": "indeterminate"
+      },
+      "assignee": "Per Ek",
+      "epicKey": null,
+      "team": "Finance",
+      "incrementKey": null,
+      "points": null,
+      "external": true,
+      "placeholder": false,
+      "blockedBy": [],
+      "blocks": [
+        "CHK-13"
+      ],
+      "schedule": {
+        "earliestStart": 0,
+        "earliestFinish": 1,
+        "latestStart": 2,
+        "slack": 2,
+        "critical": false,
+        "ready": true,
+        "downstream": 7,
+        "downstreamTeams": [
+          "Aftersales",
+          "Checkout",
+          "Fulfilment"
+        ]
+      }
+    }
+  ],
+  "dependencies": [
+    {
+      "from": "PLT-6",
+      "to": "PLT-7",
+      "kind": "item",
+      "crossTeam": false,
+      "crossEpic": false,
+      "satisfied": true,
+      "critical": false
+    },
+    {
+      "from": "PLT-6",
+      "to": "PLT-8",
+      "kind": "item",
+      "crossTeam": false,
+      "crossEpic": false,
+      "satisfied": true,
+      "critical": false
+    },
+    {
+      "from": "PLT-7",
+      "to": "PLT-9",
+      "kind": "item",
+      "crossTeam": false,
+      "crossEpic": false,
+      "satisfied": false,
+      "critical": true
+    },
+    {
+      "from": "PLT-7",
+      "to": "CHK-11",
+      "kind": "item",
+      "crossTeam": true,
+      "crossEpic": true,
+      "satisfied": false,
+      "critical": true
+    },
+    {
+      "from": "PLT-8",
+      "to": "PLT-9",
+      "kind": "item",
+      "crossTeam": false,
+      "crossEpic": false,
+      "satisfied": false,
+      "critical": true
+    },
+    {
+      "from": "PLT-9",
+      "to": "CHK-12",
+      "kind": "item",
+      "crossTeam": true,
+      "crossEpic": true,
+      "satisfied": false,
+      "critical": true
+    },
+    {
+      "from": "PLT-9",
+      "to": "AS-502",
+      "kind": "item",
+      "crossTeam": true,
+      "crossEpic": true,
+      "satisfied": false,
+      "critical": false
+    },
+    {
+      "from": "CHK-11",
+      "to": "CHK-12",
+      "kind": "item",
+      "crossTeam": false,
+      "crossEpic": false,
+      "satisfied": false,
+      "critical": true
+    },
+    {
+      "from": "CHK-12",
+      "to": "CHK-13",
+      "kind": "item",
+      "crossTeam": false,
+      "crossEpic": false,
+      "satisfied": false,
+      "critical": true
+    },
+    {
+      "from": "CHK-13",
+      "to": "AS-503",
+      "kind": "item",
+      "crossTeam": true,
+      "crossEpic": true,
+      "satisfied": false,
+      "critical": true
+    },
+    {
+      "from": "CHK-13",
+      "to": "FUL-14",
+      "kind": "item",
+      "crossTeam": true,
+      "crossEpic": true,
+      "satisfied": false,
+      "critical": true
+    },
+    {
+      "from": "AS-501",
+      "to": "AS-502",
+      "kind": "item",
+      "crossTeam": false,
+      "crossEpic": false,
+      "satisfied": true,
+      "critical": false
+    },
+    {
+      "from": "AS-502",
+      "to": "AS-503",
+      "kind": "item",
+      "crossTeam": false,
+      "crossEpic": false,
+      "satisfied": false,
+      "critical": false
+    },
+    {
+      "from": "AS-503",
+      "to": "AS-504",
+      "kind": "item",
+      "crossTeam": false,
+      "crossEpic": false,
+      "satisfied": false,
+      "critical": false
+    },
+    {
+      "from": "AS-503",
+      "to": "FUL-15",
+      "kind": "item",
+      "crossTeam": true,
+      "crossEpic": true,
+      "satisfied": false,
+      "critical": true
+    },
+    {
+      "from": "AS-504",
+      "to": "AS-505",
+      "kind": "item",
+      "crossTeam": false,
+      "crossEpic": false,
+      "satisfied": false,
+      "critical": false
+    },
+    {
+      "from": "AS-506",
+      "to": "AS-511",
+      "kind": "item",
+      "crossTeam": false,
+      "crossEpic": true,
+      "satisfied": false,
+      "critical": false
+    },
+    {
+      "from": "FUL-13",
+      "to": "FUL-14",
+      "kind": "item",
+      "crossTeam": false,
+      "crossEpic": false,
+      "satisfied": true,
+      "critical": false
+    },
+    {
+      "from": "FUL-14",
+      "to": "FUL-15",
+      "kind": "item",
+      "crossTeam": false,
+      "crossEpic": false,
+      "satisfied": false,
+      "critical": true
+    },
+    {
+      "from": "FUL-15",
+      "to": "FUL-16",
+      "kind": "item",
+      "crossTeam": false,
+      "crossEpic": false,
+      "satisfied": false,
+      "critical": true
+    },
+    {
+      "from": "FUL-16",
+      "to": "AS-505",
+      "kind": "item",
+      "crossTeam": true,
+      "crossEpic": true,
+      "satisfied": false,
+      "critical": true
+    },
+    {
+      "from": "AS-511",
+      "to": "AS-512",
+      "kind": "item",
+      "crossTeam": false,
+      "crossEpic": false,
+      "satisfied": false,
+      "critical": false
+    },
+    {
+      "from": "EXT-90",
+      "to": "CHK-13",
+      "kind": "item",
+      "crossTeam": true,
+      "crossEpic": true,
+      "satisfied": false,
+      "critical": false
+    },
+    {
+      "from": "CHK-15",
+      "to": "AS-511",
+      "kind": "epic",
+      "crossTeam": true,
+      "crossEpic": true,
+      "satisfied": false,
+      "critical": false
+    }
+  ],
+  "teams": [
+    {
+      "name": "Aftersales",
+      "epicKeys": [
+        "AS-500",
+        "AS-510"
+      ],
+      "progress": {
+        "done": 1,
+        "inProgress": 1,
+        "todo": 6,
+        "total": 8
+      },
+      "remaining": 7,
+      "criticalItems": 2,
+      "readyNow": 1,
+      "unassignedRemaining": 3,
+      "waitingOnOtherTeams": 4,
+      "blockingOtherTeams": 1,
+      "loadByLevel": [
+        1,
+        1,
+        2,
+        0,
+        1,
+        1,
+        0,
+        1
+      ],
+      "criticalByLevel": [
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        1
+      ]
+    },
+    {
+      "name": "Checkout",
+      "epicKeys": [
+        "CHK-10",
+        "CHK-14"
+      ],
+      "progress": {
+        "done": 0,
+        "inProgress": 1,
+        "todo": 4,
+        "total": 5
+      },
+      "remaining": 5,
+      "criticalItems": 3,
+      "readyNow": 2,
+      "unassignedRemaining": 1,
+      "waitingOnOtherTeams": 3,
+      "blockingOtherTeams": 3,
+      "loadByLevel": [
+        2,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      "criticalByLevel": [
+        0,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "Fulfilment",
+      "epicKeys": [
+        "FUL-12"
+      ],
+      "progress": {
+        "done": 1,
+        "inProgress": 0,
+        "todo": 4,
+        "total": 5
+      },
+      "remaining": 4,
+      "criticalItems": 3,
+      "readyNow": 1,
+      "unassignedRemaining": 2,
+      "waitingOnOtherTeams": 2,
+      "blockingOtherTeams": 1,
+      "loadByLevel": [
+        1,
+        0,
+        0,
+        0,
+        1,
+        1,
+        1,
+        0
+      ],
+      "criticalByLevel": [
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        1,
+        0
+      ]
+    },
+    {
+      "name": "Platform",
+      "epicKeys": [
+        "PLT-5"
+      ],
+      "progress": {
+        "done": 1,
+        "inProgress": 1,
+        "todo": 3,
+        "total": 5
+      },
+      "remaining": 4,
+      "criticalItems": 3,
+      "readyNow": 3,
+      "unassignedRemaining": 2,
+      "waitingOnOtherTeams": 0,
+      "blockingOtherTeams": 3,
+      "loadByLevel": [
+        3,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "criticalByLevel": [
+        2,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    }
+  ],
+  "criticalPath": {
+    "keys": [
+      "PLT-7",
+      "PLT-9",
+      "CHK-12",
+      "CHK-13",
+      "AS-503",
+      "FUL-15",
+      "FUL-16",
+      "AS-505"
+    ],
+    "criticalKeys": [
+      "PLT-7",
+      "PLT-8",
+      "PLT-9",
+      "CHK-11",
+      "CHK-12",
+      "CHK-13",
+      "AS-503",
+      "AS-505",
+      "FUL-14",
+      "FUL-15",
+      "FUL-16"
+    ],
+    "length": 8
+  },
+  "blockerEpics": [
+    {
+      "epicKey": "PLT-5",
+      "team": "Platform",
+      "remaining": 4,
+      "blockedEpics": [
+        "CHK-10",
+        "AS-500"
+      ],
+      "blockedTeams": [
+        "Aftersales",
+        "Checkout"
+      ],
+      "downstreamItems": 10,
+      "onCriticalPath": true,
+      "gatingItems": [
+        "PLT-7",
+        "PLT-9"
+      ]
+    },
+    {
+      "epicKey": "CHK-10",
+      "team": "Checkout",
+      "remaining": 4,
+      "blockedEpics": [
+        "AS-500",
+        "FUL-12"
+      ],
+      "blockedTeams": [
+        "Aftersales",
+        "Fulfilment"
+      ],
+      "downstreamItems": 6,
+      "onCriticalPath": true,
+      "gatingItems": [
+        "CHK-13"
+      ]
+    },
+    {
+      "epicKey": "AS-500",
+      "team": "Aftersales",
+      "remaining": 5,
+      "blockedEpics": [
+        "FUL-12",
+        "AS-510"
+      ],
+      "blockedTeams": [
+        "Fulfilment"
+      ],
+      "downstreamItems": 4,
+      "onCriticalPath": true,
+      "gatingItems": [
+        "AS-503",
+        "AS-506"
+      ]
+    },
+    {
+      "epicKey": "FUL-12",
+      "team": "Fulfilment",
+      "remaining": 4,
+      "blockedEpics": [
+        "AS-500"
+      ],
+      "blockedTeams": [
+        "Aftersales"
+      ],
+      "downstreamItems": 1,
+      "onCriticalPath": true,
+      "gatingItems": [
+        "FUL-16"
+      ]
+    },
+    {
+      "epicKey": "CHK-14",
+      "team": "Checkout",
+      "remaining": 1,
+      "blockedEpics": [
+        "AS-510"
+      ],
+      "blockedTeams": [
+        "Aftersales"
+      ],
+      "downstreamItems": 2,
+      "onCriticalPath": false,
+      "gatingItems": [
+        "CHK-15"
+      ]
+    }
+  ],
+  "readyNow": [
+    "PLT-7",
+    "PLT-8",
+    "AS-506",
+    "CHK-15",
+    "CHK-16",
+    "FUL-17",
+    "PLT-15"
+  ],
+  "progress": {
+    "done": 3,
+    "inProgress": 3,
+    "todo": 17,
+    "total": 23
+  },
+  "warnings": [
+    {
+      "kind": "undeclared-dependency",
+      "message": "Team work makes LAD-21 block LAD-22, but the increments don't declare it.",
+      "keys": [
+        "LAD-21",
+        "LAD-22",
+        "AS-506",
+        "AS-511"
+      ]
+    },
+    {
+      "kind": "no-team-epics",
+      "message": "LAD-23 has no team epics implementing it yet.",
+      "keys": [
+        "LAD-23"
+      ]
+    },
+    {
+      "kind": "external-blocker",
+      "message": "EXT-90 (Finance) is outside this milestone but blocks CHK-13.",
+      "keys": [
+        "EXT-90",
+        "CHK-13"
+      ]
+    },
+    {
+      "kind": "unassigned-critical",
+      "message": "4 critical-path items have no assignee.",
+      "keys": [
+        "PLT-8",
+        "CHK-13",
+        "FUL-15",
+        "FUL-16"
+      ]
+    }
+  ],
+  "generatedAt": "2026-10-09T19:36:09.558Z"
+}
