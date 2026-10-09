@@ -373,6 +373,10 @@ function CriticalPathTimeline({ detail, laneMode, selectedKey, onSelect, matches
   const canvasW = layout.width - LANE_W;
   const canvasH = layout.height;
 
+  // The scroll container only exists while there are cards (empty and
+  // no-match states render without it); listeners re-attach when it returns.
+  const hasCards = layout.cards.length > 0;
+
   // ── Culling ──
   const measure = useCallback(() => {
     const el = scrollRef.current;
@@ -409,7 +413,7 @@ function CriticalPathTimeline({ detail, laneMode, selectedKey, onSelect, matches
       ro.disconnect();
       if (frame) cancelAnimationFrame(frame);
     };
-  }, [measure]);
+  }, [measure, hasCards]);
 
   useEffect(measure, [zoom, measure]);
 
@@ -531,7 +535,7 @@ function CriticalPathTimeline({ detail, laneMode, selectedKey, onSelect, matches
     if (!el) return;
     el.addEventListener("scroll", hideTip, { passive: true });
     return () => el.removeEventListener("scroll", hideTip);
-  }, [hideTip]);
+  }, [hideTip, hasCards]);
 
   const onPointerLeave = useCallback(() => {
     if (hoverTimer.current) window.clearTimeout(hoverTimer.current);
@@ -652,7 +656,7 @@ function CriticalPathTimeline({ detail, laneMode, selectedKey, onSelect, matches
     };
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
-  }, [zoomTo]);
+  }, [zoomTo, hasCards]);
 
   // ── Keyboard ──
   const onKeyDown = useCallback(
