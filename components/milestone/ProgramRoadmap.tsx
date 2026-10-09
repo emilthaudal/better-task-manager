@@ -3,73 +3,108 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import type { MilestoneWarning, ProgramOverview, ProgramRelease } from "@/lib/milestoneTypes";
-import { KeyChip, ProgressBar, StatusDot, percentDone } from "./MilestoneBits";
+import { Badge, KeyChip, ProgressBar, SectionTitle, StatusDot, Surface, percentDone } from "./MilestoneBits";
 
 function formatDate(iso: string | null): string | null {
   if (!iso) return null;
   return new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
 }
 
-function ReleaseStage({ release, projectKey, index }: { release: ProgramRelease; projectKey: string; index: number }) {
+type Stage = "released" | "overdue" | "next" | "planned" | "empty";
+
+function stageOf(release: ProgramRelease, isNext: boolean): Stage {
+  if (release.released) return "released";
+  if (release.overdue) return "overdue";
+  if (isNext) return "next";
+  return release.increments.length ? "planned" : "empty";
+}
+
+const STAGE_LABEL: Record<Stage, string> = {
+  released: "Released",
+  overdue: "Overdue",
+  next: "Up next",
+  planned: "Planned",
+  empty: "Empty",
+};
+
+function ReleaseStage({
+  release,
+  href,
+  stage,
+}: {
+  release: ProgramRelease;
+  href: string;
+  stage: Stage;
+}) {
   const date = formatDate(release.releaseDate);
-  const state = release.released ? "Released" : release.overdue ? "Overdue" : release.increments.length ? "Planned" : "Empty";
+  const shown = release.increments.slice(0, 6);
+  const more = release.increments.length - shown.length;
   return (
     <Link
-      href={`/program/${encodeURIComponent(projectKey)}/${release.id}`}
-      className="group relative flex w-80 shrink-0 flex-col rounded-2xl border border-border bg-background/80 p-5 shadow-sm backdrop-blur transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
+      href={href}
+      aria-label={`${release.name}, milestone ${release.sequence + 1}, ${STAGE_LABEL[stage]}. Open critical path.`}
+      className={cn(
+        "group relative flex w-[300px] shrink-0 snap-start flex-col rounded-2xl bg-[var(--ms-surface)] p-5 shadow-[var(--ms-shadow-card)] transition-[transform,box-shadow] duration-300 ease-[var(--ms-ease)] hover:-translate-y-0.5 hover:shadow-[var(--ms-shadow-hover)]",
+        stage === "next" && "outline-2 outline-offset-0 outline-[var(--ms-accent)] outline-solid",
+        stage === "empty" && "bg-transparent shadow-[inset_0_0_0_1px_var(--ms-sep-strong)]",
+      )}
     >
       <div className="mb-3 flex items-center gap-2">
-        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
-          {index + 1}
-        </span>
-        <h3 className="flex-1 truncate text-base font-semibold text-foreground">{release.name}</h3>
-        <span
-          className={cn(
-            "rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
-            release.released && "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-            release.overdue && "bg-rose-500/10 text-rose-600 dark:text-rose-400",
-            !release.released && !release.overdue && "bg-muted text-muted-foreground",
-          )}
-        >
-          {state}
+        <span className="text-[12px] font-medium text-[var(--ms-label-3)]">Milestone {release.sequence + 1}</span>
+        <span className="ml-auto">
+          <Badge tone={stage === "released" ? "ready" : stage === "overdue" ? "critical" : undefined}>
+            <span className={cn(stage === "next" && "text-[var(--ms-accent-text)]")}>{STAGE_LABEL[stage]}</span>
+          </Badge>
         </span>
       </div>
+      <h3 className="text-[19px] font-semibold leading-tight tracking-[-0.015em] text-[var(--ms-label)]">{release.name}</h3>
+      <div className="mt-0.5 text-[12.5px] text-[var(--ms-label-2)]">{date ? `${release.released ? "Released" : "Due"} ${date}` : "No release date"}</div>
 
-      <div className="mb-1 flex items-baseline justify-between text-xs text-muted-foreground">
-        <span>
-          {release.increments.length} increments · {release.epicProgress.total} team epics
-        </span>
-        <span className="font-semibold tabular-nums text-foreground">{percentDone(release.epicProgress)}%</span>
-      </div>
-      <ProgressBar progress={release.epicProgress} className="mb-4" />
+      {release.increments.length > 0 && (
+        <>
+          <div className="mb-1.5 mt-4 flex items-baseline justify-between">
+            <span className="text-[12px] text-[var(--ms-label-2)]">
+              {release.epicProgress.done} of {release.epicProgress.total} team epics done
+            </span>
+            <span className="text-[15px] font-semibold tabular-nums text-[var(--ms-label)]">{percentDone(release.epicProgress)}%</span>
+          </div>
+          <ProgressBar progress={release.epicProgress} />
+        </>
+      )}
 
-      <ul className="flex flex-col gap-1.5">
-        {release.increments.map((inc) => (
-          <li key={inc.key} className="flex items-start gap-2 text-[13px]">
-            <StatusDot status={inc.status} className="mt-1.5" />
-            <div className="min-w-0 flex-1">
-              <div className="truncate text-foreground">{inc.capabilities[0]?.summary ?? inc.summary}</div>
-              <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                <span className="font-mono">{inc.key}</span>
-                <span>·</span>
-                <span>
-                  {inc.teamEpics.filter((e) => e.status.category === "done").length}/{inc.teamEpics.length} epics done
-                </span>
-                {inc.blockedBy.length > 0 && <span className="text-amber-600 dark:text-amber-400">· waits on {inc.blockedBy.join(", ")}</span>}
+      <ul className="mt-4 flex flex-col gap-2.5">
+        {shown.map((inc) => {
+          const epicsDone = inc.teamEpics.filter((e) => e.status.category === "done").length;
+          return (
+            <li key={inc.key} className="flex items-start gap-2">
+              <StatusDot status={inc.status} className="mt-[5px]" />
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-[13px] font-medium text-[var(--ms-label)]">{inc.capabilities[0]?.summary ?? inc.summary}</div>
+                <div className="flex items-center gap-1 text-[11.5px] text-[var(--ms-label-3)]">
+                  <span className="font-mono text-[10.5px]">{inc.key}</span>
+                  <span>·</span>
+                  <span className="tabular-nums">
+                    {epicsDone}/{inc.teamEpics.length} epics
+                  </span>
+                  {inc.blockedBy.length > 0 && (
+                    <span className="truncate text-[var(--ms-warn-text)]">· waits on {inc.blockedBy.join(", ")}</span>
+                  )}
+                </div>
               </div>
-            </div>
-          </li>
-        ))}
+            </li>
+          );
+        })}
+        {more > 0 && <li className="pl-4 text-[12px] text-[var(--ms-label-3)]">and {more} more</li>}
         {release.increments.length === 0 && (
-          <li className="text-xs italic text-muted-foreground">No increments scheduled yet.</li>
+          <li className="text-[13px] text-[var(--ms-label-3)]">No increments scheduled yet.</li>
         )}
       </ul>
 
-      <div className="mt-auto flex items-center justify-between pt-4 text-xs text-muted-foreground">
-        <span>{date ? `Release ${date}` : "No release date"}</span>
-        <span className="font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100">
-          Critical path →
-        </span>
+      <div className="mt-auto flex items-center pt-5 text-[13px] font-medium text-[var(--ms-accent-text)]">
+        Critical path
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" className="ml-0.5 transition-transform duration-300 group-hover:translate-x-0.5">
+          <path d="m6 3.5 4.5 4.5L6 12.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
       </div>
     </Link>
   );
@@ -78,52 +113,71 @@ function ReleaseStage({ release, projectKey, index }: { release: ProgramRelease;
 function WarningList({ warnings }: { warnings: MilestoneWarning[] }) {
   if (warnings.length === 0) return null;
   return (
-    <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
-      <h3 className="mb-2 text-sm font-semibold text-amber-700 dark:text-amber-400">Sequencing issues</h3>
-      <ul className="flex flex-col gap-1 text-sm text-foreground">
-        {warnings.map((w, i) => (
-          <li key={i}>{w.message}</li>
-        ))}
-      </ul>
-    </div>
+    <section aria-labelledby="ms-seq">
+      <SectionTitle hint={`${warnings.length} found`}>
+        <span id="ms-seq">Sequencing issues</span>
+      </SectionTitle>
+      <Surface>
+        <ul className="divide-y divide-[var(--ms-sep)]">
+          {warnings.map((w, i) => (
+            <li key={i} className="flex items-start gap-2.5 px-4 py-3 text-[13px] text-[var(--ms-label)]">
+              <span className="mt-[5px] h-2 w-2 shrink-0 rounded-full bg-[var(--ms-warn)]" aria-hidden="true" />
+              {w.message}
+            </li>
+          ))}
+        </ul>
+      </Surface>
+    </section>
   );
 }
 
-export default function ProgramRoadmap({ overview }: { overview: ProgramOverview }) {
+export default function ProgramRoadmap({ overview, linkSuffix = "" }: { overview: ProgramOverview; linkSuffix?: string }) {
+  const nextIndex = overview.releases.findIndex((r) => !r.released);
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex gap-4 overflow-x-auto pb-4">
-        {overview.releases.map((r, i) => (
-          <div key={r.id} className="flex items-stretch">
-            <ReleaseStage release={r} projectKey={overview.project.key} index={i} />
-            {i < overview.releases.length - 1 && (
-              <div className="flex w-6 items-center justify-center text-muted-foreground/50" aria-hidden="true">
-                →
-              </div>
-            )}
-          </div>
-        ))}
-        {overview.releases.length === 0 && (
-          <p className="text-sm text-muted-foreground">
-            {overview.project.key} has no releases. Create one release per milestone in the delivery space.
+    <div className="flex flex-col gap-10">
+      {overview.releases.length === 0 ? (
+        <Surface className="px-6 py-10 text-center">
+          <div className="text-[15px] font-semibold text-[var(--ms-label)]">No milestones yet</div>
+          <p className="mt-1 text-[13px] text-[var(--ms-label-2)]">
+            Create one release per milestone in {overview.project.key}, then give each increment a fix version.
           </p>
-        )}
-      </div>
+        </Surface>
+      ) : (
+        <div className="relative -mx-8">
+          {/* The delivery line the stages hang from. */}
+          <ol className="flex snap-x snap-mandatory gap-5 overflow-x-auto scroll-px-8 px-8 pb-6 pt-1" aria-label="Milestones in delivery order">
+            {overview.releases.map((r, i) => (
+              <li key={r.id} className="ms-fade-up flex" style={{ animationDelay: `${i * 50}ms` }}>
+                <ReleaseStage
+                  release={r}
+                  stage={stageOf(r, i === nextIndex)}
+                  href={`/program/${encodeURIComponent(overview.project.key)}/${r.id}${linkSuffix}`}
+                />
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
 
       <WarningList warnings={overview.warnings} />
 
       {overview.unscheduled.length > 0 && (
-        <div>
-          <h3 className="mb-2 text-sm font-semibold text-foreground">Unscheduled increments</h3>
-          <div className="flex flex-wrap gap-2">
-            {overview.unscheduled.map((i) => (
-              <span key={i.key} className="flex items-center gap-2 rounded-lg border border-border px-2 py-1 text-sm">
-                <KeyChip issueKey={i.key} />
-                {i.summary}
-              </span>
-            ))}
-          </div>
-        </div>
+        <section aria-labelledby="ms-unscheduled">
+          <SectionTitle hint="Increments without a fix version">
+            <span id="ms-unscheduled">Unscheduled</span>
+          </SectionTitle>
+          <Surface>
+            <ul className="divide-y divide-[var(--ms-sep)]">
+              {overview.unscheduled.map((i) => (
+                <li key={i.key} className="flex items-center gap-2.5 px-4 py-2.5 text-[13px] text-[var(--ms-label)]">
+                  <StatusDot status={i.status} />
+                  <KeyChip issueKey={i.key} />
+                  <span className="truncate">{i.summary}</span>
+                </li>
+              ))}
+            </ul>
+          </Surface>
+        </section>
       )}
     </div>
   );

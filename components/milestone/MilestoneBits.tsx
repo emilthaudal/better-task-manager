@@ -95,7 +95,7 @@ export function KeyChip({
   className?: string;
 }) {
   const classes = cn(
-    "inline-flex items-center rounded-md px-1.5 py-[3px] font-mono text-[11px] font-medium leading-none transition-colors",
+    "inline-flex shrink-0 items-center whitespace-nowrap rounded-md px-1.5 py-[3px] font-mono text-[11px] font-medium leading-none transition-colors",
     critical
       ? "bg-[var(--ms-critical-fill)] text-[var(--ms-critical-text)]"
       : "bg-[var(--ms-fill-2)] text-[var(--ms-label-2)]",

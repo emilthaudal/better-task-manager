@@ -203,7 +203,7 @@ const SlackLayer = memo(function SlackLayer({ cards }: { cards: LaidOutCard[] })
               width: slack * (CARD_WIDTH + COLUMN_GAP) - 14,
             }}
           >
-            <div className="h-[2px] flex-1 rounded-full bg-[repeating-linear-gradient(90deg,var(--ms-sep-strong)_0_4px,transparent_4px_7px)]" />
+            <div className="h-[2px] flex-1 rounded-full bg-[repeating-linear-gradient(90deg,var(--ms-sep)_0_4px,transparent_4px_7px)]" />
             <div className="h-[6px] w-[2px] rounded-full bg-[var(--ms-sep-strong)]" />
           </div>
         );

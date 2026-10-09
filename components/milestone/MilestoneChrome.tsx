@@ -104,7 +104,7 @@ export function MilestoneSkeleton() {
             </div>
             <div className="flex gap-14 px-7 py-3.5">
               {Array.from({ length: 4 - (lane % 3) }, (_, i) => (
-                <Skeleton key={i} className="h-[76px] w-[216px] rounded-xl" style={{ animationDelay: `${(lane + i) * 80}ms` }} />
+                <Skeleton key={i} className="h-[84px] w-[216px] rounded-xl" style={{ animationDelay: `${(lane + i) * 80}ms` }} />
               ))}
             </div>
           </div>
