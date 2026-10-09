@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Native app and its dev scripts (Bun-run, outside the web build).
+    "mac/**",
   ]),
 ]);
 
