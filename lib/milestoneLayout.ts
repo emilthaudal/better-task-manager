@@ -10,7 +10,7 @@ import type { Dependency, MilestoneDetail, WorkItem } from "@/lib/milestoneTypes
 export type LaneMode = "team" | "epic";
 
 export const CARD_WIDTH = 216;
-export const CARD_HEIGHT = 76;
+export const CARD_HEIGHT = 84;
 export const COLUMN_GAP = 56;
 export const ROW_GAP = 10;
 export const LANE_PADDING = 14;
