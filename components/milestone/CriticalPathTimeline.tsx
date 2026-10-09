@@ -34,15 +34,22 @@ function edgePath(e: LaidOutEdge): string {
   return `M ${e.x1} ${e.y1} C ${e.x1 + dx} ${e.y1}, ${e.x2 - dx} ${e.y2}, ${e.x2 - 2} ${e.y2}`;
 }
 
-function cardTitle(item: WorkItem): string {
+/** Tooltip lines for a card: summary, owner, and what its timing means. */
+function tooltipLines(item: WorkItem): { title: string; meta: string; schedule: string } {
   const s = item.schedule;
-  const lines = [`${item.key} · ${item.summary}`, `${item.team}${item.assignee ? ` · ${item.assignee}` : " · Unassigned"}`];
+  let schedule = "";
   if (s) {
-    lines.push(s.critical ? "On the critical path" : `${s.slack} step${s.slack === 1 ? "" : "s"} of slack`);
-    if (s.downstream > 0) lines.push(`Unblocks ${s.downstream}${s.downstreamTeams.length ? ` (${s.downstreamTeams.join(", ")})` : ""}`);
+    schedule = s.critical ? "On the critical path — any delay moves the milestone" : `Can slip ${s.slack} step${s.slack === 1 ? "" : "s"} without delaying the milestone`;
+    if (s.downstream > 0) schedule += ` · unblocks ${s.downstream}${s.downstreamTeams.length ? ` in ${s.downstreamTeams.join(", ")}` : ""}`;
   }
-  return lines.join("\n");
+  return {
+    title: item.summary,
+    meta: `${item.key} · ${item.team} · ${item.assignee ?? "Unassigned"}${item.external ? " · outside this milestone" : ""}`,
+    schedule,
+  };
 }
+
+const TOOLTIP_DELAY_MS = 450;
 
 // ── Card ────────────────────────────────────────────────────────────────────
 
@@ -73,7 +80,6 @@ const Card = memo(function Card({
       tabIndex={focusable ? 0 : -1}
       aria-pressed={selected}
       aria-label={`${item.key}: ${item.summary}${critical ? ", critical" : ""}${s?.ready ? ", ready" : ""}`}
-      title={cardTitle(item)}
       className={cn(
         "ms-card absolute flex flex-col justify-between overflow-hidden rounded-xl bg-[var(--ms-surface)] py-2 pl-3 pr-2.5 text-left",
         item.external && "bg-[var(--ms-warn-fill)] outline-1 outline-dashed -outline-offset-1 outline-[var(--ms-warn)]",
@@ -433,18 +439,72 @@ export default function CriticalPathTimeline({ detail, laneMode, selectedKey, on
     applyFocus();
   });
 
+  // ── Tooltip: one element, filled and positioned imperatively ──
+  const shellRef = useRef<HTMLDivElement>(null);
+  const tipRef = useRef<HTMLDivElement>(null);
+  const tipTimer = useRef<number | null>(null);
+  const tipWarmUntil = useRef(0);
+
+  const hideTip = useCallback(() => {
+    if (tipTimer.current) window.clearTimeout(tipTimer.current);
+    tipTimer.current = null;
+    const tip = tipRef.current;
+    if (tip && tip.dataset.open !== undefined) {
+      delete tip.dataset.open;
+      // Moving straight to another card shows its tooltip without the delay.
+      tipWarmUntil.current = performance.now() + 400;
+    }
+  }, []);
+
+  const showTip = useCallback(
+    (card: HTMLElement, key: string) => {
+      if (tipTimer.current) window.clearTimeout(tipTimer.current);
+      const open = () => {
+        const tip = tipRef.current;
+        const shell = shellRef.current;
+        const c = cardByKey.get(key);
+        if (!tip || !shell || !c || !card.isConnected) return;
+        const lines = tooltipLines(c.item);
+        const [title, meta, schedule] = Array.from(tip.children) as HTMLElement[];
+        if (title) title.textContent = lines.title;
+        if (meta) meta.textContent = lines.meta;
+        if (schedule) {
+          schedule.textContent = lines.schedule;
+          schedule.hidden = !lines.schedule;
+        }
+        const r = card.getBoundingClientRect();
+        const box = shell.getBoundingClientRect();
+        const width = 280;
+        const left = Math.min(Math.max(8, r.left - box.left), box.width - width - 8);
+        const below = r.bottom - box.top + 8;
+        tip.style.width = `${width}px`;
+        tip.style.left = `${left}px`;
+        tip.style.top = `${below}px`;
+        tip.dataset.open = "";
+        // Flip above the card when it would run off the bottom.
+        if (below + tip.offsetHeight > box.height - 8) tip.style.top = `${r.top - box.top - tip.offsetHeight - 8}px`;
+      };
+      if (performance.now() < tipWarmUntil.current) open();
+      else tipTimer.current = window.setTimeout(open, TOOLTIP_DELAY_MS);
+    },
+    [cardByKey],
+  );
+
   const onPointerOver = useCallback(
     (e: React.PointerEvent) => {
       const card = (e.target as HTMLElement).closest<HTMLElement>(".ms-card");
       const key = card?.dataset.k ?? null;
       if (hoverTimer.current) window.clearTimeout(hoverTimer.current);
-      if (key) {
+      if (key && card) {
         if (hoverRef.current !== key) {
           hoverRef.current = key;
           applyFocus();
+          hideTip();
+          if (e.pointerType === "mouse") showTip(card, key);
         }
         return;
       }
+      hideTip();
       // Crossing the gap between two cards shouldn't flash the whole graph.
       hoverTimer.current = window.setTimeout(() => {
         if (hoverRef.current !== null) {
@@ -453,21 +513,30 @@ export default function CriticalPathTimeline({ detail, laneMode, selectedKey, on
         }
       }, HOVER_CLEAR_MS);
     },
-    [applyFocus],
+    [applyFocus, hideTip, showTip],
   );
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.addEventListener("scroll", hideTip, { passive: true });
+    return () => el.removeEventListener("scroll", hideTip);
+  }, [hideTip]);
 
   const onPointerLeave = useCallback(() => {
     if (hoverTimer.current) window.clearTimeout(hoverTimer.current);
     hoverRef.current = null;
     applyFocus();
-  }, [applyFocus]);
+    hideTip();
+  }, [applyFocus, hideTip]);
 
   const onClick = useCallback(
     (e: React.MouseEvent) => {
+      hideTip();
       const card = (e.target as HTMLElement).closest<HTMLElement>(".ms-card");
       onSelect(card?.dataset.k ?? null);
     },
-    [onSelect],
+    [onSelect, hideTip],
   );
 
   // ── Scrolling a card into view (works for culled cards: uses layout) ──
@@ -629,7 +698,12 @@ export default function CriticalPathTimeline({ detail, laneMode, selectedKey, on
   const pctLabel = `${Math.round(zoom * 100)}%`;
 
   return (
-    <div className="absolute inset-0">
+    <div ref={shellRef} className="absolute inset-0">
+      <div ref={tipRef} role="tooltip" className="ms-tip ms-material pointer-events-none absolute z-50 rounded-xl px-3 py-2.5">
+        <div className="text-[13px] font-semibold leading-snug text-[var(--ms-label)]" />
+        <div className="mt-0.5 text-[11.5px] text-[var(--ms-label-2)]" />
+        <div className="mt-1.5 border-t border-[var(--ms-sep)] pt-1.5 text-[11.5px] leading-snug text-[var(--ms-label-2)]" />
+      </div>
       <div
         ref={scrollRef}
         role="application"
