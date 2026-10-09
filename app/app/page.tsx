@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import EpicPicker from "@/components/EpicPicker";
 import ThemeToggle from "@/components/ThemeToggle";
 import HomeShell from "@/components/HomeShell";
+import ProgramEntry from "@/components/milestone/ProgramEntry";
 import { getServerSession, isAuthenticated } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
@@ -25,7 +26,12 @@ export default async function Home() {
           <ThemeToggle />
         </>
       }
-      picker={<EpicPicker />}
+      picker={
+        <>
+          <EpicPicker />
+          <ProgramEntry />
+        </>
+      }
     />
   );
 }
