@@ -201,7 +201,7 @@ struct KeyChip: View {
         } label: {
             HStack(spacing: 5) {
                 if let status { StatusDot(status: status, size: 6) }
-                Text(key).font(.caption.monospaced().weight(.medium))
+                Text(key).font(.caption.monospaced().weight(.medium)).fixedSize()
                 if let title {
                     Text(title).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                 }
@@ -231,15 +231,26 @@ struct FlowLayout: Layout {
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
         let rows = arrange(subviews: subviews, width: bounds.width)
         for (index, origin) in rows.origins.enumerated() {
-            subviews[index].place(at: CGPoint(x: bounds.minX + origin.x, y: bounds.minY + origin.y), proposal: .unspecified)
+            subviews[index].place(
+                at: CGPoint(x: bounds.minX + origin.x, y: bounds.minY + origin.y),
+                proposal: ProposedViewSize(rows.sizes[index])
+            )
         }
     }
 
-    private func arrange(subviews: Subviews, width: CGFloat) -> (origins: [CGPoint], width: CGFloat, height: CGFloat) {
+    /// A chip wider than the row is squeezed to the row's width (its title truncates) — measuring it
+    /// unconstrained would report that width upward and stretch the whole card or grid cell.
+    private func arrange(subviews: Subviews, width: CGFloat) -> (origins: [CGPoint], sizes: [CGSize], width: CGFloat, height: CGFloat) {
         var origins: [CGPoint] = []
+        var sizes: [CGSize] = []
         var x: CGFloat = 0, y: CGFloat = 0, rowHeight: CGFloat = 0, maxX: CGFloat = 0
         for subview in subviews {
-            let size = subview.sizeThatFits(.unspecified)
+            var size = subview.sizeThatFits(.unspecified)
+            if size.width > width {
+                size = subview.sizeThatFits(ProposedViewSize(width: width, height: nil))
+                size.width = min(size.width, width)
+            }
+            sizes.append(size)
             if x > 0 && x + size.width > width {
                 x = 0
                 y += rowHeight + spacing
@@ -250,7 +261,7 @@ struct FlowLayout: Layout {
             maxX = max(maxX, x - spacing)
             rowHeight = max(rowHeight, size.height)
         }
-        return (origins, maxX, y + rowHeight)
+        return (origins, sizes, maxX, y + rowHeight)
     }
 }
 
