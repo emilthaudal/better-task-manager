@@ -118,6 +118,7 @@ struct CriticalPathView: View {
         .focusable()
         .focusEffectDisabled()
         .focused($isFocused)
+        .accessibilityElement(children: .contain)
         .accessibilityLabel("Critical path swimlane")
         .accessibilityHint("Arrow keys move between cards; Return opens the inspector, Escape clears the selection.")
         .onKeyPress(keys: [.leftArrow, .rightArrow, .upArrow, .downArrow, .return, .escape]) { press in
