@@ -16,10 +16,19 @@ struct MilestoneCommandContext {
 
 extension FocusedValues {
     @Entry var milestoneCommands: MilestoneCommandContext?
+    /// Published by the swimlane while it's on screen, for View ▸ Zoom.
+    @Entry var swimlaneZoom: Binding<CGFloat>?
+}
+
+enum SwimlaneZoom {
+    static let range: ClosedRange<CGFloat> = 0.4...1.8
+    static let step: CGFloat = 0.15
+    static func clamp(_ value: CGFloat) -> CGFloat { min(max(value, range.lowerBound), range.upperBound) }
 }
 
 struct MilestoneCommands: Commands {
     @FocusedValue(\.milestoneCommands) private var context
+    @FocusedValue(\.swimlaneZoom) private var zoom
 
     var body: some Commands {
         CommandGroup(after: .textEditing) {
@@ -60,6 +69,16 @@ struct MilestoneCommands: Commands {
                 set: { context?.options?.wrappedValue.showExternal = $0 }
             ))
             .disabled(context?.options == nil)
+            Divider()
+            Button("Actual Size") { withAnimation(.smooth) { zoom?.wrappedValue = 1 } }
+                .keyboardShortcut("0", modifiers: .command)
+                .disabled(zoom == nil || zoom?.wrappedValue == 1)
+            Button("Zoom In") { withAnimation(.smooth) { zoom?.wrappedValue = SwimlaneZoom.clamp((zoom?.wrappedValue ?? 1) + SwimlaneZoom.step) } }
+                .keyboardShortcut("+", modifiers: .command)
+                .disabled(zoom == nil || (zoom?.wrappedValue ?? 1) >= SwimlaneZoom.range.upperBound)
+            Button("Zoom Out") { withAnimation(.smooth) { zoom?.wrappedValue = SwimlaneZoom.clamp((zoom?.wrappedValue ?? 1) - SwimlaneZoom.step) } }
+                .keyboardShortcut("-", modifiers: .command)
+                .disabled(zoom == nil || (zoom?.wrappedValue ?? 1) <= SwimlaneZoom.range.lowerBound)
             Divider()
             Button("Refresh") { context?.refresh() }
                 .keyboardShortcut("r", modifiers: .command)

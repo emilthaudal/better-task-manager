@@ -94,8 +94,9 @@ selection/inspector through the `milestoneNavigator` environment value rather th
   Cells with more than `SwimlaneMetrics.cellLimit` cards fold the least important ones (never
   critical) behind a "N more" pill (`SwimlaneLayout.overflows` / `hiddenLaneByKey`); lanes unfold
   per milestone via `expandedLanes`, and selecting a folded card unfolds its lane first.
-- Menu bar: `MilestoneCommands` (View: tabs ⌘1–5, lanes, refresh ⌘R; Go: milestones ⌥⌘1–9;
-  Edit: Filter ⌘F) reads the key window through `focusedSceneValue(\.milestoneCommands)`. Tab and
+- Menu bar: `MilestoneCommands` (View: tabs ⌘1–5, lanes, zoom ⌘0/⌘+/⌘−, refresh ⌘R; Go:
+  milestones ⌥⌘1–9; Edit: Filter ⌘F) reads the key window through
+  `focusedSceneValue(\.milestoneCommands)` and the swimlane's `\.swimlaneZoom` binding. Tab and
   lane options persist per window with `@SceneStorage`.
 - Fixtures in BetterTaskManagerTests/Fixtures: `program-overview.json`/`milestone-detail.json` are
   real LAD responses; the `-multi*` and `-large` ones come from

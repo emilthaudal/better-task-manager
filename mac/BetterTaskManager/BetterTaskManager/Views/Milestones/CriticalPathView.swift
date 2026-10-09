@@ -194,6 +194,7 @@ struct CriticalPathView: View {
             }
         }
         .defaultFocus($isFocused, true)
+        .focusedSceneValue(\.swimlaneZoom, $zoom)
         .background(Color(nsColor: .windowBackgroundColor))
     }
 
@@ -281,21 +282,19 @@ struct CriticalPathView: View {
                     .buttonStyle(.glass)
                     .glassEffectID("reset", in: glassNamespace)
                     .help("Actual Size (⌘0)")
-                    .keyboardShortcut("0", modifiers: .command)
                 }
+                // Shortcuts live in View ▸ Zoom (MilestoneCommands), not on these buttons.
                 HStack(spacing: 0) {
-                    Button { withAnimation(.smooth) { zoom = clampZoom(zoom - 0.15) } } label: {
+                    Button { withAnimation(.smooth) { zoom = clampZoom(zoom - SwimlaneZoom.step) } } label: {
                         Label("Zoom Out", systemImage: "minus.magnifyingglass").labelStyle(.iconOnly).frame(width: 26, height: 22)
                     }
                     .help("Zoom Out (⌘−)")
-                    .keyboardShortcut("-", modifiers: .command)
-                    .disabled(zoom <= 0.4)
-                    Button { withAnimation(.smooth) { zoom = clampZoom(zoom + 0.15) } } label: {
+                    .disabled(zoom <= SwimlaneZoom.range.lowerBound)
+                    Button { withAnimation(.smooth) { zoom = clampZoom(zoom + SwimlaneZoom.step) } } label: {
                         Label("Zoom In", systemImage: "plus.magnifyingglass").labelStyle(.iconOnly).frame(width: 26, height: 22)
                     }
                     .help("Zoom In (⌘+)")
-                    .keyboardShortcut("=", modifiers: .command)
-                    .disabled(zoom >= 1.8)
+                    .disabled(zoom >= SwimlaneZoom.range.upperBound)
                 }
                 .buttonStyle(.borderless)
                 .padding(.horizontal, 6)
@@ -307,7 +306,7 @@ struct CriticalPathView: View {
         .animation(.smooth, value: zoom == 1)
     }
 
-    private func clampZoom(_ value: CGFloat) -> CGFloat { min(max(value, 0.4), 1.8) }
+    private func clampZoom(_ value: CGFloat) -> CGFloat { SwimlaneZoom.clamp(value) }
 }
 
 private struct ScrollSnapshot: Equatable {
