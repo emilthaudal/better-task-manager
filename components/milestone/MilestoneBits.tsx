@@ -195,8 +195,21 @@ export function Segmented<T extends string>({
   onChange: (v: T) => void;
   label: string;
 }) {
+  // ARIA radio group: one tab stop, arrow keys move the choice.
+  const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const step = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : e.key === "ArrowLeft" || e.key === "ArrowUp" ? -1 : 0;
+    if (!step) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const at = options.findIndex((o) => o.value === value);
+    const next = options[(at + step + options.length) % options.length];
+    if (!next) return;
+    onChange(next.value);
+    const buttons = e.currentTarget.querySelectorAll<HTMLButtonElement>("[role=radio]");
+    buttons[(at + step + options.length) % options.length]?.focus();
+  };
   return (
-    <div role="radiogroup" aria-label={label} className="inline-flex shrink-0 rounded-[9px] bg-[var(--ms-fill)] p-[2px]">
+    <div role="radiogroup" aria-label={label} onKeyDown={onKeyDown} className="inline-flex shrink-0 rounded-[9px] bg-[var(--ms-fill)] p-[2px]">
       {options.map((o) => {
         const on = value === o.value;
         return (
@@ -205,6 +218,7 @@ export function Segmented<T extends string>({
             type="button"
             role="radio"
             aria-checked={on}
+            tabIndex={on ? 0 : -1}
             onClick={() => onChange(o.value)}
             className={cn(
               "rounded-[7px] px-3 py-[3px] text-[12.5px] font-medium transition-all duration-200",
