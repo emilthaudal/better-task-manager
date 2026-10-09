@@ -70,6 +70,16 @@ import Testing
         #expect(folded.size.height < 7000)
     }
 
+    @Test func theSelectedCardIsNeverFoldedAway() throws {
+        let detail: MilestoneDetail = try loadFixture("milestone-detail-large")
+        let folded = buildSwimlaneLayout(detail: detail, options: SwimlaneOptions())
+        let hidden = try #require(folded.hiddenLaneByKey.keys.sorted().first)
+        let pinned = buildSwimlaneLayout(detail: detail, options: SwimlaneOptions(), pinnedKey: hidden)
+        #expect(pinned.nodesByKey[hidden] != nil)
+        #expect(pinned.hiddenLaneByKey.count == folded.hiddenLaneByKey.count)
+        #expect(pinned.size == folded.size)
+    }
+
     @Test func smallMilestonesNeverFold() throws {
         for fixture in ["milestone-detail", "milestone-detail-multiteam"] {
             let detail: MilestoneDetail = try loadFixture(fixture)

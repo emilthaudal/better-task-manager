@@ -70,9 +70,11 @@ struct MilestoneRootView: View {
     }
 
     private var commandContext: MilestoneCommandContext {
-        MilestoneCommandContext(
-            tab: selection?.milestoneID == nil ? nil : $tab,
-            options: selection?.milestoneID == nil ? nil : swimlaneOptionsBinding,
+        // Tabs and lanes only exist on a milestone page, not on its team pages.
+        let onMilestone = if case .milestone = selection { true } else { false }
+        return MilestoneCommandContext(
+            tab: onMilestone ? $tab : nil,
+            options: onMilestone ? swimlaneOptionsBinding : nil,
             milestones: store.program?.releases.map { ($0.id, $0.name) } ?? [],
             selectedMilestoneID: selection?.milestoneID,
             isRefreshing: store.isRefreshing,

@@ -43,6 +43,9 @@ struct MilestoneDetailView: View {
                 switch tab {
                 case .criticalPath:
                     CriticalPathView(loaded: loaded, options: $options, searchText: searchText)
+                        // Fresh zoom, scroll and unfolded lanes per milestone: lane ids are
+                        // team names, so another milestone's unfolded lanes would carry over.
+                        .id(loaded.detail.release.id)
                 case .blockers:
                     BlockerEpicsView(loaded: loaded, searchText: searchText)
                 case .teams:

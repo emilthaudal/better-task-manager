@@ -72,6 +72,45 @@ private struct Boom: Error, LocalizedError {
         #expect(!store.isRefreshing)
     }
 
+    @Test func aResponseThatLandsAfterResetIsDropped() async throws {
+        let program: ProgramOverview = try loadFixture("program-overview")
+        let detail: MilestoneDetail = try loadFixture("milestone-detail")
+        let store = MilestoneStore(
+            projectKey: { "LAD" },
+            fetchProgram: { _ in try await Task.sleep(for: .milliseconds(80)); return program },
+            fetchMilestone: { _, _ in try await Task.sleep(for: .milliseconds(80)); return detail },
+            fetchSiteURL: { nil }
+        )
+        async let inFlight: Void = store.refresh(milestoneID: "10140")
+        try await Task.sleep(for: .milliseconds(20))
+        store.reset()
+        await inFlight
+        #expect(store.program == nil)
+        #expect(store.milestone("10140") == nil)
+    }
+
+    @Test func anOlderResponseDoesNotOverwriteANewerOne() async throws {
+        let old: MilestoneDetail = try loadFixture("milestone-detail")
+        let new: MilestoneDetail = try loadFixture("milestone-detail-multiteam")
+        var calls = 0
+        let store = MilestoneStore(
+            projectKey: { "LAD" },
+            fetchProgram: { _ in throw Boom() },
+            fetchMilestone: { _, _ in
+                calls += 1
+                // The first request is slow and returns stale data; the second is fast.
+                if calls == 1 { try await Task.sleep(for: .milliseconds(120)); return old }
+                return new
+            },
+            fetchSiteURL: { nil }
+        )
+        async let slow: Void = store.refresh(milestoneID: "x")
+        try await Task.sleep(for: .milliseconds(20))
+        await store.refresh(milestoneID: "x")
+        await slow
+        #expect(store.milestone("x")?.detail.release.id == new.release.id)
+    }
+
     @Test func resetForgetsTheOldProject() async throws {
         let program: ProgramOverview = try loadFixture("program-overview")
         let store = MilestoneStore(projectKey: { "LAD" }, fetchProgram: { _ in program },

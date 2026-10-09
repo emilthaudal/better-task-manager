@@ -98,6 +98,10 @@ struct CriticalPathView: View {
             .padding(.bottom, 64)
         }
         .scrollPosition($position)
+        // Once the user takes the scroll, a pending reveal must not pull it back.
+        .onScrollPhaseChange { _, phase in
+            if phase == .interacting { pendingReveal = nil }
+        }
         // The scroll view runs under the glass sidebar, so the content the user can
         // actually see starts after the leading inset — pinned lane headers placed at
         // the raw offset end up hidden behind the sidebar.
@@ -147,7 +151,7 @@ struct CriticalPathView: View {
         .onChange(of: LayoutKey(generatedAt: loaded.detail.generatedAt, releaseID: loaded.detail.release.id,
                                 options: options, expandedLanes: expandedLanes), initial: true) { old, new in
             let next = buildSwimlaneLayout(detail: loaded.detail, options: new.options, metrics: metrics,
-                                           expandedLanes: new.expandedLanes)
+                                           expandedLanes: new.expandedLanes, pinnedKey: selectedKey)
             let viewChanged = old.options != new.options || old.expandedLanes != new.expandedLanes
             // Animate only user-driven changes; a background poll shouldn't make cards dance.
             if viewChanged, old.releaseID == new.releaseID, !reduceMotion {
@@ -162,7 +166,6 @@ struct CriticalPathView: View {
             let userDriven = old == new || viewChanged || old.releaseID != new.releaseID
             if userDriven, let key = selectedKey { requestReveal(key) }
         }
-        .onChange(of: loaded.detail.release.id) { expandedLanes = [] }
         .onChange(of: zoom) { _, zoom in scroll.recull(zoom: zoom, bounds: layout.size) }
         .onChange(of: selectedKey, initial: true) { _, key in
             guard let key else { return }
@@ -248,7 +251,7 @@ struct CriticalPathView: View {
             default: .down
             }
             let next = selectedKey.flatMap { layout.neighbor(of: $0, direction) }
-                ?? (selectedKey == nil ? layout.keyboardEntryKey : nil)
+                ?? (selectedKey.flatMap { layout.nodesByKey[$0] } == nil ? layout.keyboardEntryKey : nil)
             guard let next else { return .handled }
             hoveredKey = nil
             navigator.select(.item(next))

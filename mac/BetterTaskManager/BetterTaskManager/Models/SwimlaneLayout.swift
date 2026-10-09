@@ -118,7 +118,8 @@ nonisolated func buildSwimlaneLayout(
     detail: MilestoneDetail,
     options: SwimlaneOptions,
     metrics: SwimlaneMetrics = SwimlaneMetrics(),
-    expandedLanes: Set<String> = []
+    expandedLanes: Set<String> = [],
+    pinnedKey: String? = nil
 ) -> SwimlaneLayout {
     let epicsByKey = Dictionary(detail.epics.map { ($0.key, $0) }, uniquingKeysWith: { first, _ in first })
 
@@ -161,7 +162,7 @@ nonisolated func buildSwimlaneLayout(
     var hiddenKeys: Set<String> = []
     for members in Dictionary(grouping: placements, by: { "\($0.laneID)#\($0.column)" }).values where members.count > limit {
         guard let lane = members.first?.laneID, isCollapsed(lane) else { continue }
-        let ranked = members.sorted { a, b in
+        var ranked = members.sorted { a, b in
             let critA = a.item.schedule?.critical ?? false, critB = b.item.schedule?.critical ?? false
             if critA != critB { return critA }
             let downA = a.item.schedule?.downstream ?? 0, downB = b.item.schedule?.downstream ?? 0
@@ -170,6 +171,11 @@ nonisolated func buildSwimlaneLayout(
             let linkedB = !(b.item.blocks.isEmpty && b.item.blockedBy.isEmpty)
             if linkedA != linkedB { return linkedA }
             return a.item.key.localizedStandardCompare(b.item.key) == .orderedAscending
+        }
+        // The selected card always stays on screen — folding it away would strand
+        // keyboard navigation and the chain highlight on a card with no frame.
+        if let pinnedKey, let at = ranked.firstIndex(where: { $0.item.key == pinnedKey }), at >= limit {
+            ranked.insert(ranked.remove(at: at), at: limit - 1)
         }
         hiddenKeys.formUnion(ranked.dropFirst(limit).map(\.item.key))
     }
