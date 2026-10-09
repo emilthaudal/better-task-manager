@@ -6,6 +6,71 @@ import { Avatar, Badge, KeyChip, ProgressBar, SectionTitle, StatusDot, Surface, 
 
 type Select = (key: string) => void;
 
+// ── Critical chain ──────────────────────────────────────────────────────────
+
+/**
+ * The representative longest chain, step by step, with who owns each step.
+ * Handoffs between teams are where a milestone usually slips, so they're
+ * called out.
+ */
+export function CriticalChainPanel({ detail, onSelect }: { detail: MilestoneDetail; onSelect: Select }) {
+  const byKey = new Map(detail.items.map((i) => [i.key, i]));
+  const chain = detail.criticalPath.keys.map((k) => byKey.get(k)).filter((i): i is NonNullable<typeof i> => !!i);
+  const handoffs = chain.filter((item, i) => i > 0 && chain[i - 1]?.team !== item.team).length;
+  return (
+    <section aria-labelledby="ms-chain">
+      <SectionTitle hint={chain.length ? `${chain.length} steps · ${handoffs} team handoff${handoffs === 1 ? "" : "s"}` : undefined}>
+        <span id="ms-chain">Critical path</span>
+      </SectionTitle>
+      {chain.length === 0 ? (
+        <Surface className="px-4 py-6 text-center text-[13px] text-[var(--ms-label-2)]">No remaining chain — everything is done.</Surface>
+      ) : (
+        <Surface>
+          <ol className="relative">
+            {chain.map((item, i) => {
+              const handoff = i > 0 && chain[i - 1]?.team !== item.team;
+              return (
+                <li key={item.key} className="relative">
+                  {handoff && (
+                    <div className="flex items-center gap-2 border-t border-[var(--ms-sep)] bg-[var(--ms-cross-fill)] px-4 py-1 text-[11px] font-semibold text-[var(--ms-cross-text)]">
+                      <span aria-hidden="true">⇄</span> Handoff to {item.team}
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => onSelect(item.key)}
+                    className={cn(
+                      "flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-[var(--ms-fill-2)]",
+                      i > 0 && !handoff && "border-t border-[var(--ms-sep)]",
+                    )}
+                  >
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--ms-critical-fill)] text-[11px] font-semibold tabular-nums text-[var(--ms-critical-text)]">
+                      {i + 1}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <StatusDot status={item.status} />
+                        <span className="truncate text-[13.5px] font-medium text-[var(--ms-label)]">{item.summary}</span>
+                      </div>
+                      <div className="mt-0.5 text-[11.5px] text-[var(--ms-label-3)]">
+                        <span className="font-mono">{item.key}</span> · {item.team}
+                      </div>
+                    </div>
+                    <span className="flex shrink-0 items-center gap-1.5 text-[12px] text-[var(--ms-label-2)]">
+                      <Avatar name={item.assignee} size={16} />
+                      {item.assignee ?? <span className="font-medium text-[var(--ms-warn-text)]">Unassigned</span>}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ol>
+        </Surface>
+      )}
+    </section>
+  );
+}
+
 // ── Blocker epics ───────────────────────────────────────────────────────────
 
 export function BlockerEpicsPanel({ detail, onSelect }: { detail: MilestoneDetail; onSelect: Select }) {

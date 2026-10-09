@@ -124,7 +124,8 @@ export default function MilestoneInspector({ detail, selectedKey, jiraBaseUrl, o
         </button>
       </div>
 
-      <div className="flex flex-1 flex-col gap-5 overflow-y-auto px-4 py-4">
+      {/* Keyed so moving between items cross-fades instead of snapping. */}
+      <div key={selectedKey} className="ms-fade-quick flex flex-1 flex-col gap-5 overflow-y-auto px-4 py-4">
         {item && (
           <>
             <div
