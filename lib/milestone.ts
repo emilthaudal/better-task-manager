@@ -25,6 +25,8 @@ const POINT_FIELDS = ["customfield_10016", "customfield_10067"];
 
 /** Jira caps JQL length; chunk `key in (...)` / `parent in (...)` lists. */
 const JQL_CHUNK = 80;
+/** Epics per `parent in (...)` query — small batches run in parallel instead of paging sequentially. */
+const PARENT_BATCH = 4;
 
 // ── Raw shapes ──────────────────────────────────────────────────────────────
 
@@ -137,6 +139,13 @@ function toIncrementSummary(issue: RawIssue): IncrementSummary {
 const INCREMENT_FIELDS = ["summary", "status", "issuelinks", "fixVersions", TEAM_FIELD];
 const EPIC_FIELDS = ["summary", "status", "issuelinks", "project", "assignee", TEAM_FIELD];
 const ITEM_FIELDS = ["summary", "status", "issuetype", "issuelinks", "project", "assignee", "parent", TEAM_FIELD, ...POINT_FIELDS];
+
+/** Jira's `ORDER BY key` order: project key, then issue number. */
+export function compareIssueKeys(a: string, b: string): number {
+  const [pa = "", na = "0"] = a.split("-");
+  const [pb = "", nb = "0"] = b.split("-");
+  return pa.localeCompare(pb) || Number(na) - Number(nb);
+}
 
 function chunks<T>(list: T[], size: number): T[][] {
   const out: T[][] = [];
@@ -323,24 +332,48 @@ export async function getMilestoneDetail(
   // Blockers outside the milestone are pulled in as external nodes — an
   // out-of-scope blocker is exactly the kind of risk to surface. Dependants
   // outside it are not: they'd stretch this milestone's critical path with
-  // work that isn't part of it. Their lookup only needs the child items, so
-  // it runs alongside the epic fetch instead of after it.
-  const childrenPromise = searchByKeys("parent", epicKeys, ITEM_FIELDS, session);
-  const externalsPromise = childrenPromise.then((children) => {
-    const known = new Set([...children.filter(isMilestoneItem).map((i) => i.key), ...epicKeys]);
-    const externalKeys = new Set<string>();
-    for (const issue of children) {
+  // work that isn't part of it.
+  //
+  // Latency: Jira pages search results 100 at a time, sequentially. Children
+  // are therefore fetched in small parallel batches of epics, and each batch
+  // looks up its own outside blockers straight away — the JQL excludes
+  // anything under the milestone's epics, so no batch has to wait for the
+  // others to know what "outside" means. Everything runs alongside the epic
+  // fetch.
+  const epicList = epicKeys.map((k) => `"${k}"`).join(", ");
+  const batches = chunks(epicKeys, PARENT_BATCH).map(async (part) => {
+    const children = await searchByKeys("parent", part, ITEM_FIELDS, session);
+    const own = new Set(children.filter(isMilestoneItem).map((i) => i.key));
+    const candidates = new Set<string>();
+    // Only blockers of milestone items matter: a blocker of an unattributable
+    // legacy child would be an outside node with no edge into the milestone.
+    for (const issue of children.filter(isMilestoneItem)) {
       for (const k of blockedByKeys(issue)) {
-        if (!known.has(k)) externalKeys.add(k);
+        if (!own.has(k) && !epicKeySet.has(k)) candidates.add(k);
       }
     }
-    return searchByKeys("key", [...externalKeys], ITEM_FIELDS, session);
+    const outside = await Promise.all(
+      chunks([...candidates], JQL_CHUNK).map((keys) =>
+        searchIssues(
+          `key in (${keys.map((k) => `"${k}"`).join(", ")}) AND (parent is EMPTY OR parent not in (${epicList})) ORDER BY key ASC`,
+          ITEM_FIELDS,
+          session,
+        ),
+      ),
+    );
+    return { children, outside: outside.flat() as RawIssue[] };
   });
-  const [epicIssues, childIssues, externalIssues] = await Promise.all([
+  const [epicIssues, batchResults] = await Promise.all([
     searchByKeys("key", epicKeys, EPIC_FIELDS, session),
-    childrenPromise,
-    externalsPromise,
+    Promise.all(batches),
   ]);
+  // Batches return in epic order; restore Jira's key order so the payload
+  // (and every tie-break downstream) is identical to a single query's.
+  const childIssues = batchResults.flatMap((b) => b.children).sort((x, y) => compareIssueKeys(x.key, y.key));
+  const childKeys = new Set(childIssues.filter(isMilestoneItem).map((i) => i.key));
+  const externalIssues = [
+    ...new Map(batchResults.flatMap((b) => b.outside).map((i) => [i.key, i])).values(),
+  ].filter((i) => !childKeys.has(i.key));
 
   const epics: EpicInput[] = epicIssues.map((issue) => ({
     key: issue.key,
