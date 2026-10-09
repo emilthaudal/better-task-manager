@@ -138,6 +138,11 @@ export default function MilestoneInspector({ detail, selectedKey, jiraBaseUrl, o
                     : "bg-[var(--ms-fill-2)] text-[var(--ms-label)]",
               )}
             >
+              {detail.criticalPath.keys.includes(item.key) && (
+                <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.06em]">
+                  Step {detail.criticalPath.keys.indexOf(item.key) + 1} of {detail.criticalPath.keys.length} on the critical path
+                </div>
+              )}
               <span className="font-medium">
                 {item.schedule ? describeSchedule(item.schedule) : "Done — no longer constrains the milestone."}
               </span>

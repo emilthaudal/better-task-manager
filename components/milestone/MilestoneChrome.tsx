@@ -114,6 +114,54 @@ export function MilestoneSkeleton() {
   );
 }
 
+const SHORTCUTS: Array<[string, string]> = [
+  ["← → ↑ ↓", "Move between work items"],
+  ["Esc", "Clear the selection"],
+  ["⌘K  or  /", "Filter"],
+  ["Enter / ⇧Enter", "Next / previous match (in the filter)"],
+  ["+  −", "Zoom in / out"],
+  ["0", "Fit to screen"],
+  ["⌘ scroll / pinch", "Zoom around the pointer"],
+  ["?", "Show these shortcuts"],
+];
+
+/** Keyboard shortcut reference, opened with "?". */
+export function ShortcutsSheet({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/20 p-6 backdrop-blur-[2px]" onClick={onClose}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Keyboard shortcuts"
+        className="ms-material ms-fade-quick w-full max-w-sm rounded-2xl p-5"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-[15px] font-semibold text-[var(--ms-label)]">Keyboard shortcuts</h2>
+          <button
+            type="button"
+            autoFocus
+            onClick={onClose}
+            className="rounded-full bg-[var(--ms-fill)] px-3 py-1 text-[12px] font-medium text-[var(--ms-label)] hover:bg-[var(--ms-sep-strong)]"
+          >
+            Done
+          </button>
+        </div>
+        <dl className="divide-y divide-[var(--ms-sep)]">
+          {SHORTCUTS.map(([keys, what]) => (
+            <div key={keys} className="flex items-center justify-between gap-4 py-2 text-[13px]">
+              <dt className="text-[var(--ms-label-2)]">{what}</dt>
+              <dd>
+                <kbd className="rounded-md bg-[var(--ms-fill)] px-1.5 py-0.5 font-sans text-[12px] font-medium text-[var(--ms-label)]">{keys}</kbd>
+              </dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+    </div>
+  );
+}
+
 export function ErrorState({ message, onRetry, backHref }: { message: string; onRetry: () => void; backHref: string }) {
   const auth = /auth|sign in/i.test(message);
   return (
