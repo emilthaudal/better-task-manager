@@ -763,7 +763,8 @@ function CriticalPathTimeline({ detail, laneMode, selectedKey, onSelect, matches
                   key={lane.id}
                   className={cn(
                     // Top-aligned with the lane's first row of cards, not floating mid-lane.
-                    "absolute left-0 flex w-full flex-col overflow-hidden border-t px-4",
+                    // overflow-clip (not hidden) keeps the sticky title below working.
+                    "absolute left-0 flex w-full flex-col overflow-clip border-t px-4",
                     zoom < 0.65 ? "justify-center" : "justify-start",
                     i % 2 === 1 && "bg-[var(--ms-lane)]",
                     lane.newTeam ? "border-[var(--ms-sep-strong)]" : "border-[var(--ms-sep)]",
@@ -771,6 +772,8 @@ function CriticalPathTimeline({ detail, laneMode, selectedKey, onSelect, matches
                   style={{ top: lane.y * zoom, height: lane.height * zoom, paddingTop: zoom < 0.65 ? undefined : 16 * zoom }}
                   title={`${lane.title}\n${lane.subtitle}`}
                 >
+                  {/* Sticks under the column header while a tall lane scrolls past. */}
+                  <div className="sticky flex flex-col" style={{ top: HEADER_H + 12 }}>
                   {laneMode === "epic" && (i === 0 || lane.newTeam) && zoom >= 0.65 && (
                     <div className="mb-0.5 truncate text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--ms-label-3)]">{lane.team}</div>
                   )}
@@ -783,6 +786,7 @@ function CriticalPathTimeline({ detail, laneMode, selectedKey, onSelect, matches
                       {lane.critical} critical
                     </div>
                   )}
+                  </div>
                 </div>
               ))}
             </div>
