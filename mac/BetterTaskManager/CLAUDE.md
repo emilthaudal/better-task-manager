@@ -63,8 +63,32 @@ it via `Set-Cookie` on any response. `Config.skipAuth` mirrors the web app's `JI
 dev mode and short-circuits straight to `.signedIn` with no OAuth round trip at all — check this flag
 before assuming a real session exists.
 
-**View hierarchy:** `RootView` switches on `AuthManager.state` (signedOut/authenticating →
-`SignInView`, needsSiteSelection → `SiteSelectView`, signedIn → project picker → `BoardView`).
+**Milestone viewer (the primary, read-only experience).** Signed in, `RootView` shows
+`MilestoneRootView` (Views/Milestones/): a `NavigationSplitView` whose sidebar lists the delivery
+space's releases (= milestones, in release order), the teams of the selected milestone, and a
+"Boards" section that leads to the old Kanban flow (`ProjectPickerView` → `BoardView`). Content is
+the program roadmap, a milestone (tabs: critical path, blockers, team load, increments, ready &
+warnings) or a team page; an `.inspector` shows the selected item/epic/increment. Views reach the
+selection/inspector through the `milestoneNavigator` environment value rather than bindings.
+- Data: `APIClient.fetchProgram` / `fetchMilestone` hit `/api/jira/milestones[/{versionId}]?project=`;
+  `Models/MilestoneModels.swift` mirrors `lib/milestoneTypes.ts` by hand — change both together and
+  re-run `MilestoneDecodingTests`. Unknown warning kinds decode as `.other`.
+- `MilestoneStore` (ViewModels/) polls every 60s; failures only surface while nothing is loaded —
+  afterwards they're kept in `backgroundError` for the sidebar's "Updated x ago" indicator.
+  `LoadedMilestone` builds the key indexes and `DependencyGraph` once per poll.
+- All swimlane geometry (lanes, level columns, card stacking, slack bars, bezier edges) lives in the
+  pure `buildSwimlaneLayout` (Models/SwimlaneLayout.swift); hover/selection chains come from
+  `DependencyGraph`. Keep layout math there and unit-tested, not in `CriticalPathView`.
+- Fixtures in BetterTaskManagerTests/Fixtures: `program-overview.json`/`milestone-detail.json` are
+  real LAD responses; the `-multi*` ones come from `bun mac/scripts/generate-milestone-fixtures.ts`,
+  which runs the backend's own `analyzeMilestone` on synthetic multi-team input.
+- Config: server URL and delivery space key are Settings (⌘,) backed by UserDefaults
+  (`serverBaseURL`, `deliveryProjectKey`, default `localhost:3000` / `LAD`); `BTM_BASE_URL` and
+  `BTM_DELIVERY_PROJECT` env vars override them for a launch. Launch args `-BTMSelect milestone:<id>`,
+  `-BTMTab <tab>`, `-BTMInspect <key>`, `-BTMLanes epic`, `-BTMShowDone YES`, `-BTMAppearance dark`
+  open the window at a given place for screenshots/UI tests.
+
+**Board view hierarchy:** `BoardView` (reached from the sidebar's Boards section).
 `BoardView` owns all board layout math in a private `BoardLayout` struct so column widths can't drift
 between the header row, epic bars, and card columns; `BoardColumnView`/`BoardCardView` render
 individual cells, `BoardBannerView` surfaces `moveError`.
