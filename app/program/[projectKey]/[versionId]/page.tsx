@@ -16,8 +16,9 @@ import { KeyChip, ProgressRing, Segmented, Stat, percentDone } from "@/component
 import { useJiraBaseUrl } from "@/hooks/useJiraBaseUrl";
 import { useMilestoneViewState } from "@/hooks/useMilestoneViewState";
 import { usePolledJson } from "@/hooks/usePolledJson";
-import { matchItems } from "@/lib/milestoneView";
-import type { MilestoneTab } from "@/lib/milestoneView";
+import { QUICK_FILTERS, hasQuickFilter, matchItems, toggleQuickFilter } from "@/lib/milestoneView";
+import type { MilestoneTab, QuickFilter } from "@/lib/milestoneView";
+import { cn } from "@/lib/utils";
 import type { LaneMode } from "@/lib/milestoneLayout";
 import type { MilestoneDetail } from "@/lib/milestoneTypes";
 
@@ -30,6 +31,8 @@ const LANES: Array<{ value: LaneMode; label: string }> = [
   { value: "epic", label: "By epic" },
   { value: "team", label: "By team" },
 ];
+
+const CHIPS: QuickFilter[] = ["critical", "ready", "unassigned", "cross"];
 
 function formatDate(iso: string | null): string | null {
   if (!iso) return null;
@@ -123,7 +126,7 @@ function SearchField({
   inputRef: React.RefObject<HTMLInputElement | null>;
 }) {
   return (
-    <div className="relative flex w-full max-w-[360px] items-center">
+    <div className="relative flex w-full min-w-[220px] max-w-[340px] items-center">
       <svg className="pointer-events-none absolute left-2.5 text-[var(--ms-label-3)]" width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
         <circle cx="7" cy="7" r="4.75" stroke="currentColor" strokeWidth="1.6" />
         <path d="m10.5 10.5 3 3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
@@ -238,7 +241,28 @@ function MilestoneView() {
                 count={remainingMatches ? remainingMatches.length : null}
                 inputRef={searchRef}
               />
-              <span className="ml-auto hidden text-[11.5px] text-[var(--ms-label-3)] xl:inline">
+              <div role="group" aria-label="Quick filters" className="flex min-w-0 items-center gap-1.5 overflow-x-auto">
+                {CHIPS.map((name) => {
+                  const on = hasQuickFilter(view.query, name);
+                  return (
+                    <button
+                      key={name}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() => setView({ query: toggleQuickFilter(view.query, name) })}
+                      className={cn(
+                        "shrink-0 whitespace-nowrap rounded-full px-3 py-[5px] text-[12px] font-medium transition-colors",
+                        on
+                          ? "bg-[var(--ms-accent)] text-white"
+                          : "bg-[var(--ms-fill-2)] text-[var(--ms-label-2)] hover:bg-[var(--ms-fill)] hover:text-[var(--ms-label)]",
+                      )}
+                    >
+                      {QUICK_FILTERS[name].label}
+                    </button>
+                  );
+                })}
+              </div>
+              <span className="ml-auto hidden shrink-0 text-[11.5px] text-[var(--ms-label-3)] min-[1600px]:inline">
                 Hover to trace a chain · arrow keys to move · Esc to clear
               </span>
             </div>

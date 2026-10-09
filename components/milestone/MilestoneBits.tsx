@@ -132,7 +132,7 @@ export function Badge({ tone, children, title }: { tone?: Tone; children: React.
     <span
       title={title}
       className={cn(
-        "inline-flex items-center gap-1 rounded-full px-1.5 py-[2px] text-[10px] font-semibold leading-none tabular-nums",
+        "inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-1.5 py-[2px] text-[10px] font-semibold leading-none tabular-nums",
         tone ? TONE_FILL[tone] : "bg-[var(--ms-fill-2)] text-[var(--ms-label-2)]",
       )}
     >

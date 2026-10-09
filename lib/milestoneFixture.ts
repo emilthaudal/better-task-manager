@@ -186,7 +186,14 @@ export function buildFixtureOverview(): ProgramOverview {
     epicProgress: progressOf(incs.flatMap((i) => i.teamEpics.map((e) => e.status))),
   });
   const base = { description: null, released: false, archived: false, startDate: null, overdue: false };
-  const first = detail.increments.slice(0, 2).map((i, n) => ({ ...summary(i), key: `LAD-${n + 1}`, status: STATUS.done, blocks: [], blockedBy: [] }));
+  const first = detail.increments.slice(0, 2).map((i, n) => ({
+    ...summary(i),
+    key: `LAD-${n + 1}`,
+    status: STATUS.done,
+    teamEpics: i.teamEpics.map((e) => ({ ...e, status: STATUS.done })),
+    blocks: [],
+    blockedBy: [],
+  }));
   return {
     project: detail.project,
     releases: [

@@ -6,6 +6,8 @@ import {
   DEFAULT_VIEW,
   chainIndex,
   cullWindow,
+  hasQuickFilter,
+  toggleQuickFilter,
   matchItems,
   neighbor,
   parseViewState,
@@ -52,6 +54,33 @@ describe("matchItems", () => {
     expect(platform?.size).toBe(detail.items.filter((i) => i.team === "Platform").length);
     const none = matchItems(detail, "platform zzzz-nothing");
     expect(none?.size).toBe(0);
+  });
+});
+
+describe("quick filters", () => {
+  const detail = fixtureDetail("multi");
+
+  it("toggles is: tokens without touching the free text", () => {
+    const on = toggleQuickFilter("pricing", "critical");
+    expect(on).toBe("pricing is:critical");
+    expect(hasQuickFilter(on, "critical")).toBe(true);
+    expect(toggleQuickFilter(on, "critical")).toBe("pricing");
+  });
+
+  it("combines predicates with text", () => {
+    const critical = matchItems(detail, "is:critical");
+    expect(critical?.size).toBe(detail.items.filter((i) => i.schedule?.critical).length);
+    const both = matchItems(detail, "is:ready is:unassigned");
+    for (const k of both ?? []) {
+      const item = detail.items.find((i) => i.key === k);
+      expect(item?.schedule?.ready && !item.assignee).toBe(true);
+    }
+    const teamCritical = matchItems(detail, "is:critical checkout");
+    expect([...(teamCritical ?? [])].every((k) => critical?.has(k))).toBe(true);
+  });
+
+  it("treats unknown is: tokens as text", () => {
+    expect(matchItems(detail, "is:nonsense")?.size).toBe(0);
   });
 });
 

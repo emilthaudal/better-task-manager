@@ -51,16 +51,45 @@ export function serializeViewState(state: MilestoneViewState, params = new URLSe
 
 // ── Filtering ───────────────────────────────────────────────────────────────
 
+/** Quick filters, written into the query as `is:<name>` so they share links like text. */
+export const QUICK_FILTERS = {
+  critical: { label: "Critical", test: (i: WorkItem) => !!i.schedule?.critical },
+  ready: { label: "Ready", test: (i: WorkItem) => !!i.schedule?.ready },
+  unassigned: { label: "Unassigned", test: (i: WorkItem) => !!i.schedule && !i.assignee },
+  cross: { label: "Blocks other teams", test: (i: WorkItem) => (i.schedule?.downstreamTeams.length ?? 0) > 0 },
+  outside: { label: "Outside", test: (i: WorkItem) => i.external },
+} as const;
+
+export type QuickFilter = keyof typeof QUICK_FILTERS;
+
+const isQuickFilter = (name: string): name is QuickFilter => Object.hasOwn(QUICK_FILTERS, name);
+
+/** Whether `is:<name>` is part of the query. */
+export function hasQuickFilter(query: string, name: QuickFilter): boolean {
+  return query.toLowerCase().split(/\s+/).includes(`is:${name}`);
+}
+
+/** Adds or removes `is:<name>`, leaving the free text alone. */
+export function toggleQuickFilter(query: string, name: QuickFilter): string {
+  const token = `is:${name}`;
+  const terms = query.split(/\s+/).filter(Boolean);
+  const next = hasQuickFilter(query, name) ? terms.filter((t) => t.toLowerCase() !== token) : [...terms, token];
+  return next.join(" ");
+}
+
 /**
- * Remaining items matching a free-text query over key, summary, assignee,
- * team and epic. Every whitespace-separated term must match. `null` = no filter.
+ * Items matching a query: free text over key, summary, assignee, team and
+ * epic, plus `is:` quick filters. Every term must match. `null` = no filter.
  */
 export function matchItems(detail: MilestoneDetail, query: string): Set<string> | null {
-  const terms = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
-  if (terms.length === 0) return null;
+  const all = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  if (all.length === 0) return null;
+  const predicates = all.filter((t) => t.startsWith("is:") && isQuickFilter(t.slice(3))).map((t) => QUICK_FILTERS[t.slice(3) as QuickFilter].test);
+  const terms = all.filter((t) => !(t.startsWith("is:") && isQuickFilter(t.slice(3))));
   const epicSummary = new Map(detail.epics.map((e) => [e.key, e.summary]));
   const out = new Set<string>();
   for (const item of detail.items) {
+    if (!predicates.every((p) => p(item))) continue;
     const haystack = [
       item.key,
       item.summary,
