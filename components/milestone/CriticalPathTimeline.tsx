@@ -79,7 +79,7 @@ const Card = memo(function Card({
       data-match={match ? "" : undefined}
       tabIndex={focusable ? 0 : -1}
       aria-pressed={selected}
-      aria-label={`${item.key}: ${item.summary}${critical ? ", critical" : ""}${s?.ready ? ", ready" : ""}`}
+      aria-label={`${item.key}: ${item.summary}${critical ? ", critical" : ""}${s?.ready ? ", ready" : ""}${item.external ? ", outside this milestone" : ""}${item.assignee ? `, ${item.assignee}` : ", unassigned"}`}
       className={cn(
         "ms-card absolute flex flex-col justify-between overflow-hidden rounded-xl bg-[var(--ms-surface)] py-2 pl-3 pr-2.5 text-left",
         item.external && "bg-[var(--ms-warn-fill)] outline-1 outline-dashed -outline-offset-1 outline-[var(--ms-warn)]",
@@ -91,18 +91,18 @@ const Card = memo(function Card({
       <div aria-hidden="true" className="ms-card-compact line-clamp-2 text-[25px] font-semibold leading-[1.12] tracking-[-0.02em] text-[var(--ms-label)]">
         {item.summary}
       </div>
-      <div className="ms-card-detail flex items-center gap-1.5">
+      <div className="ms-card-detail flex min-w-0 items-center gap-1.5 overflow-hidden whitespace-nowrap">
         <StatusDot status={item.status} />
         <span
           className={cn(
-            "font-mono text-[11px] font-medium",
+            "shrink-0 font-mono text-[11px] font-medium",
             critical ? "text-[var(--ms-critical-text)]" : "text-[var(--ms-label-3)]",
           )}
         >
           {item.key}
         </span>
-        {item.external && <span className="text-[10px] font-semibold text-[var(--ms-warn-text)]">Outside</span>}
-        <span className="ml-auto flex items-center gap-1">
+        {item.external && <span className="truncate text-[10px] font-semibold text-[var(--ms-warn-text)]">Outside</span>}
+        <span className="ml-auto flex shrink-0 items-center gap-1">
           {crossTeams > 0 && (
             <span className="rounded-full bg-[var(--ms-cross-fill)] px-1.5 py-[1px] text-[10px] font-semibold tabular-nums text-[var(--ms-cross-text)]">
               ⇄ {crossTeams}
@@ -113,7 +113,7 @@ const Card = memo(function Card({
               Ready
             </span>
           )}
-          {!critical && s && s.slack > 0 && (
+          {!critical && !item.external && s && s.slack > 0 && (
             <span className="text-[10px] font-medium tabular-nums text-[var(--ms-label-3)]">+{s.slack}</span>
           )}
         </span>
@@ -197,7 +197,7 @@ const SlackLayer = memo(function SlackLayer({ cards }: { cards: LaidOutCard[] })
     <>
       {cards.map((c) => {
         const slack = c.item.schedule?.slack ?? 0;
-        if (slack <= 0) return null;
+        if (slack <= 0 || c.item.external) return null;
         // A slim track under the card: how far it could slide right
         // without moving the milestone. Ends in a tick at the latest start.
         return (
