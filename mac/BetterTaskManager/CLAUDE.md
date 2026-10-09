@@ -75,13 +75,30 @@ selection/inspector through the `milestoneNavigator` environment value rather th
   re-run `MilestoneDecodingTests`. Unknown warning kinds decode as `.other`.
 - `MilestoneStore` (ViewModels/) polls every 60s; failures only surface while nothing is loaded —
   afterwards they're kept in `backgroundError` for the sidebar's "Updated x ago" indicator.
-  `LoadedMilestone` builds the key indexes and `DependencyGraph` once per poll.
+  JSON is decoded off the main actor (`APIClient.decodeOffMain`, `@concurrent`) and
+  `LoadedMilestone.prepare` builds the key indexes and `DependencyGraph` off-main too. A poll whose
+  payload only differs in `generatedAt` (`hasSameContent`) is dropped, so unchanged data never
+  invalidates views or rebuilds the swimlane layout. Model/layout types are `nonisolated` (the module
+  defaults to MainActor isolation) so they can be built in the background.
 - All swimlane geometry (lanes, level columns, card stacking, slack bars, bezier edges) lives in the
-  pure `buildSwimlaneLayout` (Models/SwimlaneLayout.swift); hover/selection chains come from
-  `DependencyGraph`. Keep layout math there and unit-tested, not in `CriticalPathView`.
+  pure `buildSwimlaneLayout` (Models/SwimlaneLayout.swift); scroll/reveal/culling math and
+  arrow-key neighbours live in Models/SwimlaneViewport.swift; hover/selection chains come from
+  `DependencyGraph`. Keep that math there and unit-tested, not in `CriticalPathView`.
+- `CriticalPathView` rendering: the canvas is split into layers (backdrop, slack, edges, cards,
+  pinned headers). Scroll state lives in the `@Observable SwimlaneScrollState` so only the pinned
+  headers re-render per scroll frame; cards and edges render only inside a tile-snapped cull rect,
+  and the edge `Canvas` is sized to that rect (a full-size canvas on a big milestone is a huge
+  bitmap). Revealing a card uses `ScrollPosition.scrollTo(point:)` with a computed point — cards sit
+  inside a `scaleEffect` and are culled, so id-based `ScrollViewReader` scrolling can't target them.
+  Arrow keys / Return / Esc navigate cards (`MilestoneNavigator.select`/`clearSelection`).
+- Menu bar: `MilestoneCommands` (View: tabs ⌘1–5, lanes, refresh ⌘R; Go: milestones ⌥⌘1–9;
+  Edit: Filter ⌘F) reads the key window through `focusedSceneValue(\.milestoneCommands)`. Tab and
+  lane options persist per window with `@SceneStorage`.
 - Fixtures in BetterTaskManagerTests/Fixtures: `program-overview.json`/`milestone-detail.json` are
-  real LAD responses; the `-multi*` ones come from `bun mac/scripts/generate-milestone-fixtures.ts`,
-  which runs the backend's own `analyzeMilestone` on synthetic multi-team input.
+  real LAD responses; the `-multi*` and `-large` ones come from
+  `bun mac/scripts/generate-milestone-fixtures.ts`, which runs the backend's own `analyzeMilestone`
+  on synthetic input (`-large` is a 323-item six-team stress milestone, release 10145, used by
+  `LargeMilestoneTests` for timing). The app icon is rendered by `swift mac/scripts/make-app-icon.swift`.
 - Config: server URL and delivery space key are Settings (⌘,) backed by UserDefaults
   (`serverBaseURL`, `deliveryProjectKey`, default `localhost:3000` / `LAD`); `BTM_BASE_URL` and
   `BTM_DELIVERY_PROJECT` env vars override them for a launch. Launch args `-BTMSelect milestone:<id>`,
