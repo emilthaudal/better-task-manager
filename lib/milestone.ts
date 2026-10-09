@@ -314,9 +314,32 @@ export async function getMilestoneDetail(
   }
 
   const epicKeys = [...incrementsOfEpic.keys()];
-  const [epicIssues, childIssues] = await Promise.all([
+  const epicKeySet = new Set(epicKeys);
+  // `parent in (...)` also matches legacy issues migrated from old Epic Link
+  // hierarchies that carry no parent field — they can't be attributed to an
+  // epic, so they're left out rather than invented a team.
+  const isMilestoneItem = (i: RawIssue) => !i.fields.issuetype.subtask && epicKeySet.has(i.fields.parent?.key ?? "");
+
+  // Blockers outside the milestone are pulled in as external nodes — an
+  // out-of-scope blocker is exactly the kind of risk to surface. Dependants
+  // outside it are not: they'd stretch this milestone's critical path with
+  // work that isn't part of it. Their lookup only needs the child items, so
+  // it runs alongside the epic fetch instead of after it.
+  const childrenPromise = searchByKeys("parent", epicKeys, ITEM_FIELDS, session);
+  const externalsPromise = childrenPromise.then((children) => {
+    const known = new Set([...children.filter(isMilestoneItem).map((i) => i.key), ...epicKeys]);
+    const externalKeys = new Set<string>();
+    for (const issue of children) {
+      for (const k of blockedByKeys(issue)) {
+        if (!known.has(k)) externalKeys.add(k);
+      }
+    }
+    return searchByKeys("key", [...externalKeys], ITEM_FIELDS, session);
+  });
+  const [epicIssues, childIssues, externalIssues] = await Promise.all([
     searchByKeys("key", epicKeys, EPIC_FIELDS, session),
-    searchByKeys("parent", epicKeys, ITEM_FIELDS, session),
+    childrenPromise,
+    externalsPromise,
   ]);
 
   const epics: EpicInput[] = epicIssues.map((issue) => ({
@@ -353,26 +376,7 @@ export async function getMilestoneDetail(
     };
   };
 
-  // `parent in (...)` also matches legacy issues migrated from old Epic Link
-  // hierarchies that carry no parent field — they can't be attributed to an
-  // epic, so they're left out rather than invented a team.
-  const epicKeySet = new Set(epicKeys);
-  const items = childIssues
-    .filter((i) => !i.fields.issuetype.subtask && epicKeySet.has(i.fields.parent?.key ?? ""))
-    .map((i) => toItem(i, false));
-
-  // Blockers outside the milestone are pulled in as external nodes — an
-  // out-of-scope blocker is exactly the kind of risk to surface. Dependants
-  // outside it are not: they'd stretch this milestone's critical path with
-  // work that isn't part of it.
-  const known = new Set([...items.map((i) => i.key), ...epicKeys]);
-  const externalKeys = new Set<string>();
-  for (const issue of childIssues) {
-    for (const k of blockedByKeys(issue)) {
-      if (!known.has(k)) externalKeys.add(k);
-    }
-  }
-  const externalIssues = await searchByKeys("key", [...externalKeys], ITEM_FIELDS, session);
+  const items = childIssues.filter(isMilestoneItem).map((i) => toItem(i, false));
   const externals = externalIssues.map((i) => toItem(i, true));
   const knownItems = new Set(items.map((i) => i.key));
   for (const ext of externals) {
