@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSecondsTick } from "@/hooks/useSecondsTick";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -30,6 +31,35 @@ function Updated({ lastUpdated, refreshing, onRefresh }: { lastUpdated: Date | n
   );
 }
 
+/** Copies the current URL — view state lives in the query string, so it's a shareable view. */
+function CopyLink() {
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    if (!copied) return;
+    const id = window.setTimeout(() => setCopied(false), 1600);
+    return () => window.clearTimeout(id);
+  }, [copied]);
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        void navigator.clipboard?.writeText(window.location.href).then(() => setCopied(true), () => {});
+      }}
+      title="Copy a link to this exact view"
+      className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-medium text-[var(--ms-accent-text)] transition-colors hover:bg-[var(--ms-fill-2)]"
+    >
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        {copied ? (
+          <path d="m3.5 8.5 3 3 6-7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        ) : (
+          <path d="M6.5 9.5 9.5 6.5M7 4.5l1.3-1.3a2.6 2.6 0 0 1 3.7 3.7L10.7 8.2M9 11.5l-1.3 1.3a2.6 2.6 0 0 1-3.7-3.7L5.3 7.8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+        )}
+      </svg>
+      <span aria-live="polite">{copied ? "Copied" : "Copy link"}</span>
+    </button>
+  );
+}
+
 export function Toolbar({
   backHref,
   backLabel,
@@ -38,7 +68,9 @@ export function Toolbar({
   lastUpdated,
   refreshing = false,
   onRefresh,
+  shareable = false,
 }: {
+  shareable?: boolean;
   backHref: string;
   backLabel: string;
   title?: React.ReactNode;
@@ -63,6 +95,7 @@ export function Toolbar({
       </div>
       <div className="flex justify-center">{center}</div>
       <div className="flex items-center justify-end gap-1">
+        {shareable && <CopyLink />}
         <Updated lastUpdated={lastUpdated} refreshing={refreshing} onRefresh={onRefresh} />
         <ThemeToggle />
       </div>
