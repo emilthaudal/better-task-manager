@@ -584,7 +584,13 @@ function CriticalPathTimeline({ detail, laneMode, selectedKey, onSelect, matches
   }, [cardByKey]);
 
   // Selecting from elsewhere (inspector, URL, panels) brings the card into view.
+  // Only a *selection change* does: a poll or filter that re-lays out the
+  // timeline must not yank the scroll position back to the selection.
   const firstReveal = useRef(true);
+  const revealRef = useRef(reveal);
+  useLayoutEffect(() => {
+    revealRef.current = reveal;
+  });
   useEffect(() => {
     // A new selection (often from the keyboard) wins over a pointer that
     // happens to rest on another card, until the pointer moves again.
@@ -593,9 +599,9 @@ function CriticalPathTimeline({ detail, laneMode, selectedKey, onSelect, matches
       applyFocusRef.current();
     }
     // Only a selection present at mount (a shared link) is centred.
-    if (selectedKey) reveal(selectedKey, !firstReveal.current);
+    if (selectedKey) revealRef.current(selectedKey, !firstReveal.current);
     firstReveal.current = false;
-  }, [selectedKey, reveal]);
+  }, [selectedKey]);
 
   const focusCard = useCallback((key: string) => {
     // The card may only mount after the scroll un-culls it.
@@ -612,7 +618,8 @@ function CriticalPathTimeline({ detail, laneMode, selectedKey, onSelect, matches
   const zoomTo = useCallback((next: number, anchor?: { x: number; y: number }) => {
     const el = scrollRef.current;
     const z0 = zoomRef.current;
-    const z1 = clampZoom(Math.round(next * 100) / 100);
+    // 3 decimals: coarser rounding swallows the small steps of a slow pinch.
+    const z1 = clampZoom(Math.round(next * 1000) / 1000);
     if (!el || z1 === z0) return;
     // Keep the point under the anchor (default: viewport centre) still.
     const ax = anchor?.x ?? el.clientWidth / 2;
