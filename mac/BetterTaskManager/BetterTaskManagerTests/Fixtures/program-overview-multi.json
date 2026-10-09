@@ -1,0 +1,427 @@
+{
+  "project": {
+    "key": "LAD",
+    "name": "Logistics Accelerator - Delivery"
+  },
+  "releases": [
+    {
+      "id": "10140",
+      "name": "B2B Wholesale",
+      "description": null,
+      "released": false,
+      "archived": false,
+      "startDate": null,
+      "releaseDate": "2026-08-29",
+      "overdue": true,
+      "sequence": 0,
+      "increments": [
+        {
+          "key": "LAD-1",
+          "summary": "Shipment Orchestration · B2B Wholesale",
+          "status": {
+            "name": "Done",
+            "category": "done"
+          },
+          "team": null,
+          "capabilities": [
+            {
+              "key": "LA-41",
+              "summary": "Project quotes & price agreements",
+              "status": {
+                "name": "To Do",
+                "category": "new"
+              }
+            }
+          ],
+          "teamEpics": [
+            {
+              "key": "CHK-10",
+              "summary": "Quote-based checkout",
+              "status": {
+                "name": "To Do",
+                "category": "new"
+              }
+            },
+            {
+              "key": "PLT-5",
+              "summary": "Price agreement service",
+              "status": {
+                "name": "To Do",
+                "category": "new"
+              }
+            }
+          ],
+          "blocks": [],
+          "blockedBy": []
+        },
+        {
+          "key": "LAD-2",
+          "summary": "Order Orchestration & Operations · B2B Wholesale",
+          "status": {
+            "name": "In Progress",
+            "category": "indeterminate"
+          },
+          "team": null,
+          "capabilities": [
+            {
+              "key": "LA-33",
+              "summary": "Order Management",
+              "status": {
+                "name": "To Do",
+                "category": "new"
+              }
+            },
+            {
+              "key": "LA-52",
+              "summary": "Customer self-service",
+              "status": {
+                "name": "To Do",
+                "category": "new"
+              }
+            }
+          ],
+          "teamEpics": [
+            {
+              "key": "AS-510",
+              "summary": "Project order timeline",
+              "status": {
+                "name": "To Do",
+                "category": "new"
+              }
+            },
+            {
+              "key": "CHK-14",
+              "summary": "My projects page",
+              "status": {
+                "name": "To Do",
+                "category": "new"
+              }
+            }
+          ],
+          "blocks": [],
+          "blockedBy": []
+        }
+      ],
+      "progress": {
+        "done": 1,
+        "inProgress": 1,
+        "todo": 0,
+        "total": 2
+      },
+      "epicProgress": {
+        "done": 3,
+        "inProgress": 1,
+        "todo": 0,
+        "total": 4
+      }
+    },
+    {
+      "id": "10141",
+      "name": "B2B Project",
+      "description": "Project customers: quotes, split deliveries, tracking",
+      "released": false,
+      "archived": false,
+      "startDate": "2026-09-01",
+      "releaseDate": "2026-12-15",
+      "overdue": false,
+      "sequence": 1,
+      "increments": [
+        {
+          "key": "LAD-20",
+          "summary": "Project pricing · B2B Project",
+          "status": {
+            "name": "In Progress",
+            "category": "indeterminate"
+          },
+          "team": null,
+          "capabilities": [
+            {
+              "key": "LA-41",
+              "summary": "Project quotes & price agreements",
+              "status": {
+                "name": "To Do",
+                "category": "new"
+              }
+            }
+          ],
+          "teamEpics": [
+            {
+              "key": "CHK-10",
+              "summary": "Quote-based checkout",
+              "status": {
+                "name": "To Do",
+                "category": "new"
+              }
+            },
+            {
+              "key": "PLT-5",
+              "summary": "Price agreement service",
+              "status": {
+                "name": "To Do",
+                "category": "new"
+              }
+            }
+          ],
+          "blocks": [
+            "LAD-21"
+          ],
+          "blockedBy": []
+        },
+        {
+          "key": "LAD-21",
+          "summary": "Split deliveries · B2B Project",
+          "status": {
+            "name": "In Progress",
+            "category": "indeterminate"
+          },
+          "team": null,
+          "capabilities": [
+            {
+              "key": "LA-30",
+              "summary": "Foundational Shipment Orchestration",
+              "status": {
+                "name": "To Do",
+                "category": "new"
+              }
+            }
+          ],
+          "teamEpics": [
+            {
+              "key": "AS-500",
+              "summary": "Multi-drop shipment planning",
+              "status": {
+                "name": "To Do",
+                "category": "new"
+              }
+            },
+            {
+              "key": "FUL-12",
+              "summary": "Warehouse wave picking for projects",
+              "status": {
+                "name": "To Do",
+                "category": "new"
+              }
+            }
+          ],
+          "blocks": [],
+          "blockedBy": [
+            "LAD-20"
+          ]
+        },
+        {
+          "key": "LAD-22",
+          "summary": "Project order tracking · B2B Project",
+          "status": {
+            "name": "To Do",
+            "category": "new"
+          },
+          "team": null,
+          "capabilities": [
+            {
+              "key": "LA-33",
+              "summary": "Order Management",
+              "status": {
+                "name": "To Do",
+                "category": "new"
+              }
+            },
+            {
+              "key": "LA-52",
+              "summary": "Customer self-service",
+              "status": {
+                "name": "To Do",
+                "category": "new"
+              }
+            }
+          ],
+          "teamEpics": [
+            {
+              "key": "AS-510",
+              "summary": "Project order timeline",
+              "status": {
+                "name": "To Do",
+                "category": "new"
+              }
+            },
+            {
+              "key": "CHK-14",
+              "summary": "My projects page",
+              "status": {
+                "name": "To Do",
+                "category": "new"
+              }
+            }
+          ],
+          "blocks": [],
+          "blockedBy": []
+        },
+        {
+          "key": "LAD-23",
+          "summary": "Invoicing per site · B2B Project",
+          "status": {
+            "name": "To Do",
+            "category": "new"
+          },
+          "team": null,
+          "capabilities": [
+            {
+              "key": "LA-60",
+              "summary": "B2B invoicing",
+              "status": {
+                "name": "To Do",
+                "category": "new"
+              }
+            }
+          ],
+          "teamEpics": [],
+          "blocks": [],
+          "blockedBy": []
+        }
+      ],
+      "progress": {
+        "done": 0,
+        "inProgress": 2,
+        "todo": 2,
+        "total": 4
+      },
+      "epicProgress": {
+        "done": 0,
+        "inProgress": 0,
+        "todo": 6,
+        "total": 6
+      }
+    },
+    {
+      "id": "10142",
+      "name": "B2C Low Volume",
+      "description": null,
+      "released": false,
+      "archived": false,
+      "startDate": null,
+      "releaseDate": "2027-03-01",
+      "overdue": false,
+      "sequence": 2,
+      "increments": [
+        {
+          "key": "LAD-30",
+          "summary": "Consumer checkout · B2C Low Volume",
+          "status": {
+            "name": "To Do",
+            "category": "new"
+          },
+          "team": null,
+          "capabilities": [
+            {
+              "key": "LA-60",
+              "summary": "B2B invoicing",
+              "status": {
+                "name": "To Do",
+                "category": "new"
+              }
+            }
+          ],
+          "teamEpics": [],
+          "blocks": [],
+          "blockedBy": [
+            "LAD-22"
+          ]
+        }
+      ],
+      "progress": {
+        "done": 0,
+        "inProgress": 0,
+        "todo": 1,
+        "total": 1
+      },
+      "epicProgress": {
+        "done": 0,
+        "inProgress": 0,
+        "todo": 0,
+        "total": 0
+      }
+    },
+    {
+      "id": "10143",
+      "name": "B2C High Volume",
+      "description": null,
+      "released": false,
+      "archived": false,
+      "startDate": null,
+      "releaseDate": null,
+      "overdue": false,
+      "sequence": 3,
+      "increments": [],
+      "progress": {
+        "done": 0,
+        "inProgress": 0,
+        "todo": 0,
+        "total": 0
+      },
+      "epicProgress": {
+        "done": 0,
+        "inProgress": 0,
+        "todo": 0,
+        "total": 0
+      }
+    },
+    {
+      "id": "10144",
+      "name": "FT Shops",
+      "description": null,
+      "released": false,
+      "archived": false,
+      "startDate": null,
+      "releaseDate": null,
+      "overdue": false,
+      "sequence": 4,
+      "increments": [],
+      "progress": {
+        "done": 0,
+        "inProgress": 0,
+        "todo": 0,
+        "total": 0
+      },
+      "epicProgress": {
+        "done": 0,
+        "inProgress": 0,
+        "todo": 0,
+        "total": 0
+      }
+    }
+  ],
+  "unscheduled": [
+    {
+      "key": "LAD-40",
+      "summary": "Returns portal",
+      "status": {
+        "name": "To Do",
+        "category": "new"
+      },
+      "team": null,
+      "capabilities": [
+        {
+          "key": "LA-60",
+          "summary": "B2B invoicing",
+          "status": {
+            "name": "To Do",
+            "category": "new"
+          }
+        }
+      ],
+      "teamEpics": [],
+      "blocks": [],
+      "blockedBy": []
+    }
+  ],
+  "warnings": [
+    {
+      "kind": "out-of-order-dependency",
+      "message": "LAD-30 (B2C Low Volume) is blocked by LAD-22, which ships in a later-or-same milestone.",
+      "keys": [
+        "LAD-30",
+        "LAD-22"
+      ]
+    }
+  ],
+  "generatedAt": "2026-10-09T19:36:09.558Z"
+}
