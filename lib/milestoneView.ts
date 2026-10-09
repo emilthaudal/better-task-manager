@@ -64,6 +64,11 @@ export type QuickFilter = keyof typeof QUICK_FILTERS;
 
 const isQuickFilter = (name: string): name is QuickFilter => Object.hasOwn(QUICK_FILTERS, name);
 
+/** A team name as a query token value: `team:<token>` (lower-case, spaces as dashes). */
+export function teamToken(team: string): string {
+  return team.trim().toLowerCase().replace(/\s+/g, "-");
+}
+
 /** Whether `is:<name>` is part of the query. */
 export function hasQuickFilter(query: string, name: QuickFilter): boolean {
   return query.toLowerCase().split(/\s+/).includes(`is:${name}`);
@@ -84,8 +89,13 @@ export function toggleQuickFilter(query: string, name: QuickFilter): string {
 export function matchItems(detail: MilestoneDetail, query: string): Set<string> | null {
   const all = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
   if (all.length === 0) return null;
-  const predicates = all.filter((t) => t.startsWith("is:") && isQuickFilter(t.slice(3))).map((t) => QUICK_FILTERS[t.slice(3) as QuickFilter].test);
-  const terms = all.filter((t) => !(t.startsWith("is:") && isQuickFilter(t.slice(3))));
+  const isQuick = (t: string) => t.startsWith("is:") && isQuickFilter(t.slice(3));
+  const isTeam = (t: string) => t.startsWith("team:") && t.length > 5;
+  const predicates: Array<(i: WorkItem) => boolean> = [
+    ...all.filter(isQuick).map((t) => QUICK_FILTERS[t.slice(3) as QuickFilter].test),
+    ...all.filter(isTeam).map((t) => (i: WorkItem) => teamToken(i.team) === t.slice(5)),
+  ];
+  const terms = all.filter((t) => !isQuick(t) && !isTeam(t));
   const epicSummary = new Map(detail.epics.map((e) => [e.key, e.summary]));
   const out = new Set<string>();
   for (const item of detail.items) {
