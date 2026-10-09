@@ -52,6 +52,15 @@ describe("layoutTimeline", () => {
     expect(layout.lanes.map((l) => l.title)).toEqual(["API", "UI"]);
     expect(layout.lanes[1].subtitle).toBe("B-E · Team B");
   });
+
+  it("can drop lanes (e.g. without filter matches) while keeping every card's column", () => {
+    const layout = layoutTimeline(detail(), "team", { includeLane: (members) => members.some((m) => m.key === "B-1") });
+    expect(layout.lanes.map((l) => l.id)).toEqual(["Team B"]);
+    expect(layout.lanes[0].y).toBe(0);
+    expect(layout.cards.find((c) => c.item.key === "B-1")?.x).toBe(columnX(1));
+    expect(layout.columns).toBe(2);
+    expect(layout.edges).toEqual([]);
+  });
 });
 
 describe("chainOf", () => {
