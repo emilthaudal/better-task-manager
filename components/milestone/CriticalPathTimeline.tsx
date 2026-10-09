@@ -343,6 +343,7 @@ function CriticalPathTimeline({ detail, laneMode, selectedKey, onSelect, matches
     return { ...base, lanes };
   }, [base]);
   const chainOf = useMemo(() => chainIndex(detail.dependencies), [detail.dependencies]);
+  const teamByName = useMemo(() => new Map(detail.teams.map((t) => [t.name, t])), [detail.teams]);
   const cardByKey = useMemo(() => new Map(layout.cards.map((c) => [c.item.key, c])), [layout.cards]);
   const columnCounts = useMemo(() => {
     const counts = Array.from({ length: layout.columns }, () => ({ total: 0, critical: 0 }));
@@ -794,6 +795,14 @@ function CriticalPathTimeline({ detail, laneMode, selectedKey, onSelect, matches
                     {lane.title}
                   </div>
                   {zoom >= 0.65 && <div className="mt-0.5 truncate text-[11px] text-[var(--ms-label-3)]">{lane.subtitle}</div>}
+                  {laneMode === "team" && zoom >= 0.65 && teamByName.get(lane.team) && (
+                    <div className="mt-1 text-[11px] leading-snug text-[var(--ms-label-3)]">
+                      {teamByName.get(lane.team)?.readyNow ?? 0} ready · {teamByName.get(lane.team)?.unassignedRemaining ?? 0} unassigned
+                      {(teamByName.get(lane.team)?.waitingOnOtherTeams ?? 0) > 0 && (
+                        <div>waits on others for {teamByName.get(lane.team)?.waitingOnOtherTeams}</div>
+                      )}
+                    </div>
+                  )}
                   {lane.critical > 0 && zoom >= 0.8 && (
                     <div className="mt-1.5 inline-flex w-fit items-center gap-1 rounded-full bg-[var(--ms-critical-fill)] px-1.5 py-[2px] text-[10px] font-semibold text-[var(--ms-critical-text)]">
                       {lane.critical} critical
