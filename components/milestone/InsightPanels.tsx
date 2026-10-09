@@ -75,7 +75,14 @@ export function CriticalChainPanel({ detail, onSelect }: { detail: MilestoneDeta
 // ── Who waits on whom ───────────────────────────────────────────────────────
 
 /** Team × team grid of open cross-team links: rows block, columns wait. */
-export function TeamDependencyPanel({ detail }: { detail: MilestoneDetail }) {
+export function TeamDependencyPanel({
+  detail,
+  onShowTeam,
+}: {
+  detail: MilestoneDetail;
+  /** Show a team's work that blocks other teams on the timeline. */
+  onShowTeam?: (team: string) => void;
+}) {
   const matrix = teamMatrix(detail);
   if (!matrix) return null;
   const { teams, counts, max } = matrix;
@@ -102,7 +109,18 @@ export function TeamDependencyPanel({ detail }: { detail: MilestoneDetail }) {
             {teams.map((from) => (
               <tr key={from}>
                 <th scope="row" className="truncate pr-2 text-left text-[12px] font-medium text-[var(--ms-label)]">
-                  {from}
+                  {onShowTeam ? (
+                    <button
+                      type="button"
+                      onClick={() => onShowTeam(from)}
+                      title={`Show ${from}'s work that blocks other teams`}
+                      className="rounded text-left hover:text-[var(--ms-accent-text)]"
+                    >
+                      {from}
+                    </button>
+                  ) : (
+                    from
+                  )}
                 </th>
                 {teams.map((to) => {
                   const n = counts[from]?.[to] ?? 0;

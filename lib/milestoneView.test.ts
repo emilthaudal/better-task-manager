@@ -14,6 +14,7 @@ import {
   samePayload,
   serializeViewState,
   teamMatrix,
+  teamToken,
   visibleCards,
   visibleEdges,
 } from "@/lib/milestoneView";
@@ -78,6 +79,17 @@ describe("quick filters", () => {
     }
     const teamCritical = matchItems(detail, "is:critical checkout");
     expect([...(teamCritical ?? [])].every((k) => critical?.has(k))).toBe(true);
+  });
+
+  it("filters by exact team with team:<token>", () => {
+    expect(teamToken("Team A ")).toBe("team-a");
+    const platform = matchItems(detail, "team:platform is:cross");
+    expect(platform?.size).toBeGreaterThan(0);
+    for (const k of platform ?? []) {
+      const item = detail.items.find((i) => i.key === k);
+      expect(item?.team).toBe("Platform");
+      expect(item?.schedule?.downstreamTeams.length).toBeGreaterThan(0);
+    }
   });
 
   it("treats unknown is: tokens as text", () => {

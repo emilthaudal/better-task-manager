@@ -18,7 +18,7 @@ import { KeyChip, ProgressRing, Segmented, Stat, percentDone } from "@/component
 import { useJiraBaseUrl } from "@/hooks/useJiraBaseUrl";
 import { useMilestoneViewState } from "@/hooks/useMilestoneViewState";
 import { usePolledJson } from "@/hooks/usePolledJson";
-import { QUICK_FILTERS, hasQuickFilter, matchItems, toggleQuickFilter } from "@/lib/milestoneView";
+import { QUICK_FILTERS, hasQuickFilter, matchItems, teamToken, toggleQuickFilter } from "@/lib/milestoneView";
 import type { MilestoneTab, QuickFilter } from "@/lib/milestoneView";
 import { cn } from "@/lib/utils";
 import type { LaneMode } from "@/lib/milestoneLayout";
@@ -299,7 +299,10 @@ function MilestoneView() {
                 <div className="ms-fade-up mx-auto grid max-w-[1280px] gap-8 px-8 py-8 xl:grid-cols-[1.15fr_1fr]">
                   <div className="flex min-w-0 flex-col gap-8">
                     <BlockerEpicsPanel detail={data} onSelect={select} />
-                    <TeamDependencyPanel detail={data} />
+                    <TeamDependencyPanel
+                      detail={data}
+                      onShowTeam={(team) => setView({ tab: "path", lanes: "team", item: null, query: `team:${teamToken(team)} is:cross` })}
+                    />
                     <TeamLoadPanel detail={data} />
                   </div>
                   <div className="flex min-w-0 flex-col gap-8">
