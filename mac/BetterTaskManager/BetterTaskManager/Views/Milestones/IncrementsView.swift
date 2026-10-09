@@ -51,7 +51,7 @@ struct IncrementsView: View {
             matchesSearch(searchText, inc.key, inc.summary) || inc.capabilities.contains { matchesSearch(searchText, $0.key, $0.summary) }
         }
         if loaded.detail.increments.isEmpty {
-            ContentUnavailableView("No increments", systemImage: "square.stack.3d.up.slash",
+            ContentUnavailableView("No Increments", systemImage: "square.stack.3d.up.slash",
                                    description: Text("No delivery epics have this milestone as their fix version."))
         } else if increments.isEmpty {
             ContentUnavailableView.search(text: searchText)

@@ -39,7 +39,7 @@ struct MilestoneInspector: View {
                 .animation(.smooth(duration: 0.25), value: target)
             } else {
                 ContentUnavailableView(
-                    "Nothing selected",
+                    "No Selection",
                     systemImage: "sidebar.right",
                     description: Text("Select an item, epic or increment to see its schedule and dependencies.")
                 )
@@ -48,7 +48,7 @@ struct MilestoneInspector: View {
     }
 
     private func missing(_ key: String) -> some View {
-        ContentUnavailableView("\(key) isn't in this milestone", systemImage: "questionmark.square.dashed")
+        ContentUnavailableView("\(key) Isn't in This Milestone", systemImage: "questionmark.square.dashed")
     }
 }
 

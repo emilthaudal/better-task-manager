@@ -8,7 +8,7 @@ struct TeamLoadView: View {
 
     var body: some View {
         if loaded.detail.teams.isEmpty {
-            ContentUnavailableView("No teams yet", systemImage: "person.2.slash",
+            ContentUnavailableView("No Teams Yet", systemImage: "person.2.slash",
                                    description: Text("No team epics implement this milestone's increments."))
         } else {
             ScrollView {
@@ -211,7 +211,10 @@ struct TeamDetailView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     HStack(spacing: 12) {
-                        Circle().fill(teamColor(team.name).gradient).frame(width: 18, height: 18)
+                        Image(systemName: "person.2.fill")
+                            .font(.title)
+                            .foregroundStyle(teamColor(team.name))
+                            .accessibilityHidden(true)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(team.name).font(.largeTitle.weight(.bold))
                             Text("\(loaded.detail.release.name) · \(pluralized(team.epicKeys.count, "epic")) · \(team.remaining) remaining")
@@ -234,11 +237,15 @@ struct TeamDetailView: View {
                     itemSection("Ready now", "play.circle.fill", loaded.detail.readyNow.compactMap { loaded.index.itemsByKey[$0] }.filter { $0.team == team.name })
                 }
                 .padding(24)
+                // Rows spanning a full-screen window put the key and its badges a
+                // whole display apart; a readable measure keeps each row scannable.
+                .frame(maxWidth: 1100, alignment: .leading)
+                .frame(maxWidth: .infinity)
             }
             .navigationTitle(team.name)
             .navigationSubtitle(loaded.detail.release.name)
         } else {
-            ContentUnavailableView("Team not in this milestone", systemImage: "person.2.slash")
+            ContentUnavailableView("Team Not in This Milestone", systemImage: "person.2.slash")
         }
     }
 

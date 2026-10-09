@@ -13,7 +13,7 @@ struct BlockerEpicsView: View {
         }
         if loaded.detail.blockerEpics.isEmpty {
             ContentUnavailableView(
-                "No epic is blocking another",
+                "No Epic Is Blocking Another",
                 systemImage: "checkmark.seal",
                 description: Text("None of the remaining work in this milestone gates an epic outside its own.")
             )
