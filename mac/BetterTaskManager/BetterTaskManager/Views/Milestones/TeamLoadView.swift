@@ -364,5 +364,8 @@ struct WorkItemRow: View {
         .onHover { isHovered = $0 }
         .onTapGesture { navigator.inspect(.item(item.key)) }
         .help(item.schedule.map(scheduleSummary) ?? item.status.name)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
+        .accessibilityAction { navigator.inspect(.item(item.key)) }
     }
 }
