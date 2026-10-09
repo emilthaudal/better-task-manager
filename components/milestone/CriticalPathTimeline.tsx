@@ -87,7 +87,11 @@ const Card = memo(function Card({
       style={{ left: x, top: y, width: CARD_WIDTH, height: CARD_HEIGHT }}
     >
       {critical && <span aria-hidden="true" className="absolute inset-y-0 left-0 w-[3px] bg-[var(--ms-critical)]" />}
-      <div className="flex items-center gap-1.5">
+      {/* Zoomed out, the detail rows would render at ~6 px; a large summary stays legible. */}
+      <div aria-hidden="true" className="ms-card-compact line-clamp-2 text-[25px] font-semibold leading-[1.12] tracking-[-0.02em] text-[var(--ms-label)]">
+        {item.summary}
+      </div>
+      <div className="ms-card-detail flex items-center gap-1.5">
         <StatusDot status={item.status} />
         <span
           className={cn(
@@ -114,8 +118,8 @@ const Card = memo(function Card({
           )}
         </span>
       </div>
-      <div className="line-clamp-2 text-[12.5px] font-medium leading-[1.25] tracking-[-0.01em] text-[var(--ms-label)]">{item.summary}</div>
-      <div className="flex items-center gap-1.5 text-[11px] text-[var(--ms-label-3)]">
+      <div className="ms-card-detail line-clamp-2 text-[12.5px] font-medium leading-[1.25] tracking-[-0.01em] text-[var(--ms-label)]">{item.summary}</div>
+      <div className="ms-card-detail flex items-center gap-1.5 text-[11px] text-[var(--ms-label-3)]">
         <Avatar name={item.assignee} size={14} />
         <span
           className={cn(
@@ -789,6 +793,7 @@ function CriticalPathTimeline({ detail, laneMode, selectedKey, onSelect, matches
                 ref={canvasRef}
                 className="ms-canvas absolute left-0 top-0 origin-top-left"
                 data-filter={matches ? "" : undefined}
+                data-compact={zoom < 0.65 ? "" : undefined}
                 style={{ width: layout.width, height: canvasH, transform: `scale(${zoom}) translateX(${-LANE_W}px)` }}
                 onPointerOver={onPointerOver}
                 onPointerLeave={onPointerLeave}
