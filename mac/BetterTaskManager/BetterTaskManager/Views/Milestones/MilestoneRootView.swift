@@ -95,6 +95,7 @@ struct MilestoneRootView: View {
         }
         .searchable(text: $searchText, placement: .toolbar, prompt: "Filter items, epics, people")
         .searchFocused($isSearchFocused)
+        .onSubmit(of: .search) { jumpToFirstSearchMatch() }
         .toolbar { toolbarContent }
         .environment(\.milestoneNavigator, navigator)
         .environment(\.jiraSiteURL, store.siteURL)
@@ -195,6 +196,28 @@ struct MilestoneRootView: View {
         case let .board(project):
             BoardView(project: project) { selection = .boards }
                 .id(project.key)
+        }
+    }
+
+    /// Return in the filter field selects the most important matching card — the
+    /// swimlane then scrolls to it — so search works as "go to", not only as a dimmer.
+    private func jumpToFirstSearchMatch() {
+        guard case let .milestone(id) = selection, tab == .criticalPath, !searchText.isEmpty,
+              let loaded = store.milestone(id) else { return }
+        let matches = loaded.detail.items.filter { item in
+            (item.schedule != nil || showDone) && (showExternal || !item.external)
+                && matchesSearch(searchText, item.key, item.summary, item.assignee, item.team, item.epicKey,
+                                 item.epicKey.flatMap { loaded.index.epicsByKey[$0]?.summary })
+        }
+        let best = matches.min { a, b in
+            let critA = a.schedule?.critical == true, critB = b.schedule?.critical == true
+            if critA != critB { return critA }
+            return (a.schedule?.earliestStart ?? .max) < (b.schedule?.earliestStart ?? .max)
+        }
+        guard let best else { return }
+        withAnimation(.smooth) {
+            inspected = .item(best.key)
+            showInspector = true
         }
     }
 

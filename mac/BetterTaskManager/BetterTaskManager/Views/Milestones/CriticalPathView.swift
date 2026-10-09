@@ -147,7 +147,12 @@ struct CriticalPathView: View {
         }
         .onChange(of: zoom) { _, zoom in scroll.recull(zoom: zoom, bounds: layout.size) }
         .onChange(of: selectedKey, initial: true) { _, key in
-            if let key { requestReveal(key) }
+            guard let key else { return }
+            requestReveal(key)
+            // Clicking a card (or a chip pointing at one) hands the keyboard to the
+            // swimlane, so the arrow keys carry on from that card instead of moving
+            // the sidebar selection.
+            isFocused = true
         }
         // The viewport changes size when the inspector slides in after a selection,
         // and on first appearance while the window is still laying out.
@@ -547,8 +552,11 @@ private struct LaneHeaderLayer: View {
                 .offset(x: x)
                 .allowsHitTesting(false)
             }
+            let top = max(scroll.visible.minY / zoom, 0) + metrics.columnHeaderHeight
             ForEach(layout.lanes) { lane in
-                LaneHeader(lane: lane)
+                // The title rides down a tall lane like a sticky section header, so it
+                // stays readable after scrolling deep into a 50-card column.
+                LaneHeader(lane: lane, titleOffset: min(max(top - lane.frame.minY, 0), max(lane.frame.height - 130, 0)))
                     .frame(width: metrics.laneHeaderWidth - 18, height: lane.frame.height)
                     .offset(x: x + 6, y: lane.frame.minY)
                     .onTapGesture { navigator.showTeam(lane.team) }
@@ -602,6 +610,7 @@ private struct LegendSwatch: View {
 
 private struct LaneHeader: View {
     let lane: SwimlaneLayout.Lane
+    var titleOffset: CGFloat = 0
     @State private var isHovered = false
 
     var body: some View {
@@ -635,6 +644,7 @@ private struct LaneHeader: View {
             Spacer(minLength: 0)
         }
         .padding(12)
+        .offset(y: titleOffset)
         .frame(maxHeight: .infinity, alignment: .top)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay {
