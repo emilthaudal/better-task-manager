@@ -56,6 +56,22 @@ private struct Boom: Error, LocalizedError {
         #expect(store.backgroundError == "server down")
     }
 
+    @Test func aRefreshStartedWhileAnotherIsInFlightStillLoadsItsMilestone() async throws {
+        let program: ProgramOverview = try loadFixture("program-overview")
+        let detail: MilestoneDetail = try loadFixture("milestone-detail")
+        let store = MilestoneStore(
+            projectKey: { "LAD" },
+            fetchProgram: { _ in try await Task.sleep(for: .milliseconds(50)); return program },
+            fetchMilestone: { _, _ in detail },
+            fetchSiteURL: { nil }
+        )
+        async let first: Void = store.refresh(milestoneID: nil)
+        async let second: Void = store.refresh(milestoneID: "10140")
+        _ = await (first, second)
+        #expect(store.state(ofMilestone: "10140") == .loaded)
+        #expect(!store.isRefreshing)
+    }
+
     @Test func resetForgetsTheOldProject() async throws {
         let program: ProgramOverview = try loadFixture("program-overview")
         let store = MilestoneStore(projectKey: { "LAD" }, fetchProgram: { _ in program },

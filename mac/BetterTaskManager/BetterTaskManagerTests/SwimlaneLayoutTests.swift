@@ -222,6 +222,29 @@ private func detail(items: [WorkItem], dependencies: [Dependency] = [], length: 
         #expect(parseJiraDate("garbage") == nil)
     }
 
+    @Test func flagsBlockersThatShipInALaterMilestone() {
+        func increment(_ key: String, blockedBy: [String] = []) -> IncrementSummary {
+            IncrementSummary(key: key, summary: key, status: StatusRef(name: "To Do", category: .new), team: nil,
+                             capabilities: [], teamEpics: [], blocks: [], blockedBy: blockedBy)
+        }
+        func release(_ sequence: Int, _ increments: [IncrementSummary]) -> ProgramRelease {
+            ProgramRelease(id: "\(sequence)", name: "R\(sequence)", description: nil, released: false, archived: false,
+                           startDate: nil, releaseDate: nil, overdue: false, sequence: sequence, increments: increments,
+                           progress: .empty, epicProgress: .empty)
+        }
+        let program = ProgramOverview(
+            project: DeliveryProject(key: "LAD", name: "D"),
+            releases: [
+                release(0, [increment("A", blockedBy: ["B", "U", "OUTSIDE"]), increment("A2")]),
+                release(1, [increment("B", blockedBy: ["A2"])]),
+            ],
+            unscheduled: [increment("U")],
+            warnings: [],
+            generatedAt: ""
+        )
+        #expect(outOfOrderBlockers(in: program) == ["A": ["B", "U"]])
+    }
+
     @Test func browseURL() {
         #expect(jiraBrowseURL(site: URL(string: "https://whiteaway.atlassian.net")!, key: "AS-1").absoluteString
                 == "https://whiteaway.atlassian.net/browse/AS-1")

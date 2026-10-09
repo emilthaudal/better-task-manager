@@ -116,6 +116,26 @@ func releaseStateLabel(_ state: ReleaseState, now: Date = .now) -> String {
     }
 }
 
+/// Increment → the blockers that land in a later milestone (or none at all), which
+/// means the increment can't actually ship with its own milestone. Blockers the
+/// program doesn't know about are left to the server's warnings.
+func outOfOrderBlockers(in program: ProgramOverview) -> [String: [String]] {
+    var sequenceOf: [String: Int] = [:]
+    for release in program.releases {
+        for increment in release.increments { sequenceOf[increment.key] = release.sequence }
+    }
+    for increment in program.unscheduled { sequenceOf[increment.key] = .max }
+
+    var result: [String: [String]] = [:]
+    for release in program.releases {
+        for increment in release.increments {
+            let late = increment.blockedBy.filter { (sequenceOf[$0] ?? .min) > release.sequence }
+            if !late.isEmpty { result[increment.key] = late }
+        }
+    }
+    return result
+}
+
 func jiraBrowseURL(site: URL, key: String) -> URL {
     site.appending(path: "browse").appending(path: key)
 }

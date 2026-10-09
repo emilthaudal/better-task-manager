@@ -11,21 +11,9 @@ struct RootView: View {
             case .needsSiteSelection:
                 SiteSelectView()
             case .signedIn:
-                SignedInFlowView()
+                MilestoneRootView()
             }
         }
         .animation(.default, value: auth.state)
-    }
-}
-
-private struct SignedInFlowView: View {
-    @State private var selectedProject: JiraProject?
-
-    var body: some View {
-        if let selectedProject {
-            BoardView(project: selectedProject) { self.selectedProject = nil }
-        } else {
-            ProjectPickerView { self.selectedProject = $0 }
-        }
     }
 }

@@ -1,6 +1,6 @@
 import Foundation
 
-enum Config {
+nonisolated enum Config {
     static let defaultBaseURL = URL(string: "http://localhost:3000")!
     static let defaultDeliveryProjectKey = "LAD"
 

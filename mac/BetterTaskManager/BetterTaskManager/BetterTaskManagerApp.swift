@@ -16,5 +16,15 @@ struct BetterTaskManagerApp: App {
             RootView()
                 .environment(auth)
         }
+        .defaultSize(width: 1440, height: 900)
+        .commands {
+            SidebarCommands()
+            InspectorCommands()
+            ToolbarCommands()
+        }
+
+        Settings {
+            SettingsView()
+        }
     }
 }

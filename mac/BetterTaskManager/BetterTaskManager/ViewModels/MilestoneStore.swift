@@ -44,6 +44,7 @@ final class MilestoneStore {
     private let fetchSiteURL: () async throws -> URL?
     private let projectKey: () -> String
     private var siteURLResolved = false
+    private var inFlight = 0
 
     init(
         projectKey: @escaping () -> String = { Config.deliveryProjectKey },
@@ -67,10 +68,17 @@ final class MilestoneStore {
     /// Refreshes the program and, if one is focused, that milestone. Both requests run
     /// concurrently — the milestone detail is the slow one and shouldn't wait on the
     /// overview.
+    ///
+    /// Overlapping refreshes are allowed on purpose: switching milestones restarts the
+    /// polling task while the previous refresh may still be in flight, and skipping
+    /// the new one would leave the newly selected milestone unloaded until the next poll.
     func refresh(milestoneID: String?) async {
-        guard !isRefreshing else { return }
+        inFlight += 1
         isRefreshing = true
-        defer { isRefreshing = false }
+        defer {
+            inFlight -= 1
+            isRefreshing = inFlight > 0
+        }
 
         let project = projectKey()
         async let overview: Void = loadProgram(project: project)
