@@ -21,8 +21,10 @@ final class SwimlaneScrollState {
     var viewportSize: CGSize = .zero
 
     func update(visible: CGRect, insets: EdgeInsets, zoom: CGFloat, bounds: CGSize) {
-        self.visible = visible
-        self.insets = insets
+        // Only `visible` changes every frame; guard the rest so their readers aren't
+        // invalidated by writes of an unchanged value.
+        if self.visible != visible { self.visible = visible }
+        if self.insets != insets { self.insets = insets }
         if viewportSize != visible.size { viewportSize = visible.size }
         recull(zoom: zoom, bounds: bounds)
     }
@@ -143,7 +145,11 @@ struct CriticalPathView: View {
                 layout = next
             }
             scroll.recull(zoom: zoom, bounds: next.size)
-            if let key = selectedKey { requestReveal(key) }
+            // Re-reveal after a user-driven relayout (lanes regrouped, done items shown),
+            // not when a background poll brings new data — that would yank the view
+            // back to the selection every minute.
+            let userDriven = old == new || old.options != new.options || old.releaseID != new.releaseID
+            if userDriven, let key = selectedKey { requestReveal(key) }
         }
         .onChange(of: zoom) { _, zoom in scroll.recull(zoom: zoom, bounds: layout.size) }
         .onChange(of: selectedKey, initial: true) { _, key in
@@ -749,8 +755,10 @@ struct SwimlaneCard: View {
         .overlay {
             if isSelected {
                 shape.inset(by: -4).stroke(Color.accentColor, lineWidth: 2.5)
+                    .transition(.scale(scale: 1.04).combined(with: .opacity))
             }
         }
+        .animation(.spring(duration: 0.25, bounce: 0.2), value: isSelected)
         .opacity(item.status.isDone ? 0.6 : 1)
         .contentShape(shape)
         .animation(.easeOut(duration: 0.12), value: isHovered)
