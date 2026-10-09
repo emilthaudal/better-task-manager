@@ -165,11 +165,35 @@ private struct MilestoneHeader: View {
                          systemImage: "exclamationmark.triangle.fill", tint: detail.warnings.isEmpty ? .secondary : .orange)
             }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(StatTileButtonStyle())
     }
 
     private var warningDetail: String {
         let severe = detail.warnings.filter(\.kind.isSevere).count
         return severe == 0 ? "nothing severe" : "\(severe) need attention"
+    }
+}
+
+/// The header tiles that jump to a tab: a hover wash and a press dip, so they read
+/// as controls without dressing them up as buttons.
+private struct StatTileButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        StatTileButton(configuration: configuration)
+    }
+
+    private struct StatTileButton: View {
+        let configuration: Configuration
+        @State private var isHovered = false
+
+        var body: some View {
+            configuration.label
+                .overlay {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Color.primary.opacity(configuration.isPressed ? 0.08 : (isHovered ? 0.04 : 0)))
+                }
+                .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .onHover { isHovered = $0 }
+                .animation(.easeOut(duration: 0.12), value: isHovered)
+        }
     }
 }
