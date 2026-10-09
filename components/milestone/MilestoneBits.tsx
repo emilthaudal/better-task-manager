@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import type { Progress, StatusRef } from "@/lib/milestoneTypes";
 
@@ -58,22 +61,29 @@ export function ProgressBar({ progress, className }: { progress: Progress; class
   );
 }
 
-/** Circular progress, the way Apple shows completion at a glance. */
+/** Circular progress, the way Apple shows completion at a glance. Fills in on mount. */
 export function ProgressRing({ progress, size = 44, stroke = 4.5 }: { progress: Progress; size?: number; stroke?: number }) {
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setShown(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
-  const done = progress.total ? progress.done / progress.total : 0;
-  const active = progress.total ? progress.inProgress / progress.total : 0;
+  const done = shown && progress.total ? progress.done / progress.total : 0;
+  const active = shown && progress.total ? progress.inProgress / progress.total : 0;
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90" aria-hidden="true">
       <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--ms-fill)" strokeWidth={stroke} />
       <circle
         cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--ms-accent)" strokeWidth={stroke} strokeLinecap="round"
         strokeDasharray={`${c * (done + active)} ${c}`} opacity={0.35}
+        style={{ transition: "stroke-dasharray 900ms cubic-bezier(0.2, 0.8, 0.2, 1)" }}
       />
       <circle
         cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--ms-ready)" strokeWidth={stroke} strokeLinecap="round"
         strokeDasharray={`${c * done} ${c}`}
+        style={{ transition: "stroke-dasharray 900ms cubic-bezier(0.2, 0.8, 0.2, 1) 80ms" }}
       />
     </svg>
   );
