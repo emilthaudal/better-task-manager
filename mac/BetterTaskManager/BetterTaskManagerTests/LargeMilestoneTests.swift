@@ -23,7 +23,7 @@ import Testing
             for _ in 0..<10 { layout = buildSwimlaneLayout(detail: detail, options: SwimlaneOptions()) }
         }
         print("[perf] buildSwimlaneLayout large ×10: \(elapsed)")
-        #expect(layout.nodes.count == detail.items.filter { $0.schedule != nil }.count)
+        #expect(layout.nodes.count + layout.hiddenLaneByKey.count == detail.items.filter { $0.schedule != nil }.count)
         #expect(elapsed < .seconds(2))
     }
 
@@ -38,6 +38,45 @@ import Testing
         print("[perf] LoadedMilestone large: \(build); chain for every item: \(chains)")
         #expect(build < .milliseconds(500))
         #expect(chains < .seconds(1))
+    }
+
+    @Test func crowdedCellsFoldBehindAMorePill() throws {
+        let detail: MilestoneDetail = try loadFixture("milestone-detail-large")
+        let metrics = SwimlaneMetrics()
+        let folded = buildSwimlaneLayout(detail: detail, options: SwimlaneOptions(), metrics: metrics)
+        let remaining = detail.items.filter { $0.schedule != nil }
+
+        #expect(!folded.overflows.isEmpty)
+        // Every remaining item is either a card or accounted for behind a pill.
+        #expect(folded.nodes.count + folded.hiddenLaneByKey.count == remaining.count)
+        #expect(folded.overflows.map(\.hiddenCount).reduce(0, +) == folded.hiddenLaneByKey.count)
+        #expect(folded.columnCounts.reduce(0, +) == remaining.count)
+        // No cell shows more than the limit, and critical work is never folded away.
+        let cells = Dictionary(grouping: folded.nodes) { "\($0.laneID)#\($0.column)" }
+        #expect(cells.values.allSatisfy { $0.count <= metrics.cellLimit })
+        let index = MilestoneIndex(detail)
+        #expect(folded.hiddenLaneByKey.keys.allSatisfy { index.itemsByKey[$0]?.schedule?.critical == false })
+        // Edges only join cards that are on screen.
+        #expect(folded.edges.allSatisfy { folded.nodesByKey[$0.from] != nil && folded.nodesByKey[$0.to] != nil })
+
+        let lane = try #require(folded.overflows.first?.laneID)
+        let unfolded = buildSwimlaneLayout(detail: detail, options: SwimlaneOptions(), metrics: metrics, expandedLanes: [lane])
+        #expect(unfolded.overflows.allSatisfy { $0.laneID != lane })
+        #expect(unfolded.hiddenLaneByKey.values.allSatisfy { $0 != lane })
+        #expect(unfolded.lanes.first { $0.id == lane }?.isExpanded == true)
+        #expect(unfolded.size.height > folded.size.height)
+        // Unfolded, the six lanes of this fixture are ~16,000pt tall.
+        #expect(folded.size.height < unfolded.size.height)
+        #expect(folded.size.height < 7000)
+    }
+
+    @Test func smallMilestonesNeverFold() throws {
+        for fixture in ["milestone-detail", "milestone-detail-multiteam"] {
+            let detail: MilestoneDetail = try loadFixture(fixture)
+            let layout = buildSwimlaneLayout(detail: detail, options: SwimlaneOptions())
+            #expect(layout.overflows.isEmpty)
+            #expect(layout.hiddenLaneByKey.isEmpty)
+        }
     }
 
     @MainActor

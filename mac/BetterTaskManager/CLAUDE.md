@@ -91,6 +91,9 @@ selection/inspector through the `milestoneNavigator` environment value rather th
   bitmap). Revealing a card uses `ScrollPosition.scrollTo(point:)` with a computed point — cards sit
   inside a `scaleEffect` and are culled, so id-based `ScrollViewReader` scrolling can't target them.
   Arrow keys / Return / Esc navigate cards (`MilestoneNavigator.select`/`clearSelection`).
+  Cells with more than `SwimlaneMetrics.cellLimit` cards fold the least important ones (never
+  critical) behind a "N more" pill (`SwimlaneLayout.overflows` / `hiddenLaneByKey`); lanes unfold
+  per milestone via `expandedLanes`, and selecting a folded card unfolds its lane first.
 - Menu bar: `MilestoneCommands` (View: tabs ⌘1–5, lanes, refresh ⌘R; Go: milestones ⌥⌘1–9;
   Edit: Filter ⌘F) reads the key window through `focusedSceneValue(\.milestoneCommands)`. Tab and
   lane options persist per window with `@SceneStorage`.

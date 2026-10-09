@@ -4,6 +4,7 @@ private struct LayoutKey: Hashable {
     let generatedAt: String
     let releaseID: String
     let options: SwimlaneOptions
+    let expandedLanes: Set<String>
 }
 
 /// Scroll state shared by the swimlane's layers. Kept in an observable object rather
@@ -47,6 +48,9 @@ struct CriticalPathView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var layout = SwimlaneLayout.empty
     @State private var hoveredKey: String?
+    /// Lanes whose crowded cells the user unfolded; kept out of SwimlaneOptions
+    /// because it's per-milestone view state, not a persisted preference.
+    @State private var expandedLanes: Set<String> = []
     @State private var zoom: CGFloat = 1
     @State private var pinchBase: CGFloat?
     @State private var scroll = SwimlaneScrollState()
@@ -82,7 +86,8 @@ struct CriticalPathView: View {
                 searchText: searchText,
                 scroll: scroll,
                 zoom: zoom,
-                metrics: metrics
+                metrics: metrics,
+                setLaneExpanded: setLaneExpanded
             )
             .frame(width: layout.size.width, height: layout.size.height, alignment: .topLeading)
             .scaleEffect(zoom, anchor: .topLeading)
@@ -136,10 +141,13 @@ struct CriticalPathView: View {
                 )
             }
         }
-        .onChange(of: LayoutKey(generatedAt: loaded.detail.generatedAt, releaseID: loaded.detail.release.id, options: options), initial: true) { old, new in
-            let next = buildSwimlaneLayout(detail: loaded.detail, options: new.options, metrics: metrics)
+        .onChange(of: LayoutKey(generatedAt: loaded.detail.generatedAt, releaseID: loaded.detail.release.id,
+                                options: options, expandedLanes: expandedLanes), initial: true) { old, new in
+            let next = buildSwimlaneLayout(detail: loaded.detail, options: new.options, metrics: metrics,
+                                           expandedLanes: new.expandedLanes)
+            let viewChanged = old.options != new.options || old.expandedLanes != new.expandedLanes
             // Animate only user-driven changes; a background poll shouldn't make cards dance.
-            if old.options != new.options, old.releaseID == new.releaseID, !reduceMotion {
+            if viewChanged, old.releaseID == new.releaseID, !reduceMotion {
                 withAnimation(.snappy(duration: 0.35)) { layout = next }
             } else {
                 layout = next
@@ -148,13 +156,20 @@ struct CriticalPathView: View {
             // Re-reveal after a user-driven relayout (lanes regrouped, done items shown),
             // not when a background poll brings new data — that would yank the view
             // back to the selection every minute.
-            let userDriven = old == new || old.options != new.options || old.releaseID != new.releaseID
+            let userDriven = old == new || viewChanged || old.releaseID != new.releaseID
             if userDriven, let key = selectedKey { requestReveal(key) }
         }
+        .onChange(of: loaded.detail.release.id) { expandedLanes = [] }
         .onChange(of: zoom) { _, zoom in scroll.recull(zoom: zoom, bounds: layout.size) }
         .onChange(of: selectedKey, initial: true) { _, key in
             guard let key else { return }
-            requestReveal(key)
+            // A card folded into a "more" pill has no frame yet: unfold its lane and
+            // let the relayout reveal it.
+            if let lane = layout.hiddenLaneByKey[key] {
+                setLaneExpanded(lane, true)
+            } else {
+                requestReveal(key)
+            }
             // Clicking a card (or a chip pointing at one) hands the keyboard to the
             // swimlane, so the arrow keys carry on from that card instead of moving
             // the sidebar selection.
@@ -171,6 +186,10 @@ struct CriticalPathView: View {
     }
 
     // MARK: Reveal & keyboard
+
+    private func setLaneExpanded(_ lane: String, _ expanded: Bool) {
+        if expanded { expandedLanes.insert(lane) } else { expandedLanes.remove(lane) }
+    }
 
     private func requestReveal(_ key: String) {
         pendingReveal = (key, .now.addingTimeInterval(1.2), scroll.visible.origin)
@@ -299,6 +318,7 @@ private struct SwimlaneCanvas: View {
     let scroll: SwimlaneScrollState
     let zoom: CGFloat
     let metrics: SwimlaneMetrics
+    let setLaneExpanded: (String, Bool) -> Void
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -307,10 +327,11 @@ private struct SwimlaneCanvas: View {
             SwimlaneEdgeLayer(edges: layout.edges, chain: chain, scroll: scroll)
             SwimlaneCardLayer(
                 layout: layout, loaded: loaded, chain: chain, selectedKey: selectedKey,
-                hoveredKey: $hoveredKey, searchText: searchText, scroll: scroll
+                hoveredKey: $hoveredKey, searchText: searchText, scroll: scroll,
+                setLaneExpanded: setLaneExpanded
             )
             ColumnHeaderLayer(layout: layout, metrics: metrics, scroll: scroll, zoom: zoom)
-            LaneHeaderLayer(layout: layout, metrics: metrics, scroll: scroll, zoom: zoom)
+            LaneHeaderLayer(layout: layout, metrics: metrics, scroll: scroll, zoom: zoom, setLaneExpanded: setLaneExpanded)
         }
     }
 }
@@ -458,12 +479,31 @@ private struct SwimlaneCardLayer: View {
     @Binding var hoveredKey: String?
     let searchText: String
     let scroll: SwimlaneScrollState
+    let setLaneExpanded: (String, Bool) -> Void
 
     @Environment(\.milestoneNavigator) private var navigator
 
     var body: some View {
         let cull = scroll.cull
         ZStack(alignment: .topLeading) {
+            ForEach(layout.overflows.filter { $0.frame.intersects(cull) }) { overflow in
+                Button {
+                    setLaneExpanded(overflow.laneID, true)
+                } label: {
+                    Label("\(overflow.hiddenCount) more", systemImage: "chevron.down")
+                        .font(.callout.weight(.medium))
+                        .foregroundStyle(.secondary)
+                        .frame(width: overflow.frame.width, height: overflow.frame.height)
+                        .background {
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .strokeBorder(.separator, style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+                        }
+                        .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .help("Show all \(overflow.hiddenCount + SwimlaneMetrics().cellLimit) cards in this step")
+                .offset(x: overflow.frame.minX, y: overflow.frame.minY)
+            }
             ForEach(layout.nodes.filter { $0.frame.intersects(cull) || $0.key == selectedKey }) { node in
                 if let item = loaded.index.itemsByKey[node.key] {
                     let isMatch = searchText.isEmpty || matches(item)
@@ -508,7 +548,7 @@ private struct ColumnHeaderLayer: View {
     let zoom: CGFloat
 
     var body: some View {
-        let counts = Dictionary(grouping: layout.nodes, by: \.column).mapValues(\.count)
+        let counts = layout.columnCounts
         ZStack(alignment: .topLeading) {
             Rectangle()
                 .fill(.bar)
@@ -519,7 +559,7 @@ private struct ColumnHeaderLayer: View {
                     Text(levelTitle(column.level))
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(column.level == 0 ? Color.green : Color.primary)
-                    Text("\(counts[index] ?? 0)")
+                    Text("\(index < counts.count ? counts[index] : 0)")
                         .font(.caption.monospacedDigit())
                         .foregroundStyle(.secondary)
                 }
@@ -539,6 +579,7 @@ private struct LaneHeaderLayer: View {
     let metrics: SwimlaneMetrics
     let scroll: SwimlaneScrollState
     let zoom: CGFloat
+    let setLaneExpanded: (String, Bool) -> Void
 
     @Environment(\.milestoneNavigator) private var navigator
 
@@ -562,7 +603,8 @@ private struct LaneHeaderLayer: View {
             ForEach(layout.lanes) { lane in
                 // The title rides down a tall lane like a sticky section header, so it
                 // stays readable after scrolling deep into a 50-card column.
-                LaneHeader(lane: lane, titleOffset: min(max(top - lane.frame.minY, 0), max(lane.frame.height - 130, 0)))
+                LaneHeader(lane: lane, titleOffset: min(max(top - lane.frame.minY, 0), max(lane.frame.height - 150, 0)),
+                           setExpanded: { setLaneExpanded(lane.id, $0) })
                     .frame(width: metrics.laneHeaderWidth - 18, height: lane.frame.height)
                     .offset(x: x + 6, y: lane.frame.minY)
                     .onTapGesture { navigator.showTeam(lane.team) }
@@ -617,6 +659,7 @@ private struct LegendSwatch: View {
 private struct LaneHeader: View {
     let lane: SwimlaneLayout.Lane
     var titleOffset: CGFloat = 0
+    var setExpanded: (Bool) -> Void = { _ in }
     @State private var isHovered = false
 
     var body: some View {
@@ -646,6 +689,12 @@ private struct LaneHeader: View {
                 .labelStyle(.titleAndIcon)
                 .font(.caption.monospacedDigit())
                 .foregroundStyle(.secondary)
+                if lane.isCollapsible {
+                    Button(lane.isExpanded ? "Show Fewer" : "Show All") { setExpanded(!lane.isExpanded) }
+                        .buttonStyle(.link)
+                        .font(.caption)
+                        .help(lane.isExpanded ? "Fold crowded steps back to their most important cards" : "Show every card in this lane")
+                }
             }
             Spacer(minLength: 0)
         }
