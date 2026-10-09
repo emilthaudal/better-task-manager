@@ -3,7 +3,7 @@ import Observation
 
 /// One loaded milestone plus the derived lookups every view needs, built once per
 /// poll instead of on each body evaluation.
-struct LoadedMilestone: Sendable {
+nonisolated struct LoadedMilestone: Sendable {
     let detail: MilestoneDetail
     let index: MilestoneIndex
     let graph: DependencyGraph
@@ -12,6 +12,12 @@ struct LoadedMilestone: Sendable {
         self.detail = detail
         index = MilestoneIndex(detail)
         graph = DependencyGraph(detail.dependencies)
+    }
+
+    /// Building the indexes walks every item and link; keep it off the main actor.
+    @concurrent
+    static func prepare(_ detail: MilestoneDetail) async -> LoadedMilestone {
+        LoadedMilestone(detail)
     }
 }
 
@@ -111,7 +117,10 @@ final class MilestoneStore {
     private func loadProgram(project: String) async {
         if program == nil { programState = .loading }
         do {
-            program = try await fetchProgram(project)
+            let next = try await fetchProgram(project)
+            // generatedAt changes on every response; replacing an otherwise identical
+            // payload would invalidate every view that reads the program.
+            if program?.hasSameContent(as: next) != true { program = next }
             programState = .loaded
             backgroundError = nil
         } catch {
@@ -125,7 +134,11 @@ final class MilestoneStore {
         if milestones[id] == nil { milestoneStates[id] = .loading }
         do {
             let detail = try await fetchMilestone(id, project)
-            milestones[id] = LoadedMilestone(detail)
+            // An unchanged poll must not hand the swimlane a new value — that would
+            // rebuild its layout (and reset hover state) every 60 seconds for nothing.
+            if milestones[id]?.detail.hasSameContent(as: detail) != true {
+                milestones[id] = await LoadedMilestone.prepare(detail)
+            }
             milestoneStates[id] = .loaded
         } catch {
             if milestones[id] == nil { milestoneStates[id] = .failed(error.localizedDescription) }

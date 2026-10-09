@@ -4,18 +4,18 @@ import Foundation
 // JSON exactly so the default Codable synthesis works; when the TS contract
 // changes, this file and the fixture decode tests need to change with it.
 
-enum StatusCategory: String, Codable, Hashable, Sendable {
+nonisolated enum StatusCategory: String, Codable, Hashable, Sendable {
     case new, indeterminate, done
 }
 
-struct StatusRef: Codable, Hashable, Sendable {
+nonisolated struct StatusRef: Codable, Hashable, Sendable {
     let name: String
     let category: StatusCategory
 
     var isDone: Bool { category == .done }
 }
 
-struct IssueRef: Codable, Hashable, Identifiable, Sendable {
+nonisolated struct IssueRef: Codable, Hashable, Identifiable, Sendable {
     let key: String
     let summary: String
     let status: StatusRef
@@ -23,12 +23,12 @@ struct IssueRef: Codable, Hashable, Identifiable, Sendable {
     var id: String { key }
 }
 
-struct DeliveryProject: Codable, Hashable, Sendable {
+nonisolated struct DeliveryProject: Codable, Hashable, Sendable {
     let key: String
     let name: String
 }
 
-struct WorkProgress: Codable, Hashable, Sendable {
+nonisolated struct WorkProgress: Codable, Hashable, Sendable {
     let done: Int
     let inProgress: Int
     let todo: Int
@@ -41,7 +41,7 @@ struct WorkProgress: Codable, Hashable, Sendable {
     var fractionInProgress: Double { total == 0 ? 0 : Double(inProgress) / Double(total) }
 }
 
-struct Release: Codable, Hashable, Identifiable, Sendable {
+nonisolated struct Release: Codable, Hashable, Identifiable, Sendable {
     let id: String
     let name: String
     let description: String?
@@ -53,7 +53,7 @@ struct Release: Codable, Hashable, Identifiable, Sendable {
     let sequence: Int
 }
 
-struct IncrementSummary: Codable, Hashable, Identifiable, Sendable {
+nonisolated struct IncrementSummary: Codable, Hashable, Identifiable, Sendable {
     let key: String
     let summary: String
     let status: StatusRef
@@ -68,7 +68,7 @@ struct IncrementSummary: Codable, Hashable, Identifiable, Sendable {
 
 /// The TS type is `Release & {...}`; flattening it here keeps decoding trivial and
 /// `release` gives back the shared shape where views only need the release fields.
-struct ProgramRelease: Codable, Hashable, Identifiable, Sendable {
+nonisolated struct ProgramRelease: Codable, Hashable, Identifiable, Sendable {
     let id: String
     let name: String
     let description: String?
@@ -88,7 +88,7 @@ struct ProgramRelease: Codable, Hashable, Identifiable, Sendable {
     }
 }
 
-struct ProgramOverview: Codable, Hashable, Sendable {
+nonisolated struct ProgramOverview: Codable, Hashable, Sendable {
     let project: DeliveryProject
     let releases: [ProgramRelease]
     let unscheduled: [IncrementSummary]
@@ -96,7 +96,7 @@ struct ProgramOverview: Codable, Hashable, Sendable {
     let generatedAt: String
 }
 
-struct ItemSchedule: Codable, Hashable, Sendable {
+nonisolated struct ItemSchedule: Codable, Hashable, Sendable {
     let earliestStart: Int
     let earliestFinish: Int
     let latestStart: Int
@@ -107,7 +107,7 @@ struct ItemSchedule: Codable, Hashable, Sendable {
     let downstreamTeams: [String]
 }
 
-struct WorkItem: Codable, Hashable, Identifiable, Sendable {
+nonisolated struct WorkItem: Codable, Hashable, Identifiable, Sendable {
     let key: String
     let summary: String
     let type: String
@@ -126,11 +126,11 @@ struct WorkItem: Codable, Hashable, Identifiable, Sendable {
     var id: String { key }
 }
 
-enum DependencyKind: String, Codable, Hashable, Sendable {
+nonisolated enum DependencyKind: String, Codable, Hashable, Sendable {
     case item, epic
 }
 
-struct Dependency: Codable, Hashable, Sendable {
+nonisolated struct Dependency: Codable, Hashable, Sendable {
     let from: String
     let to: String
     let kind: DependencyKind
@@ -140,7 +140,7 @@ struct Dependency: Codable, Hashable, Sendable {
     let critical: Bool
 }
 
-struct TeamEpic: Codable, Hashable, Identifiable, Sendable {
+nonisolated struct TeamEpic: Codable, Hashable, Identifiable, Sendable {
     let key: String
     let summary: String
     let status: StatusRef
@@ -160,7 +160,7 @@ struct TeamEpic: Codable, Hashable, Identifiable, Sendable {
     var id: String { key }
 }
 
-struct Increment: Codable, Hashable, Identifiable, Sendable {
+nonisolated struct Increment: Codable, Hashable, Identifiable, Sendable {
     let key: String
     let summary: String
     let status: StatusRef
@@ -178,7 +178,7 @@ struct Increment: Codable, Hashable, Identifiable, Sendable {
     var id: String { key }
 }
 
-struct TeamSummary: Codable, Hashable, Identifiable, Sendable {
+nonisolated struct TeamSummary: Codable, Hashable, Identifiable, Sendable {
     let name: String
     let epicKeys: [String]
     let progress: WorkProgress
@@ -194,7 +194,7 @@ struct TeamSummary: Codable, Hashable, Identifiable, Sendable {
     var id: String { name }
 }
 
-struct BlockerEpic: Codable, Hashable, Identifiable, Sendable {
+nonisolated struct BlockerEpic: Codable, Hashable, Identifiable, Sendable {
     let epicKey: String
     let team: String
     let remaining: Int
@@ -209,7 +209,7 @@ struct BlockerEpic: Codable, Hashable, Identifiable, Sendable {
 
 /// Unknown kinds decode as `.other` so a new warning type on the server degrades to
 /// a generic row instead of failing the whole milestone decode.
-enum WarningKind: Hashable, Sendable, Codable {
+nonisolated enum WarningKind: Hashable, Sendable, Codable {
     case cycle
     case undeclaredDependency
     case unbackedDependency
@@ -247,19 +247,19 @@ enum WarningKind: Hashable, Sendable, Codable {
     }
 }
 
-struct MilestoneWarning: Codable, Hashable, Sendable {
+nonisolated struct MilestoneWarning: Codable, Hashable, Sendable {
     let kind: WarningKind
     let message: String
     let keys: [String]
 }
 
-struct CriticalPath: Codable, Hashable, Sendable {
+nonisolated struct CriticalPath: Codable, Hashable, Sendable {
     let keys: [String]
     let criticalKeys: [String]
     let length: Int
 }
 
-struct MilestoneDetail: Codable, Hashable, Sendable {
+nonisolated struct MilestoneDetail: Codable, Hashable, Sendable {
     let project: DeliveryProject
     let release: Release
     let increments: [Increment]
@@ -275,9 +275,27 @@ struct MilestoneDetail: Codable, Hashable, Sendable {
     let generatedAt: String
 }
 
+nonisolated extension MilestoneDetail {
+    /// Everything but `generatedAt`, which the server stamps fresh on every response.
+    func hasSameContent(as other: MilestoneDetail) -> Bool {
+        project == other.project && release == other.release && progress == other.progress
+            && criticalPath == other.criticalPath && readyNow == other.readyNow
+            && items == other.items && dependencies == other.dependencies && epics == other.epics
+            && increments == other.increments && teams == other.teams
+            && blockerEpics == other.blockerEpics && warnings == other.warnings
+    }
+}
+
+nonisolated extension ProgramOverview {
+    func hasSameContent(as other: ProgramOverview) -> Bool {
+        project == other.project && releases == other.releases
+            && unscheduled == other.unscheduled && warnings == other.warnings
+    }
+}
+
 /// Key → value lookups over a milestone, built once per payload rather than on every
 /// view access — the swimlane, inspector and lists all resolve keys constantly.
-struct MilestoneIndex: Sendable {
+nonisolated struct MilestoneIndex: Sendable {
     let itemsByKey: [String: WorkItem]
     let epicsByKey: [String: TeamEpic]
     let incrementsByKey: [String: Increment]

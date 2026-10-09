@@ -2,7 +2,7 @@ import Foundation
 
 /// Adjacency over a milestone's dependencies, for the "what does this item hold up /
 /// what holds it up" chain that hover and selection highlight.
-struct DependencyGraph: Sendable {
+nonisolated struct DependencyGraph: Sendable {
     private let successors: [String: [String]]
     private let predecessors: [String: [String]]
 
@@ -37,7 +37,7 @@ struct DependencyGraph: Sendable {
     }
 }
 
-struct DependencyChain: Hashable, Sendable {
+nonisolated struct DependencyChain: Hashable, Sendable {
     let focus: String
     let upstream: Set<String>
     let downstream: Set<String>

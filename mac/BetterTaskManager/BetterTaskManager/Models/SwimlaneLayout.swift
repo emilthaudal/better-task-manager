@@ -1,17 +1,17 @@
 import CoreGraphics
 import Foundation
 
-enum SwimlaneGrouping: String, CaseIterable, Hashable, Sendable {
+nonisolated enum SwimlaneGrouping: String, CaseIterable, Hashable, Sendable {
     case team, epic
 }
 
-struct SwimlaneOptions: Hashable, Sendable {
+nonisolated struct SwimlaneOptions: Hashable, Sendable {
     var grouping: SwimlaneGrouping = .team
     var showDone = false
     var showExternal = true
 }
 
-struct SwimlaneMetrics: Hashable, Sendable {
+nonisolated struct SwimlaneMetrics: Hashable, Sendable {
     var laneHeaderWidth: CGFloat = 176
     var columnHeaderHeight: CGFloat = 40
     var cardWidth: CGFloat = 228
@@ -29,7 +29,7 @@ struct SwimlaneMetrics: Hashable, Sendable {
 
 /// Every position in the critical-path swimlane, computed in one pass so the lane
 /// backgrounds, cards, slack bars and edges can't disagree about where a card is.
-struct SwimlaneLayout: Sendable {
+nonisolated struct SwimlaneLayout: Sendable {
     struct Lane: Identifiable, Hashable, Sendable {
         let id: String
         let title: String
@@ -85,13 +85,13 @@ struct SwimlaneLayout: Sendable {
     static let empty = SwimlaneLayout(lanes: [], columns: [], nodes: [], edges: [], size: .zero, nodesByKey: [:])
 }
 
-private struct Placement {
+nonisolated private struct Placement {
     let item: WorkItem
     let laneID: String
     let column: Int
 }
 
-func buildSwimlaneLayout(
+nonisolated func buildSwimlaneLayout(
     detail: MilestoneDetail,
     options: SwimlaneOptions,
     metrics: SwimlaneMetrics = SwimlaneMetrics()
@@ -228,7 +228,7 @@ func buildSwimlaneLayout(
 
 /// Leaves the card's right edge horizontally and enters the next card's left edge
 /// horizontally — the tangents make a long multi-column edge read as one sweep.
-func makeEdge(dependency: Dependency, from: CGRect, to: CGRect) -> SwimlaneLayout.Edge {
+nonisolated func makeEdge(dependency: Dependency, from: CGRect, to: CGRect) -> SwimlaneLayout.Edge {
     let start = CGPoint(x: from.maxX, y: from.midY)
     let end = CGPoint(x: to.minX, y: to.midY)
     let reach = max((end.x - start.x) * 0.5, 32)
@@ -245,13 +245,13 @@ func makeEdge(dependency: Dependency, from: CGRect, to: CGRect) -> SwimlaneLayou
     )
 }
 
-private func barycenter(of item: WorkItem, placed: [String: CGFloat]) -> CGFloat? {
+nonisolated private func barycenter(of item: WorkItem, placed: [String: CGFloat]) -> CGFloat? {
     let ys = item.blockedBy.compactMap { placed[$0] }
     guard !ys.isEmpty else { return nil }
     return ys.reduce(0, +) / CGFloat(ys.count)
 }
 
-private struct LaneSeed {
+nonisolated private struct LaneSeed {
     let id: String
     let title: String
     let subtitle: String?
@@ -266,7 +266,7 @@ private struct LaneSeed {
 /// Lanes that carry the critical path come first, in the order the path reaches
 /// them, so the path reads top-down as well as left-to-right; work outside the
 /// milestone sinks to the bottom.
-private func orderedLanes(
+nonisolated private func orderedLanes(
     placements: [Placement],
     grouping: SwimlaneGrouping,
     epicsByKey: [String: TeamEpic]

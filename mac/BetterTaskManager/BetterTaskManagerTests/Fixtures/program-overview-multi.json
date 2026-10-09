@@ -387,6 +387,415 @@
         "todo": 0,
         "total": 0
       }
+    },
+    {
+      "id": "10145",
+      "name": "Stress Test",
+      "description": "Synthetic six-team milestone for performance work",
+      "released": false,
+      "archived": false,
+      "startDate": null,
+      "releaseDate": "2027-06-01",
+      "overdue": false,
+      "sequence": 5,
+      "increments": [
+        {
+          "key": "LAD-100",
+          "summary": "invoices · Stress",
+          "status": {
+            "name": "In Progress",
+            "category": "indeterminate"
+          },
+          "team": null,
+          "capabilities": [
+            {
+              "key": "LA-200",
+              "summary": "Capability 1",
+              "status": {
+                "name": "To Do",
+                "category": "new"
+              }
+            }
+          ],
+          "teamEpics": [
+            {
+              "key": "PLT-1000",
+              "summary": "Platform wave picks",
+              "status": {
+                "name": "To Do",
+                "category": "new"
+              }
+            },
+            {
+              "key": "AS-1003",
+              "summary": "Aftersales customer sites",
+              "status": {
+                "name": "To Do",
+                "category": "new"
+              }
+            },
+            {
+              "key": "PAY-1002",
+              "summary": "Payments customer sites",
+              "status": {
+                "name": "To Do",
+                "category": "new"
+              }
+            }
+          ],
+          "blocks": [],
+          "blockedBy": []
+        },
+        {
+          "key": "LAD-101",
+          "summary": "customer sites · Stress",
+          "status": {
+            "name": "In Progress",
+            "category": "indeterminate"
+          },
+          "team": null,
+          "capabilities": [
+            {
+              "key": "LA-201",
+              "summary": "Capability 2",
+              "status": {
+                "name": "To Do",
+                "category": "new"
+              }
+            }
+          ],
+          "teamEpics": [
+            {
+              "key": "CHK-1000",
+              "summary": "Checkout price agreements",
+              "status": {
+                "name": "To Do",
+                "category": "new"
+              }
+            },
+            {
+              "key": "FUL-1003",
+              "summary": "Fulfilment search facets",
+              "status": {
+                "name": "To Do",
+                "category": "new"
+              }
+            },
+            {
+              "key": "SRCH-1002",
+              "summary": "Search search facets",
+              "status": {
+                "name": "To Do",
+                "category": "new"
+              }
+            }
+          ],
+          "blocks": [],
+          "blockedBy": []
+        },
+        {
+          "key": "LAD-102",
+          "summary": "order lines · Stress",
+          "status": {
+            "name": "To Do",
+            "category": "new"
+          },
+          "team": null,
+          "capabilities": [
+            {
+              "key": "LA-202",
+              "summary": "Capability 3",
+              "status": {
+                "name": "To Do",
+                "category": "new"
+              }
+            }
+          ],
+          "teamEpics": [
+            {
+              "key": "PLT-1001",
+              "summary": "Platform search facets",
+              "status": {
+                "name": "To Do",
+                "category": "new"
+              }
+            },
+            {
+              "key": "AS-1000",
+              "summary": "Aftersales search facets",
+              "status": {
+                "name": "To Do",
+                "category": "new"
+              }
+            },
+            {
+              "key": "PAY-1003",
+              "summary": "Payments order lines",
+              "status": {
+                "name": "To Do",
+                "category": "new"
+              }
+            }
+          ],
+          "blocks": [],
+          "blockedBy": []
+        },
+        {
+          "key": "LAD-103",
+          "summary": "invoices · Stress",
+          "status": {
+            "name": "To Do",
+            "category": "new"
+          },
+          "team": null,
+          "capabilities": [
+            {
+              "key": "LA-203",
+              "summary": "Capability 4",
+              "status": {
+                "name": "To Do",
+                "category": "new"
+              }
+            }
+          ],
+          "teamEpics": [
+            {
+              "key": "CHK-1001",
+              "summary": "Checkout wave picks",
+              "status": {
+                "name": "To Do",
+                "category": "new"
+              }
+            },
+            {
+              "key": "FUL-1000",
+              "summary": "Fulfilment return labels",
+              "status": {
+                "name": "To Do",
+                "category": "new"
+              }
+            },
+            {
+              "key": "SRCH-1003",
+              "summary": "Search order lines",
+              "status": {
+                "name": "To Do",
+                "category": "new"
+              }
+            }
+          ],
+          "blocks": [
+            "LAD-104"
+          ],
+          "blockedBy": []
+        },
+        {
+          "key": "LAD-104",
+          "summary": "price agreements · Stress",
+          "status": {
+            "name": "To Do",
+            "category": "new"
+          },
+          "team": null,
+          "capabilities": [
+            {
+              "key": "LA-204",
+              "summary": "Capability 5",
+              "status": {
+                "name": "To Do",
+                "category": "new"
+              }
+            }
+          ],
+          "teamEpics": [
+            {
+              "key": "PLT-1002",
+              "summary": "Platform quote carts",
+              "status": {
+                "name": "To Do",
+                "category": "new"
+              }
+            },
+            {
+              "key": "AS-1001",
+              "summary": "Aftersales customer sites",
+              "status": {
+                "name": "To Do",
+                "category": "new"
+              }
+            },
+            {
+              "key": "PAY-1000",
+              "summary": "Payments stock reservations",
+              "status": {
+                "name": "To Do",
+                "category": "new"
+              }
+            }
+          ],
+          "blocks": [
+            "LAD-105"
+          ],
+          "blockedBy": [
+            "LAD-103"
+          ]
+        },
+        {
+          "key": "LAD-105",
+          "summary": "wave picks · Stress",
+          "status": {
+            "name": "To Do",
+            "category": "new"
+          },
+          "team": null,
+          "capabilities": [
+            {
+              "key": "LA-205",
+              "summary": "Capability 6",
+              "status": {
+                "name": "To Do",
+                "category": "new"
+              }
+            }
+          ],
+          "teamEpics": [
+            {
+              "key": "CHK-1002",
+              "summary": "Checkout payment terms",
+              "status": {
+                "name": "To Do",
+                "category": "new"
+              }
+            },
+            {
+              "key": "FUL-1001",
+              "summary": "Fulfilment invoices",
+              "status": {
+                "name": "To Do",
+                "category": "new"
+              }
+            },
+            {
+              "key": "SRCH-1000",
+              "summary": "Search price agreements",
+              "status": {
+                "name": "To Do",
+                "category": "new"
+              }
+            }
+          ],
+          "blocks": [],
+          "blockedBy": [
+            "LAD-104"
+          ]
+        },
+        {
+          "key": "LAD-106",
+          "summary": "stock reservations · Stress",
+          "status": {
+            "name": "To Do",
+            "category": "new"
+          },
+          "team": null,
+          "capabilities": [
+            {
+              "key": "LA-206",
+              "summary": "Capability 7",
+              "status": {
+                "name": "To Do",
+                "category": "new"
+              }
+            }
+          ],
+          "teamEpics": [
+            {
+              "key": "PLT-1003",
+              "summary": "Platform delivery drops",
+              "status": {
+                "name": "To Do",
+                "category": "new"
+              }
+            },
+            {
+              "key": "AS-1002",
+              "summary": "Aftersales stock reservations",
+              "status": {
+                "name": "To Do",
+                "category": "new"
+              }
+            },
+            {
+              "key": "PAY-1001",
+              "summary": "Payments price agreements",
+              "status": {
+                "name": "To Do",
+                "category": "new"
+              }
+            }
+          ],
+          "blocks": [],
+          "blockedBy": []
+        },
+        {
+          "key": "LAD-107",
+          "summary": "payment terms · Stress",
+          "status": {
+            "name": "To Do",
+            "category": "new"
+          },
+          "team": null,
+          "capabilities": [
+            {
+              "key": "LA-207",
+              "summary": "Capability 8",
+              "status": {
+                "name": "To Do",
+                "category": "new"
+              }
+            }
+          ],
+          "teamEpics": [
+            {
+              "key": "CHK-1003",
+              "summary": "Checkout wave picks",
+              "status": {
+                "name": "To Do",
+                "category": "new"
+              }
+            },
+            {
+              "key": "FUL-1002",
+              "summary": "Fulfilment stock reservations",
+              "status": {
+                "name": "To Do",
+                "category": "new"
+              }
+            },
+            {
+              "key": "SRCH-1001",
+              "summary": "Search quote carts",
+              "status": {
+                "name": "To Do",
+                "category": "new"
+              }
+            }
+          ],
+          "blocks": [],
+          "blockedBy": []
+        }
+      ],
+      "progress": {
+        "done": 0,
+        "inProgress": 2,
+        "todo": 6,
+        "total": 8
+      },
+      "epicProgress": {
+        "done": 0,
+        "inProgress": 0,
+        "todo": 24,
+        "total": 24
+      }
     }
   ],
   "unscheduled": [
@@ -423,5 +832,5 @@
       ]
     }
   ],
-  "generatedAt": "2026-10-09T19:36:09.558Z"
+  "generatedAt": "2026-10-09T20:37:11.801Z"
 }

@@ -98,7 +98,59 @@ const program = {
   generatedAt: now,
 };
 
+// A deterministic stress milestone: six teams, ~340 items and a dense blocking
+// graph, for measuring swimlane layout and scrolling at realistic program scale.
+let seed = 42;
+const rand = () => ((seed = (seed * 1103515245 + 12345) % 2 ** 31) / 2 ** 31);
+const pick = <T,>(xs: T[]) => xs[Math.floor(rand() * xs.length)];
+const bigTeams = [["PLT", "Platform"], ["CHK", "Checkout"], ["AS", "Aftersales"], ["FUL", "Fulfilment"], ["PAY", "Payments"], ["SRCH", "Search"]] as const;
+const people = ["Mia Holm", "Jonas Berg", "Sara Lind", "Kim Dahl", "Lars Vik", "Ola Nord", "Per Ek", "Ida Sand", null];
+const verbs = ["Model", "API for", "Import of", "UI for", "Events for", "Migration of", "Validation of", "Reporting on", "Sync of", "Caching of"];
+const nouns = ["price agreements", "delivery drops", "quote carts", "wave picks", "payment terms", "search facets", "invoices", "carrier bookings", "stock reservations", "order lines", "customer sites", "return labels"];
+const bigIncrements = Array.from({ length: 8 }, (_, i) => ({
+  key: `LAD-${100 + i}`, summary: `${pick(nouns)} · Stress`, status: st(i < 2 ? "indeterminate" : "new"), team: null,
+  capabilities: [ref(`LA-${200 + i}`, `Capability ${i + 1}`)], teamEpics: [] as ReturnType<typeof ref>[],
+  blocks: i < 7 && rand() < 0.5 ? [`LAD-${101 + i}`] : [], blockedBy: [] as string[],
+}));
+for (const inc of bigIncrements) for (const b of inc.blocks) bigIncrements.find((x) => x.key === b)!.blockedBy.push(inc.key);
+const bigEpics: EpicInput[] = [];
+const bigItems: ItemInput[] = [];
+let order = 0;
+bigTeams.forEach(([prefix, name], t) => {
+  for (let e = 0; e < 4; e++) {
+    const epicKey = `${prefix}-${1000 + e}`;
+    const inc = bigIncrements[(t + e * 2) % bigIncrements.length];
+    inc.teamEpics.push(ref(epicKey, `${name} ${pick(nouns)}`));
+    bigEpics.push({ key: epicKey, summary: `${name} ${pick(nouns)}`, status: st(e === 0 ? "indeterminate" : "new"), team: name, projectKey: prefix, assignee: pick(people), incrementKeys: [inc.key], blocks: [] });
+    const count = 12 + Math.floor(rand() * 4);
+    for (let n = 0; n < count; n++) {
+      const c = rand() < 0.15 ? "done" : rand() < 0.25 ? "indeterminate" : "new";
+      bigItems.push({ key: `${prefix}-${1100 + e * 40 + n}`, summary: `${pick(verbs)} ${pick(nouns)}`, type: "Story", status: st(c), assignee: pick(people), epicKey, team: name, points: null, external: false, blocks: [], order: order++ } as ItemInput & { order: number });
+    }
+  }
+});
+// Edges only run from earlier-generated to later items (a DAG); most stay within the
+// team, roughly a third cross teams, so the critical path hops lanes realistically.
+const ranked = [...bigItems].sort(() => rand() - 0.5).map((item, i) => ({ item, rank: i }));
+for (const { item, rank } of ranked) {
+  const fanOut = rand() < 0.55 ? 1 + Math.floor(rand() * 2) : 0;
+  for (let k = 0; k < fanOut; k++) {
+    const sameTeam = rand() < 0.65;
+    const candidates = ranked.filter((r) => r.rank > rank && r.rank < rank + 40 && (r.item.team === item.team) === sameTeam);
+    if (candidates.length) {
+      const target = pick(candidates).item.key;
+      if (!item.blocks.includes(target)) item.blocks.push(target);
+    }
+  }
+}
+const big = analyzeMilestone({ increments: bigIncrements, epics: bigEpics, items: bigItems.map(({ order: _, ...rest }: any) => rest) });
+const bigRelease = { id: "10145", name: "Stress Test", description: "Synthetic six-team milestone for performance work", released: false, archived: false, startDate: null, releaseDate: "2027-06-01", overdue: false, sequence: 5 };
+const bigDetail = { project: detail.project, release: bigRelease, ...big, generatedAt: now };
+program.releases.push(programRelease(bigRelease, big.increments) as any);
+
 mkdirSync(out, { recursive: true });
+writeFileSync(`${out}/milestone-detail-large.json`, JSON.stringify(bigDetail));
+console.log("large:", big.items.length, "items", big.dependencies.length, "deps, path", big.criticalPath.length);
 writeFileSync(`${out}/milestone-detail-multiteam.json`, JSON.stringify(detail, null, 2));
 writeFileSync(`${out}/program-overview-multi.json`, JSON.stringify(program, null, 2));
 console.log("critical path", r.criticalPath, "teams", r.teams.map((t) => t.name), "warnings", r.warnings.map((w) => w.kind));
