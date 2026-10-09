@@ -7,6 +7,7 @@ import MilestoneInspector from "@/components/milestone/MilestoneInspector";
 import { ErrorState, MilestoneSkeleton, Toolbar } from "@/components/milestone/MilestoneChrome";
 import {
   BlockerEpicsPanel,
+  CriticalChainPanel,
   IncrementsPanel,
   ReadyNowPanel,
   TeamLoadPanel,
@@ -284,6 +285,7 @@ function MilestoneView() {
                     <TeamLoadPanel detail={data} />
                   </div>
                   <div className="flex min-w-0 flex-col gap-8">
+                    <CriticalChainPanel detail={data} onSelect={select} />
                     <WarningsPanel warnings={data.warnings} onSelect={select} />
                     <ReadyNowPanel detail={data} onSelect={select} />
                     <IncrementsPanel detail={data} onSelect={select} />

@@ -1135,6 +1135,7 @@ html.dark .ms {
 }
 .ms-sheet-in { animation: ms-sheet-in 340ms var(--ms-spring) both; }
 .ms-fade-up { animation: ms-fade-up 360ms var(--ms-ease) both; }
+.ms-fade-quick { animation: ms-fade-up 180ms var(--ms-ease) both; }
 
 @keyframes ms-shimmer {
   0% { background-position: -480px 0; }
