@@ -1109,7 +1109,7 @@ html.dark .ms {
 .ms-canvas[data-focus] .ms-edge[data-lit] { stroke-width: 2.5; }
 .ms-canvas[data-filter] .ms-card:not([data-match]) { opacity: 0.2; }
 .ms-canvas[data-filter] .ms-edge { opacity: 0.12; }
-.ms-canvas[data-filter] .ms-card[data-match] { box-shadow: 0 0 0 2px var(--ms-warn), var(--ms-shadow-hover); }
+.ms-canvas[data-filter] .ms-card[data-match]:not([data-selected]) { box-shadow: var(--ms-shadow-hover); }
 
 .ms-tip {
   opacity: 0;

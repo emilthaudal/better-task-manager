@@ -320,7 +320,13 @@ const Minimap = memo(function Minimap({
 
 // ── Timeline ────────────────────────────────────────────────────────────────
 
-export default function CriticalPathTimeline({ detail, laneMode, selectedKey, onSelect, matches }: Props) {
+/**
+ * Memoised: a poll that returns unchanged data keeps the same `detail`
+ * object, so the page's re-render (toolbar status, refresh flag) stops here.
+ */
+export default memo(CriticalPathTimeline);
+
+function CriticalPathTimeline({ detail, laneMode, selectedKey, onSelect, matches }: Props) {
   // Filtering hides lanes without a match; columns stay put so the schedule
   // still reads the same, and non-matching cards in kept lanes are dimmed.
   const base = useMemo(
