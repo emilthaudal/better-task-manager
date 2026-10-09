@@ -43,18 +43,50 @@ enum SidebarItem: Hashable {
 struct MilestoneRootView: View {
     @State private var store = MilestoneStore()
     @State private var selection: SidebarItem?
-    @State private var tab: MilestoneTab = .criticalPath
-    @State private var swimlaneOptions = SwimlaneOptions()
+    @State private var columnVisibility = NavigationSplitViewVisibility.all
+    @SceneStorage("milestoneTab") private var tab: MilestoneTab = .criticalPath
+    @SceneStorage("laneGrouping") private var laneGrouping: SwimlaneGrouping = .team
+    @SceneStorage("showDoneItems") private var showDone = false
+    @SceneStorage("showExternalItems") private var showExternal = true
     @State private var inspected: InspectorTarget?
     @State private var showInspector = false
     @State private var searchText = ""
+    @FocusState private var isSearchFocused: Bool
+    @State private var revealRequest = 0
     @State private var reloadToken = 0
     @SceneStorage("sidebarSelection") private var storedSelection = ""
     @AppStorage(Config.DefaultsKey.deliveryProjectKey) private var deliveryProjectSetting = Config.defaultDeliveryProjectKey
     @AppStorage(Config.DefaultsKey.baseURL) private var baseURLSetting = ""
 
+    /// Lane options persist per window as separate scene-storage values; this stitches
+    /// them back into the one value the swimlane and its menu edit.
+    private var swimlaneOptionsBinding: Binding<SwimlaneOptions> {
+        Binding {
+            SwimlaneOptions(grouping: laneGrouping, showDone: showDone, showExternal: showExternal)
+        } set: { options in
+            laneGrouping = options.grouping
+            showDone = options.showDone
+            showExternal = options.showExternal
+        }
+    }
+
+    private var commandContext: MilestoneCommandContext {
+        // Tabs and lanes only exist on a milestone page, not on its team pages.
+        let onMilestone = if case .milestone = selection { true } else { false }
+        return MilestoneCommandContext(
+            tab: onMilestone ? $tab : nil,
+            options: onMilestone ? swimlaneOptionsBinding : nil,
+            milestones: store.program?.releases.map { ($0.id, $0.name) } ?? [],
+            selectedMilestoneID: selection?.milestoneID,
+            isRefreshing: store.isRefreshing,
+            show: { selection = $0 },
+            refresh: { Task { await store.refresh(milestoneID: selection?.milestoneID) } },
+            focusSearch: { isSearchFocused = true }
+        )
+    }
+
     var body: some View {
-        NavigationSplitView {
+        NavigationSplitView(columnVisibility: $columnVisibility) {
             MilestoneSidebar(store: store, selection: $selection)
                 .navigationSplitViewColumnWidth(min: 230, ideal: 270, max: 340)
         } detail: {
@@ -65,10 +97,13 @@ struct MilestoneRootView: View {
                 }
         }
         .searchable(text: $searchText, placement: .toolbar, prompt: "Filter items, epics, people")
+        .searchFocused($isSearchFocused)
+        .onSubmit(of: .search) { jumpToFirstSearchMatch() }
         .toolbar { toolbarContent }
         .environment(\.milestoneNavigator, navigator)
         .environment(\.jiraSiteURL, store.siteURL)
-        .frame(minWidth: 1000, minHeight: 640)
+        .focusedSceneValue(\.milestoneCommands, commandContext)
+        .frame(minWidth: 900, minHeight: 600)
         .task(id: PollKey(milestoneID: selection?.milestoneID, token: reloadToken, project: deliveryProjectSetting, server: baseURLSetting)) {
             await store.runPollingLoop(milestoneID: selection?.milestoneID)
         }
@@ -88,11 +123,11 @@ struct MilestoneRootView: View {
                     : key.hasPrefix("increment:") ? .increment(String(key.dropFirst(10))) : .item(key)
                 showInspector = true
             }
-            if defaults.bool(forKey: "BTMShowDone") { swimlaneOptions.showDone = true }
+            if defaults.bool(forKey: "BTMShowDone") { showDone = true }
             if let appearance = defaults.string(forKey: "BTMAppearance") {
                 NSApp.appearance = NSAppearance(named: appearance == "dark" ? .darkAqua : .aqua)
             }
-            if defaults.string(forKey: "BTMLanes") == "epic" { swimlaneOptions.grouping = .epic }
+            if let lanes = defaults.string(forKey: "BTMLanes").flatMap(SwimlaneGrouping.init(rawValue:)) { laneGrouping = lanes }
         }
         .onChange(of: selection) { old, new in
             storedSelection = new?.storageValue ?? ""
@@ -126,12 +161,15 @@ struct MilestoneRootView: View {
                     showInspector = true
                 }
             },
+            select: { target in inspected = target },
+            clearSelection: { withAnimation(.smooth) { inspected = nil } },
             showTeam: { name in
                 guard let id = selection?.milestoneID else { return }
                 selection = .team(milestone: id, name: name)
             },
             showMilestone: { id in selection = .milestone(id) },
-            inspected: inspected
+            inspected: inspected,
+            revealRequest: revealRequest
         )
     }
 
@@ -146,7 +184,7 @@ struct MilestoneRootView: View {
             }
         case let .milestone(id):
             if let loaded = store.milestone(id) {
-                MilestoneDetailView(loaded: loaded, tab: $tab, options: $swimlaneOptions, searchText: searchText)
+                MilestoneDetailView(loaded: loaded, tab: $tab, options: swimlaneOptionsBinding, searchText: searchText)
             } else {
                 loadingOrError(store.state(ofMilestone: id), what: milestoneName(id))
             }
@@ -163,6 +201,29 @@ struct MilestoneRootView: View {
             BoardView(project: project) { selection = .boards }
                 .id(project.key)
         }
+    }
+
+    /// Return in the filter field selects the most important matching card — the
+    /// swimlane then scrolls to it — so search works as "go to", not only as a dimmer.
+    private func jumpToFirstSearchMatch() {
+        guard case let .milestone(id) = selection, tab == .criticalPath, !searchText.isEmpty,
+              let loaded = store.milestone(id) else { return }
+        let matches = loaded.detail.items.filter { item in
+            (item.schedule != nil || showDone) && (showExternal || !item.external)
+                && matchesSearch(searchText, item.key, item.summary, item.assignee, item.team, item.epicKey,
+                                 item.epicKey.flatMap { loaded.index.epicsByKey[$0]?.summary })
+        }
+        let best = matches.min { a, b in
+            let critA = a.schedule?.critical == true, critB = b.schedule?.critical == true
+            if critA != critB { return critA }
+            return (a.schedule?.earliestStart ?? .max) < (b.schedule?.earliestStart ?? .max)
+        }
+        guard let best else { return }
+        withAnimation(.smooth) {
+            inspected = .item(best.key)
+            showInspector = true
+        }
+        revealRequest += 1
     }
 
     private func milestoneName(_ id: String) -> String {
@@ -185,14 +246,7 @@ struct MilestoneRootView: View {
                     .buttonStyle(.glass)
             }
         } else {
-            VStack(spacing: 12) {
-                ProgressView().controlSize(.large)
-                Text("Analysing \(what)…").foregroundStyle(.secondary)
-                Text("Walking increments, team epics and blocking links in Jira.")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            MilestoneSkeleton(title: what)
         }
     }
 
@@ -204,7 +258,6 @@ struct MilestoneRootView: View {
             } label: {
                 Label("Refresh", systemImage: "arrow.clockwise")
             }
-            .keyboardShortcut("r", modifiers: .command)
             .help("Refresh from Jira (⌘R)")
             .disabled(store.isRefreshing)
             .symbolEffect(.rotate, isActive: store.isRefreshing)

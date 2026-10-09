@@ -118,7 +118,7 @@ final class APIClient {
 
     func fetchProgram(project: String) async throws -> ProgramOverview {
         let request = makeRequest(path: "/api/jira/milestones", queryItems: [URLQueryItem(name: "project", value: project)])
-        return try JSONDecoder().decode(ProgramOverview.self, from: try await send(request))
+        return try await Self.decodeOffMain(ProgramOverview.self, from: try await send(request))
     }
 
     func fetchMilestone(versionID: String, project: String) async throws -> MilestoneDetail {
@@ -126,7 +126,14 @@ final class APIClient {
             path: "/api/jira/milestones/\(versionID)",
             queryItems: [URLQueryItem(name: "project", value: project)]
         )
-        return try JSONDecoder().decode(MilestoneDetail.self, from: try await send(request))
+        return try await Self.decodeOffMain(MilestoneDetail.self, from: try await send(request))
+    }
+
+    /// Milestone payloads run to hundreds of kilobytes; decoding them on the main actor
+    /// (this module's default isolation) would hitch scrolling on every 60s poll.
+    @concurrent
+    private nonisolated static func decodeOffMain<T: Decodable & Sendable>(_ type: T.Type, from data: Data) async throws -> T {
+        try JSONDecoder().decode(T.self, from: data)
     }
 
     func fetchSiteURL() async throws -> URL? {

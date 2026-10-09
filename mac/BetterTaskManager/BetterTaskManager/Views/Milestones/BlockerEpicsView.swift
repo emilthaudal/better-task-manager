@@ -13,7 +13,7 @@ struct BlockerEpicsView: View {
         }
         if loaded.detail.blockerEpics.isEmpty {
             ContentUnavailableView(
-                "No epic is blocking another",
+                "No Epic Is Blocking Another",
                 systemImage: "checkmark.seal",
                 description: Text("None of the remaining work in this milestone gates an epic outside its own.")
             )
@@ -52,10 +52,11 @@ private struct BlockerEpicRow: View {
         ContentCard {
             HStack(alignment: .top, spacing: 16) {
                 Text("\(rank)")
-                    .font(.title3.weight(.bold).monospacedDigit())
-                    .foregroundStyle(blocker.onCriticalPath ? .white : .primary)
-                    .frame(width: 34, height: 34)
-                    .background(blocker.onCriticalPath ? AnyShapeStyle(Color.red.gradient) : AnyShapeStyle(.fill.tertiary), in: Circle())
+                    .font(.headline.monospacedDigit())
+                    .foregroundStyle(blocker.onCriticalPath ? Color.red : Color.secondary)
+                    .frame(width: 30, height: 30)
+                    .background(blocker.onCriticalPath ? AnyShapeStyle(Color.red.opacity(0.12)) : AnyShapeStyle(.fill.tertiary), in: Circle())
+                    .accessibilityLabel("Rank \(rank)")
 
                 VStack(alignment: .leading, spacing: 10) {
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
@@ -100,10 +101,15 @@ private struct BlockerEpicRow: View {
                 }
             }
         }
-        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(selected ? Color.accentColor : .clear, lineWidth: 2))
-        .scaleEffect(isHovered ? 1.004 : 1)
+        .overlay {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .strokeBorder(selected ? Color.accentColor : Color.primary.opacity(isHovered ? 0.16 : 0), lineWidth: selected ? 2 : 1)
+        }
         .onHover { hovering in withAnimation(.easeOut(duration: 0.15)) { isHovered = hovering } }
         .onTapGesture { navigator.inspect(.epic(blocker.epicKey)) }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("\(blocker.epicKey), \(epic?.summary ?? ""), holds up \(pluralized(blocker.downstreamItems, "item"))")
+        .accessibilityAction { navigator.inspect(.epic(blocker.epicKey)) }
     }
 
     private func metric(_ value: String, _ label: String, _ symbol: String) -> some View {

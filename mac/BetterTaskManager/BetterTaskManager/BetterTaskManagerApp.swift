@@ -21,6 +21,7 @@ struct BetterTaskManagerApp: App {
             SidebarCommands()
             InspectorCommands()
             ToolbarCommands()
+            MilestoneCommands()
         }
 
         Settings {

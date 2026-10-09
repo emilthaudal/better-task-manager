@@ -1,21 +1,23 @@
 import CoreGraphics
 import Foundation
 
-enum SwimlaneGrouping: String, CaseIterable, Hashable, Sendable {
+nonisolated enum SwimlaneGrouping: String, CaseIterable, Hashable, Sendable {
     case team, epic
 }
 
-struct SwimlaneOptions: Hashable, Sendable {
+nonisolated struct SwimlaneOptions: Hashable, Sendable {
     var grouping: SwimlaneGrouping = .team
     var showDone = false
     var showExternal = true
 }
 
-struct SwimlaneMetrics: Hashable, Sendable {
+nonisolated struct SwimlaneMetrics: Hashable, Sendable {
     var laneHeaderWidth: CGFloat = 176
     var columnHeaderHeight: CGFloat = 40
     var cardWidth: CGFloat = 228
-    var cardHeight: CGFloat = 82
+    /// Tall enough for a two-line summary between the key row and the footer —
+    /// Jira summaries often share a long prefix ("rma-integration-service: …").
+    var cardHeight: CGFloat = 94
     /// Wide enough for an edge to curve between columns without hugging the cards.
     var columnGap: CGFloat = 64
     var rowGap: CGFloat = 16
@@ -23,13 +25,17 @@ struct SwimlaneMetrics: Hashable, Sendable {
     var laneGap: CGFloat = 10
     var trailingPadding: CGFloat = 40
     var slackBarHeight: CGFloat = 4
+    /// Cards shown per lane/column cell before the rest fold into a "more" pill. A
+    /// large milestone has dozens of unblocked items per team in "Now", which would
+    /// otherwise make each lane thousands of points tall.
+    var cellLimit = 8
 
     var columnPitch: CGFloat { cardWidth + columnGap }
 }
 
 /// Every position in the critical-path swimlane, computed in one pass so the lane
 /// backgrounds, cards, slack bars and edges can't disagree about where a card is.
-struct SwimlaneLayout: Sendable {
+nonisolated struct SwimlaneLayout: Sendable {
     struct Lane: Identifiable, Hashable, Sendable {
         let id: String
         let title: String
@@ -39,6 +45,18 @@ struct SwimlaneLayout: Sendable {
         let remaining: Int
         let critical: Int
         let frame: CGRect
+        /// Some cell in this lane holds more cards than the cell limit.
+        var isCollapsible = false
+        var isExpanded = false
+    }
+
+    /// Stands in for the cards folded away in one lane/column cell.
+    struct Overflow: Identifiable, Hashable, Sendable {
+        let laneID: String
+        let column: Int
+        let hiddenCount: Int
+        let frame: CGRect
+        var id: String { "\(laneID)#\(column)" }
     }
 
     struct Column: Identifiable, Hashable, Sendable {
@@ -81,20 +99,27 @@ struct SwimlaneLayout: Sendable {
     let edges: [SwimlaneLayout.Edge]
     let size: CGSize
     let nodesByKey: [String: Node]
+    var overflows: [Overflow] = []
+    /// Folded-away card → its lane, so selecting one can expand the lane first.
+    var hiddenLaneByKey: [String: String] = [:]
+    /// Cards per column including folded ones, for the column headers.
+    var columnCounts: [Int] = []
 
     static let empty = SwimlaneLayout(lanes: [], columns: [], nodes: [], edges: [], size: .zero, nodesByKey: [:])
 }
 
-private struct Placement {
+nonisolated private struct Placement {
     let item: WorkItem
     let laneID: String
     let column: Int
 }
 
-func buildSwimlaneLayout(
+nonisolated func buildSwimlaneLayout(
     detail: MilestoneDetail,
     options: SwimlaneOptions,
-    metrics: SwimlaneMetrics = SwimlaneMetrics()
+    metrics: SwimlaneMetrics = SwimlaneMetrics(),
+    expandedLanes: Set<String> = [],
+    pinnedKey: String? = nil
 ) -> SwimlaneLayout {
     let epicsByKey = Dictionary(detail.epics.map { ($0.key, $0) }, uniquingKeysWith: { first, _ in first })
 
@@ -128,12 +153,40 @@ func buildSwimlaneLayout(
     // Lane heights depend only on how many cards share a (lane, column) cell.
     var cellCounts: [String: [Int: Int]] = [:]
     for placement in placements { cellCounts[placement.laneID, default: [:]][placement.column, default: 0] += 1 }
+    let limit = max(metrics.cellLimit, 1)
+    let collapsibleLanes = Set(cellCounts.filter { $0.value.values.contains { $0 > limit } }.keys)
+    let isCollapsed: (String) -> Bool = { collapsibleLanes.contains($0) && !expandedLanes.contains($0) }
+
+    // A folded cell keeps its most important cards: critical first, then the ones
+    // that unblock the most. Everything else waits behind the "more" pill.
+    var hiddenKeys: Set<String> = []
+    for members in Dictionary(grouping: placements, by: { "\($0.laneID)#\($0.column)" }).values where members.count > limit {
+        guard let lane = members.first?.laneID, isCollapsed(lane) else { continue }
+        var ranked = members.sorted { a, b in
+            let critA = a.item.schedule?.critical ?? false, critB = b.item.schedule?.critical ?? false
+            if critA != critB { return critA }
+            let downA = a.item.schedule?.downstream ?? 0, downB = b.item.schedule?.downstream ?? 0
+            if downA != downB { return downA > downB }
+            let linkedA = !(a.item.blocks.isEmpty && a.item.blockedBy.isEmpty)
+            let linkedB = !(b.item.blocks.isEmpty && b.item.blockedBy.isEmpty)
+            if linkedA != linkedB { return linkedA }
+            return a.item.key.localizedStandardCompare(b.item.key) == .orderedAscending
+        }
+        // The selected card always stays on screen — folding it away would strand
+        // keyboard navigation and the chain highlight on a card with no frame.
+        if let pinnedKey, let at = ranked.firstIndex(where: { $0.item.key == pinnedKey }), at >= limit {
+            ranked.insert(ranked.remove(at: at), at: limit - 1)
+        }
+        hiddenKeys.formUnion(ranked.dropFirst(limit).map(\.item.key))
+    }
 
     var laneFrames: [String: CGRect] = [:]
     var y = metrics.columnHeaderHeight
     let contentWidth = metrics.laneHeaderWidth + CGFloat(columnCount) * metrics.columnPitch - metrics.columnGap + metrics.trailingPadding
     for lane in lanes {
-        let rows = max(cellCounts[lane.id]?.values.max() ?? 1, 1)
+        let tallest = max(cellCounts[lane.id]?.values.max() ?? 1, 1)
+        // A folded lane shows `limit` cards plus one row for the pill.
+        let rows = isCollapsed(lane.id) ? min(tallest, limit + 1) : tallest
         let height = metrics.lanePadding * 2 + CGFloat(rows) * metrics.cardHeight + CGFloat(rows - 1) * metrics.rowGap
         laneFrames[lane.id] = CGRect(x: 0, y: y, width: contentWidth, height: height)
         y += height + metrics.laneGap
@@ -146,11 +199,26 @@ func buildSwimlaneLayout(
     // near the cards that block it — that keeps edges short and mostly horizontal.
     var rowCenterY: [String: CGFloat] = [:]
     var nodes: [SwimlaneLayout.Node] = []
+    var overflows: [SwimlaneLayout.Overflow] = []
     let byColumn = Dictionary(grouping: placements, by: \.column)
     for column in 0..<columnCount {
         let cells = Dictionary(grouping: byColumn[column] ?? [], by: \.laneID)
-        for (lane, members) in cells {
+        for (lane, allMembers) in cells {
             guard let laneFrame = laneFrames[lane] else { continue }
+            let members = allMembers.filter { !hiddenKeys.contains($0.item.key) }
+            if members.count < allMembers.count {
+                overflows.append(SwimlaneLayout.Overflow(
+                    laneID: lane,
+                    column: column,
+                    hiddenCount: allMembers.count - members.count,
+                    frame: CGRect(
+                        x: columnX(column),
+                        y: laneFrame.minY + metrics.lanePadding + CGFloat(members.count) * (metrics.cardHeight + metrics.rowGap),
+                        width: metrics.cardWidth,
+                        height: metrics.cardHeight * 0.5
+                    )
+                ))
+            }
             let sorted = members.sorted { a, b in
                 let critA = a.item.schedule?.critical ?? false
                 let critB = b.item.schedule?.critical ?? false
@@ -213,7 +281,15 @@ func buildSwimlaneLayout(
 
     let laneModels = lanes.map { lane in
         SwimlaneLayout.Lane(id: lane.id, title: lane.title, subtitle: lane.subtitle, team: lane.team, isExternal: lane.isExternal,
-             remaining: lane.remaining, critical: lane.critical, frame: laneFrames[lane.id] ?? .zero)
+                            remaining: lane.remaining, critical: lane.critical, frame: laneFrames[lane.id] ?? .zero,
+                            isCollapsible: collapsibleLanes.contains(lane.id), isExpanded: expandedLanes.contains(lane.id))
+    }
+
+    var hiddenLaneByKey: [String: String] = [:]
+    var columnCounts = Array(repeating: 0, count: columnCount)
+    for placement in placements {
+        columnCounts[placement.column] += 1
+        if hiddenKeys.contains(placement.item.key) { hiddenLaneByKey[placement.item.key] = placement.laneID }
     }
 
     return SwimlaneLayout(
@@ -222,13 +298,16 @@ func buildSwimlaneLayout(
         nodes: nodes,
         edges: edges,
         size: CGSize(width: contentWidth, height: contentHeight),
-        nodesByKey: nodesByKey
+        nodesByKey: nodesByKey,
+        overflows: overflows.sorted { $0.id < $1.id },
+        hiddenLaneByKey: hiddenLaneByKey,
+        columnCounts: columnCounts
     )
 }
 
 /// Leaves the card's right edge horizontally and enters the next card's left edge
 /// horizontally — the tangents make a long multi-column edge read as one sweep.
-func makeEdge(dependency: Dependency, from: CGRect, to: CGRect) -> SwimlaneLayout.Edge {
+nonisolated func makeEdge(dependency: Dependency, from: CGRect, to: CGRect) -> SwimlaneLayout.Edge {
     let start = CGPoint(x: from.maxX, y: from.midY)
     let end = CGPoint(x: to.minX, y: to.midY)
     let reach = max((end.x - start.x) * 0.5, 32)
@@ -245,13 +324,13 @@ func makeEdge(dependency: Dependency, from: CGRect, to: CGRect) -> SwimlaneLayou
     )
 }
 
-private func barycenter(of item: WorkItem, placed: [String: CGFloat]) -> CGFloat? {
+nonisolated private func barycenter(of item: WorkItem, placed: [String: CGFloat]) -> CGFloat? {
     let ys = item.blockedBy.compactMap { placed[$0] }
     guard !ys.isEmpty else { return nil }
     return ys.reduce(0, +) / CGFloat(ys.count)
 }
 
-private struct LaneSeed {
+nonisolated private struct LaneSeed {
     let id: String
     let title: String
     let subtitle: String?
@@ -266,7 +345,7 @@ private struct LaneSeed {
 /// Lanes that carry the critical path come first, in the order the path reaches
 /// them, so the path reads top-down as well as left-to-right; work outside the
 /// milestone sinks to the bottom.
-private func orderedLanes(
+nonisolated private func orderedLanes(
     placements: [Placement],
     grouping: SwimlaneGrouping,
     epicsByKey: [String: TeamEpic]

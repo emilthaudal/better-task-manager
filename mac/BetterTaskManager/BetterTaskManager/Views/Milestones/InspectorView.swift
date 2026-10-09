@@ -6,6 +6,7 @@ struct MilestoneInspector: View {
 
     @Environment(\.jiraSiteURL) private var siteURL
     @Environment(\.openURL) private var openURL
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         Group {
@@ -33,12 +34,12 @@ struct MilestoneInspector: View {
                     }
                     .padding(18)
                     .id(target)
-                    .transition(.opacity.combined(with: .move(edge: .trailing)))
+                    .transition(reduceMotion ? .opacity : .opacity.combined(with: .offset(x: 12)))
                 }
                 .animation(.smooth(duration: 0.25), value: target)
             } else {
                 ContentUnavailableView(
-                    "Nothing selected",
+                    "No Selection",
                     systemImage: "sidebar.right",
                     description: Text("Select an item, epic or increment to see its schedule and dependencies.")
                 )
@@ -47,7 +48,7 @@ struct MilestoneInspector: View {
     }
 
     private func missing(_ key: String) -> some View {
-        ContentUnavailableView("\(key) isn't in this milestone", systemImage: "questionmark.square.dashed")
+        ContentUnavailableView("\(key) Isn't in This Milestone", systemImage: "questionmark.square.dashed")
     }
 }
 
@@ -57,10 +58,10 @@ private struct InspectorSection<Content: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(title.uppercased())
-                .font(.caption2.weight(.semibold))
-                .tracking(0.6)
+            Text(title)
+                .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.secondary)
+                .accessibilityAddTraits(.isHeader)
             content
         }
     }

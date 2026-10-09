@@ -32,6 +32,7 @@ struct ProgramOverviewView: View {
                 .padding(.bottom, 32)
                 .frame(maxWidth: 1180, alignment: .leading)
             }
+            .frame(maxWidth: .infinity)
         }
         .navigationTitle("Delivery Program")
         .navigationSubtitle(program.project.name)
@@ -58,8 +59,8 @@ struct ProgramOverviewView: View {
                 StatTile(title: "Milestones", value: "\(program.releases.count)",
                          detail: "\(program.releases.filter(\.released).count) released", systemImage: "flag.pattern.checkered")
                 StatTile(title: "Increments", value: "\(increments.count)",
-                         detail: "\(increments.filter { $0.status.isDone }.count) done", systemImage: "square.stack.3d.up", tint: .purple)
-                StatTile(title: "Team epics", value: "\(epics.total)", detail: "\(epics.done) done", systemImage: "person.2", tint: .teal)
+                         detail: "\(increments.filter { $0.status.isDone }.count) done", systemImage: "square.stack.3d.up")
+                StatTile(title: "Team epics", value: "\(epics.total)", detail: "\(epics.done) done", systemImage: "person.2")
                 if let next {
                     StatTile(title: "Up next", value: next.name, detail: releaseStateLabel(next.state),
                              systemImage: next.state.symbol, tint: next.state.tint)
@@ -68,13 +69,8 @@ struct ProgramOverviewView: View {
         }
         .padding(.horizontal, 28)
         .padding(.top, 24)
-        .padding(.bottom, 22)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background {
-            LinearGradient(colors: [Color.accentColor.opacity(0.16), Color.purple.opacity(0.07), .clear],
-                           startPoint: .topLeading, endPoint: .bottomTrailing)
-                .backgroundExtensionEffect()
-        }
+        .padding(.bottom, 6)
+        .frame(maxWidth: 1180, alignment: .leading)
     }
 
     private var programWarnings: some View {

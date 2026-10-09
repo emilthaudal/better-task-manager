@@ -119,21 +119,19 @@ private struct TeamSidebarRow: View {
         Label {
             HStack(spacing: 6) {
                 Text(team.name).lineLimit(1)
-                Spacer(minLength: 4)
                 if team.criticalItems > 0 {
                     Image(systemName: "flame.fill")
-                        .font(.caption)
+                        .font(.caption2)
                         .foregroundStyle(.red)
                         .help("\(pluralized(team.criticalItems, "item")) on the critical path")
+                        .accessibilityLabel("\(team.criticalItems) critical")
                 }
-                Text("\(team.remaining)")
-                    .font(.caption.monospacedDigit())
-                    .foregroundStyle(.secondary)
-                    .help("\(team.remaining) remaining")
             }
         } icon: {
             Image(systemName: "person.2.fill").foregroundStyle(teamColor(team.name))
         }
+        .badge(team.remaining)
+        .help("\(team.name): \(team.remaining) remaining")
     }
 }
 

@@ -8,23 +8,32 @@ struct TeamLoadView: View {
 
     var body: some View {
         if loaded.detail.teams.isEmpty {
-            ContentUnavailableView("No teams yet", systemImage: "person.2.slash",
+            ContentUnavailableView("No Teams Yet", systemImage: "person.2.slash",
                                    description: Text("No team epics implement this milestone's increments."))
         } else {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    Text("Remaining items per step of the schedule. Red is critical-path work; a tall bar next to an idle team is a candidate to rebalance.")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 380), spacing: 14)], spacing: 14) {
+                    HStack(alignment: .firstTextBaseline, spacing: 16) {
+                        Text("Remaining items per step of the schedule, on one scale so teams compare directly. A tall bar next to an idle team is a candidate to rebalance.")
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Spacer(minLength: 12)
+                        TeamLoadLegend()
+                    }
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 380), spacing: 16)], spacing: 16) {
                         ForEach(sortedTeams) { team in
-                            TeamLoadCard(team: team, length: loaded.detail.criticalPath.length)
+                            TeamLoadCard(team: team, length: loaded.detail.criticalPath.length, sharedMaximum: sharedMaximum)
                         }
                     }
                 }
                 .padding(24)
             }
         }
+    }
+
+    private var sharedMaximum: Int {
+        max(loaded.detail.teams.flatMap(\.loadByLevel).max() ?? 1, 1)
     }
 
     private var sortedTeams: [TeamSummary] {
@@ -38,7 +47,8 @@ struct TeamLoadView: View {
 struct TeamLoadCard: View {
     let team: TeamSummary
     let length: Int
-    var chartHeight: CGFloat = 120
+    var sharedMaximum: Int?
+    var chartHeight: CGFloat = 130
 
     @Environment(\.milestoneNavigator) private var navigator
     @State private var isHovered = false
@@ -56,7 +66,7 @@ struct TeamLoadCard: View {
                         .font(.caption.monospacedDigit())
                         .foregroundStyle(.secondary)
                 }
-                TeamLoadChart(team: team, length: length)
+                TeamLoadChart(team: team, length: length, maximum: sharedMaximum, showsLegend: false)
                     .frame(height: chartHeight)
                 TeamMetricsGrid(team: team)
                 if let insight = loadInsight(team) {
@@ -66,16 +76,40 @@ struct TeamLoadCard: View {
                 }
             }
         }
-        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Color.accentColor.opacity(isHovered ? 0.5 : 0), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Color.primary.opacity(isHovered ? 0.18 : 0), lineWidth: 1))
         .onHover { isHovered = $0 }
         .onTapGesture { navigator.showTeam(team.name) }
         .help("Show \(team.name)")
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction { navigator.showTeam(team.name) }
+    }
+}
+
+struct TeamLoadLegend: View {
+    var body: some View {
+        HStack(spacing: 14) {
+            legendItem("Critical path", .red)
+            legendItem("Other work", Color.gray.opacity(0.45))
+        }
+        .font(.caption)
+        .foregroundStyle(.secondary)
+        .accessibilityElement(children: .combine)
+    }
+
+    private func legendItem(_ title: String, _ color: some ShapeStyle) -> some View {
+        HStack(spacing: 5) {
+            RoundedRectangle(cornerRadius: 2).fill(color).frame(width: 10, height: 10)
+            Text(title)
+        }
     }
 }
 
 struct TeamLoadChart: View {
     let team: TeamSummary
     let length: Int
+    /// Fixed y-domain top so cards side by side share a scale; nil scales to this team.
+    var maximum: Int?
+    var showsLegend = true
 
     private struct Bar: Identifiable {
         let level: Int
@@ -91,15 +125,26 @@ struct TeamLoadChart: View {
             return [Bar(level: level, series: "Critical", count: critical),
                     Bar(level: level, series: "Other", count: max(load - critical, 0))]
         }
+        let top = maximum ?? max(team.loadByLevel.max() ?? 1, 1)
         Chart(bars) { bar in
-            BarMark(x: .value("Step", levelTitle(bar.level)), y: .value("Items", bar.count))
+            // Short tick labels ("Now", "2", "3"…) stay legible at 15+ steps; the
+            // axis title says what the numbers are.
+            BarMark(x: .value("Step", bar.level == 0 ? "Now" : "\(bar.level + 1)"), y: .value("Items", bar.count))
                 .foregroundStyle(by: .value("Kind", bar.series))
                 .cornerRadius(3)
+                .accessibilityLabel(levelTitle(bar.level))
+                .accessibilityValue("\(pluralized(bar.count, "item")), \(bar.series == "Critical" ? "on the critical path" : "with slack")")
         }
-        .chartForegroundStyleScale(["Critical": Color.red.gradient, "Other": teamColor(team.name).opacity(0.55).gradient])
+        // Red against neutral grey stays distinguishable for every team colour and
+        // for red–green colour blindness; team identity lives in the card header.
+        .chartForegroundStyleScale(["Critical": Color.red, "Other": Color.gray.opacity(0.45)])
+        .chartLegend(showsLegend ? .visible : .hidden)
         .chartLegend(position: .top, alignment: .trailing)
+        .chartYScale(domain: 0...top)
         .chartYAxis { AxisMarks(position: .leading, values: .automatic(desiredCount: 3)) }
-        .accessibilityLabel("\(team.name) load by step")
+        .chartXAxisLabel("Step", alignment: .center)
+        .chartYAxisLabel("Items")
+        .accessibilityLabel("\(team.name) remaining items by step")
     }
 }
 
@@ -109,13 +154,13 @@ struct TeamMetricsGrid: View {
     var body: some View {
         Grid(alignment: .leading, horizontalSpacing: 14, verticalSpacing: 8) {
             GridRow {
-                metric("Remaining", team.remaining, "circle.dashed", .blue)
+                metric("Remaining", team.remaining, "circle.dashed", .secondary)
                 metric("Critical", team.criticalItems, "flame.fill", .red)
                 metric("Ready", team.readyNow, "play.circle.fill", .green)
             }
             GridRow {
                 metric("Unassigned", team.unassignedRemaining, "person.crop.circle.badge.questionmark", team.unassignedRemaining > 0 ? .orange : .secondary)
-                metric("Waiting on others", team.waitingOnOtherTeams, "hourglass", team.waitingOnOtherTeams > 0 ? .purple : .secondary)
+                metric("Waiting on others", team.waitingOnOtherTeams, "hourglass", .secondary)
                 metric("Blocking others", team.blockingOtherTeams, "hand.raised.fill", team.blockingOtherTeams > 0 ? .red : .secondary)
             }
         }
@@ -166,7 +211,10 @@ struct TeamDetailView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     HStack(spacing: 12) {
-                        Circle().fill(teamColor(team.name).gradient).frame(width: 18, height: 18)
+                        Image(systemName: "person.2.fill")
+                            .font(.title)
+                            .foregroundStyle(teamColor(team.name))
+                            .accessibilityHidden(true)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(team.name).font(.largeTitle.weight(.bold))
                             Text("\(loaded.detail.release.name) · \(pluralized(team.epicKeys.count, "epic")) · \(team.remaining) remaining")
@@ -189,11 +237,15 @@ struct TeamDetailView: View {
                     itemSection("Ready now", "play.circle.fill", loaded.detail.readyNow.compactMap { loaded.index.itemsByKey[$0] }.filter { $0.team == team.name })
                 }
                 .padding(24)
+                // Rows spanning a full-screen window put the key and its badges a
+                // whole display apart; a readable measure keeps each row scannable.
+                .frame(maxWidth: 1100, alignment: .leading)
+                .frame(maxWidth: .infinity)
             }
             .navigationTitle(team.name)
             .navigationSubtitle(loaded.detail.release.name)
         } else {
-            ContentUnavailableView("Team not in this milestone", systemImage: "person.2.slash")
+            ContentUnavailableView("Team Not in This Milestone", systemImage: "person.2.slash")
         }
     }
 
@@ -312,5 +364,8 @@ struct WorkItemRow: View {
         .onHover { isHovered = $0 }
         .onTapGesture { navigator.inspect(.item(item.key)) }
         .help(item.schedule.map(scheduleSummary) ?? item.status.name)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
+        .accessibilityAction { navigator.inspect(.item(item.key)) }
     }
 }

@@ -43,6 +43,9 @@ struct MilestoneDetailView: View {
                 switch tab {
                 case .criticalPath:
                     CriticalPathView(loaded: loaded, options: $options, searchText: searchText)
+                        // Fresh zoom, scroll and unfolded lanes per milestone: lane ids are
+                        // team names, so another milestone's unfolded lanes would carry over.
+                        .id(loaded.detail.release.id)
                 case .blockers:
                     BlockerEpicsView(loaded: loaded, searchText: searchText)
                 case .teams:
@@ -75,14 +78,6 @@ struct MilestoneDetailView: View {
                 ToolbarItem(placement: .primaryAction) {
                     SwimlaneOptionsMenu(options: $options)
                 }
-            }
-        }
-        .background {
-            // Hidden buttons give each tab a ⌘-number shortcut, like Xcode's navigators.
-            ForEach(Array(MilestoneTab.allCases.enumerated()), id: \.element) { index, value in
-                Button(value.title) { tab = value }
-                    .keyboardShortcut(KeyEquivalent(Character("\(index + 1)")), modifiers: .command)
-                    .hidden()
             }
         }
     }
@@ -126,20 +121,27 @@ private struct MilestoneHeader: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(detail.release.name)
                     .font(.title.weight(.bold))
+                    .lineLimit(1)
                 HStack(spacing: 8) {
                     Badge(text: releaseStateLabel(state), systemImage: state.symbol, tint: state.tint)
+                        .fixedSize()
                     Text("Milestone \(detail.release.sequence + 1) · \(pluralized(detail.increments.count, "increment")) · \(pluralized(detail.teams.count, "team"))")
                         .font(.callout)
                         .foregroundStyle(.secondary)
+                        .lineLimit(1)
                 }
                 if let description = detail.release.description, !description.isEmpty {
                     Text(description).font(.callout).foregroundStyle(.secondary).lineLimit(1)
                 }
             }
+            // The title block claims its width first; the stat tiles shrink, then
+            // drop out, as the window narrows — never the other way round.
+            .layoutPriority(1)
             Spacer(minLength: 12)
             ViewThatFits(in: .horizontal) {
                 tiles(remaining: remaining, compact: false)
                 tiles(remaining: remaining, compact: true)
+                Color.clear.frame(width: 0, height: 0)
             }
         }
     }
@@ -163,11 +165,35 @@ private struct MilestoneHeader: View {
                          systemImage: "exclamationmark.triangle.fill", tint: detail.warnings.isEmpty ? .secondary : .orange)
             }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(StatTileButtonStyle())
     }
 
     private var warningDetail: String {
         let severe = detail.warnings.filter(\.kind.isSevere).count
         return severe == 0 ? "nothing severe" : "\(severe) need attention"
+    }
+}
+
+/// The header tiles that jump to a tab: a hover wash and a press dip, so they read
+/// as controls without dressing them up as buttons.
+private struct StatTileButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        StatTileButton(configuration: configuration)
+    }
+
+    private struct StatTileButton: View {
+        let configuration: Configuration
+        @State private var isHovered = false
+
+        var body: some View {
+            configuration.label
+                .overlay {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Color.primary.opacity(configuration.isPressed ? 0.08 : (isHovered ? 0.04 : 0)))
+                }
+                .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .onHover { isHovered = $0 }
+                .animation(.easeOut(duration: 0.12), value: isHovered)
+        }
     }
 }

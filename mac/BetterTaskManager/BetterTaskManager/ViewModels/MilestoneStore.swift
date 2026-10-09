@@ -3,7 +3,7 @@ import Observation
 
 /// One loaded milestone plus the derived lookups every view needs, built once per
 /// poll instead of on each body evaluation.
-struct LoadedMilestone: Sendable {
+nonisolated struct LoadedMilestone: Sendable {
     let detail: MilestoneDetail
     let index: MilestoneIndex
     let graph: DependencyGraph
@@ -12,6 +12,12 @@ struct LoadedMilestone: Sendable {
         self.detail = detail
         index = MilestoneIndex(detail)
         graph = DependencyGraph(detail.dependencies)
+    }
+
+    /// Building the indexes walks every item and link; keep it off the main actor.
+    @concurrent
+    static func prepare(_ detail: MilestoneDetail) async -> LoadedMilestone {
+        LoadedMilestone(detail)
     }
 }
 
@@ -45,6 +51,9 @@ final class MilestoneStore {
     private let projectKey: () -> String
     private var siteURLResolved = false
     private var inFlight = 0
+    private var epoch = 0
+    private var milestoneRequests: [String: Int] = [:]
+    private var appliedRequests: [String: Int] = [:]
 
     init(
         projectKey: @escaping () -> String = { Config.deliveryProjectKey },
@@ -100,6 +109,7 @@ final class MilestoneStore {
     /// Drops everything loaded for the old delivery project so a project-key change
     /// in Settings can't show one space's milestones under another's name.
     func reset() {
+        epoch += 1
         program = nil
         programState = .idle
         milestones = [:]
@@ -110,8 +120,13 @@ final class MilestoneStore {
 
     private func loadProgram(project: String) async {
         if program == nil { programState = .loading }
+        let epoch = self.epoch
         do {
-            program = try await fetchProgram(project)
+            let next = try await fetchProgram(project)
+            guard epoch == self.epoch else { return }
+            // generatedAt changes on every response; replacing an otherwise identical
+            // payload would invalidate every view that reads the program.
+            if program?.hasSameContent(as: next) != true { program = next }
             programState = .loaded
             backgroundError = nil
         } catch {
@@ -123,11 +138,28 @@ final class MilestoneStore {
     private func loadMilestone(_ id: String?, project: String) async {
         guard let id else { return }
         if milestones[id] == nil { milestoneStates[id] = .loading }
+        // Refreshes overlap (⌘R during a poll, a project switch mid-flight), so a
+        // response is only applied if it's still for the current project and no
+        // later request for this milestone has already landed.
+        let epoch = self.epoch
+        let request = (milestoneRequests[id] ?? 0) + 1
+        milestoneRequests[id] = request
+        let isCurrent = { epoch == self.epoch && request >= (self.appliedRequests[id] ?? 0) }
         do {
             let detail = try await fetchMilestone(id, project)
-            milestones[id] = LoadedMilestone(detail)
+            guard isCurrent() else { return }
+            // An unchanged poll must not hand the swimlane a new value — that would
+            // rebuild its layout (and reset hover state) every 60 seconds for nothing.
+            if milestones[id]?.detail.hasSameContent(as: detail) != true {
+                let prepared = await LoadedMilestone.prepare(detail)
+                guard isCurrent() else { return }
+                TeamColors.register(detail.teams.map(\.name) + detail.items.map(\.team))
+                milestones[id] = prepared
+            }
+            appliedRequests[id] = request
             milestoneStates[id] = .loaded
         } catch {
+            guard epoch == self.epoch else { return }
             if milestones[id] == nil { milestoneStates[id] = .failed(error.localizedDescription) }
             else { backgroundError = error.localizedDescription }
         }

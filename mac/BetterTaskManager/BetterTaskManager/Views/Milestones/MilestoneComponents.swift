@@ -15,10 +15,18 @@ enum InspectorTarget: Hashable {
 /// Lets any row, card or chip deep in the milestone views drive the window's
 /// selection and inspector without threading bindings through every layer.
 struct MilestoneNavigator {
+    /// Selects and shows the inspector.
     var inspect: (InspectorTarget) -> Void = { _ in }
+    /// Selects without opening a hidden inspector — keyboard navigation moves
+    /// through cards without the inspector popping in on every arrow press.
+    var select: (InspectorTarget) -> Void = { _ in }
+    var clearSelection: () -> Void = {}
     var showTeam: (String) -> Void = { _ in }
     var showMilestone: (String) -> Void = { _ in }
     var inspected: InspectorTarget?
+    /// Bumped to ask the swimlane to scroll the current selection back into view,
+    /// e.g. when a search jump lands on the card that's already selected.
+    var revealRequest = 0
 }
 
 extension EnvironmentValues {
@@ -34,9 +42,37 @@ private let teamPalette: [Color] = [
 /// FNV-1a rather than String.hashValue, which is seeded per process — a team has to
 /// keep its color across launches in the sidebar, lanes and charts.
 func teamColor(_ name: String) -> Color {
-    var hash: UInt64 = 0xcbf2_9ce4_8422_2325
-    for byte in name.utf8 { hash = (hash ^ UInt64(byte)) &* 0x100_0000_01b3 }
-    return teamPalette[Int(hash % UInt64(teamPalette.count))]
+    teamPalette[TeamColors.slot(for: name)]
+}
+
+/// Hashing alone put two of six teams on the same orange. Teams seen together in a
+/// milestone are registered as a group and probe past slots already taken, in name
+/// order, so the same set of teams always gets the same distinct colours.
+enum TeamColors {
+    private static var assigned: [String: Int] = [:]
+
+    static func register(_ names: [String]) {
+        for name in Set(names).sorted() where assigned[name] == nil {
+            let used = Set(assigned.values)
+            var slot = hashSlot(name)
+            for _ in 0..<teamPalette.count where used.contains(slot) {
+                slot = (slot + 1) % teamPalette.count
+            }
+            assigned[name] = slot
+        }
+    }
+
+    static func slot(for name: String) -> Int {
+        assigned[name] ?? hashSlot(name)
+    }
+
+    static func reset() { assigned = [:] }
+
+    private static func hashSlot(_ name: String) -> Int {
+        var hash: UInt64 = 0xcbf2_9ce4_8422_2325
+        for byte in name.utf8 { hash = (hash ^ UInt64(byte)) &* 0x100_0000_01b3 }
+        return Int(hash % UInt64(teamPalette.count))
+    }
 }
 
 func statusTint(_ category: StatusCategory) -> Color {
@@ -190,7 +226,7 @@ struct KeyChip: View {
     var title: String?
     var status: StatusRef?
     var target: InspectorTarget?
-    var tint: Color = .secondary
+    var isCritical = false
 
     @Environment(\.milestoneNavigator) private var navigator
     @State private var isHovered = false
@@ -199,17 +235,22 @@ struct KeyChip: View {
         Button {
             if let target { navigator.inspect(target) }
         } label: {
+            // Neutral capsules: a list of chips each tinted by team or criticality
+            // turned whole panels pink. Criticality is a glyph, not a fill.
             HStack(spacing: 5) {
                 if let status { StatusDot(status: status, size: 6) }
                 Text(key).font(.caption.monospaced().weight(.medium)).fixedSize()
                 if let title {
                     Text(title).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                 }
+                if isCritical {
+                    Image(systemName: "flame.fill").font(.caption2).foregroundStyle(.red)
+                        .accessibilityLabel("critical")
+                }
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
-            .background(tint.opacity(isHovered && target != nil ? 0.22 : 0.11), in: Capsule())
-            .overlay(Capsule().strokeBorder(tint.opacity(0.18), lineWidth: 0.5))
+            .background(isHovered && target != nil ? AnyShapeStyle(.fill.secondary) : AnyShapeStyle(.fill.tertiary), in: Capsule())
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
@@ -273,21 +314,27 @@ struct StatTile: View {
     var tint: Color = .accentColor
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Label(title, systemImage: systemImage)
-                .font(.caption.weight(.medium))
-                .foregroundStyle(tint)
+        VStack(alignment: .leading, spacing: 2) {
+            // Only the symbol carries the tint — a row of coloured labels reads as noise.
+            Label {
+                Text(title).foregroundStyle(.secondary)
+            } icon: {
+                Image(systemName: systemImage).foregroundStyle(tint)
+            }
+            .font(.caption.weight(.medium))
             Text(value)
                 .font(.title2.weight(.semibold).monospacedDigit())
                 .contentTransition(.numericText())
+                .lineLimit(1)
             if let detail {
-                Text(detail).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                Text(detail).font(.caption).foregroundStyle(.tertiary).lineLimit(1)
             }
         }
         .frame(minWidth: 96, alignment: .leading)
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
         .background(.fill.quinary, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -380,7 +427,7 @@ struct MilestoneKeyChip: View {
             title: showTitle ? title : nil,
             status: status,
             target: inspectorTarget(for: key, in: index),
-            tint: critical ? .red : (epic.map { teamColor($0.team) } ?? .secondary)
+            isCritical: critical
         )
         .help(title.map { "\(key) — \($0)" } ?? key)
     }
