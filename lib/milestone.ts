@@ -1,6 +1,7 @@
 import { jiraFetch, searchIssues } from "@/lib/jira";
 import type { JiraIssue, JiraIssueLink, JiraStatus } from "@/lib/jira";
 import type { SessionData } from "@/lib/session";
+import { TtlCache } from "@/lib/ttlCache";
 import { analyzeMilestone, progressOf } from "@/lib/milestoneAnalysis";
 import type { EpicInput, ItemInput } from "@/lib/milestoneAnalysis";
 import type {
@@ -132,8 +133,9 @@ function toIncrementSummary(issue: RawIssue): IncrementSummary {
 
 // ── Fetching ────────────────────────────────────────────────────────────────
 
-const INCREMENT_FIELDS = ["summary", "status", "issuetype", "issuelinks", "fixVersions", "assignee", TEAM_FIELD];
-const EPIC_FIELDS = ["summary", "status", "issuetype", "issuelinks", "project", "assignee", TEAM_FIELD];
+// Only what the normalisers read — issuelinks dominate the payload size.
+const INCREMENT_FIELDS = ["summary", "status", "issuelinks", "fixVersions", TEAM_FIELD];
+const EPIC_FIELDS = ["summary", "status", "issuelinks", "project", "assignee", TEAM_FIELD];
 const ITEM_FIELDS = ["summary", "status", "issuetype", "issuelinks", "project", "assignee", "parent", TEAM_FIELD, ...POINT_FIELDS];
 
 function chunks<T>(list: T[], size: number): T[][] {
@@ -157,20 +159,56 @@ async function searchByKeys(
   return pages.flat() as RawIssue[];
 }
 
+// ── Caching ─────────────────────────────────────────────────────────────────
+//
+// Keyed by Jira site so two sites never share data. Project name and release
+// list barely change, so they live longer than the analysed payloads.
+
+const META_TTL_MS = 5 * 60_000;
+export const PAYLOAD_TTL_MS = 30_000;
+
+const projectNameCache = new TtlCache<string>({ ttlMs: META_TTL_MS });
+const releasesCache = new TtlCache<Release[]>({ ttlMs: META_TTL_MS });
+const detailCache = new TtlCache<MilestoneDetail>({ ttlMs: PAYLOAD_TTL_MS, maxEntries: 50 });
+const overviewCache = new TtlCache<ProgramOverview>({ ttlMs: PAYLOAD_TTL_MS, maxEntries: 50 });
+
+/** Which Jira site a request reads from — the cache partition. */
+export function siteKey(session?: SessionData): string {
+  return process.env.JIRA_BYPASS === "true" ? `bypass:${process.env.JIRA_BASE_URL ?? ""}` : `cloud:${session?.cloudId ?? "none"}`;
+}
+
 async function getReleases(projectKey: string, session?: SessionData): Promise<Release[]> {
-  const versions = await jiraFetch<JiraVersion[]>(
-    `/project/${encodeURIComponent(projectKey)}/versions`,
-    session,
-  );
-  return versions.filter((v) => !v.archived).map(toRelease);
+  const { value } = await releasesCache.getOrLoad(`${siteKey(session)}|${projectKey}`, async () => {
+    const versions = await jiraFetch<JiraVersion[]>(
+      `/project/${encodeURIComponent(projectKey)}/versions`,
+      session,
+    );
+    return versions.filter((v) => !v.archived).map(toRelease);
+  });
+  return value;
 }
 
 async function getProjectName(projectKey: string, session?: SessionData): Promise<string> {
-  const p = await jiraFetch<{ key: string; name: string }>(
-    `/project/${encodeURIComponent(projectKey)}`,
-    session,
+  const { value } = await projectNameCache.getOrLoad(`${siteKey(session)}|${projectKey}`, async () => {
+    const p = await jiraFetch<{ key: string; name: string }>(
+      `/project/${encodeURIComponent(projectKey)}`,
+      session,
+    );
+    return p.name;
+  });
+  return value;
+}
+
+/** Cached program overview — see {@link getProgramOverview}. */
+export function getProgramOverviewCached(projectKey: string, session?: SessionData) {
+  return overviewCache.getOrLoad(`${siteKey(session)}|${projectKey}`, () => getProgramOverview(projectKey, session));
+}
+
+/** Cached milestone detail — see {@link getMilestoneDetail}. */
+export function getMilestoneDetailCached(projectKey: string, versionId: string, session?: SessionData) {
+  return detailCache.getOrLoad(`${siteKey(session)}|${projectKey}|${versionId}`, () =>
+    getMilestoneDetail(projectKey, versionId, session),
   );
-  return p.name;
 }
 
 async function getIncrements(projectKey: string, session?: SessionData, versionId?: string): Promise<RawIssue[]> {
