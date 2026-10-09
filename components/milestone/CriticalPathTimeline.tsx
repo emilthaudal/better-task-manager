@@ -720,7 +720,9 @@ function CriticalPathTimeline({ detail, laneMode, selectedKey, onSelect, matches
         aria-roledescription="critical path timeline"
         aria-label="Critical path timeline. Use arrow keys to move between work items, Escape to clear the selection, plus and minus to zoom."
         onKeyDown={onKeyDown}
-        className="absolute inset-0 overflow-auto overscroll-contain"
+        // Focusable itself so arrow keys work even when the active card is culled.
+        tabIndex={0}
+        className="absolute inset-0 overflow-auto overscroll-contain focus-visible:rounded-none focus-visible:outline-offset-[-2px]"
       >
         <div className="relative" style={{ width: totalW, height: totalH }}>
           {/* Column headers — sticky to the top */}
