@@ -229,6 +229,7 @@ function MilestoneView() {
         lastUpdated={lastUpdated}
         refreshing={refreshing && !loading}
         onRefresh={refresh}
+        shareable={!!data}
         center={data ? <Segmented label="View" value={view.tab} onChange={(tab) => setView({ tab })} options={TABS} /> : null}
       />
       {loading && !data ? (
