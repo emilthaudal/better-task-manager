@@ -110,7 +110,7 @@ Screenshots are saved to `tests/screenshots/output/`.
 ## Delivery Milestones (`/program/...`)
 
 - `lib/milestoneTypes.ts` is a JSON contract shared with the native mac app — only add optional fields.
-- `lib/milestone.ts` fetches from Jira; payloads are cached per Jira site + project (+ release) for 30 s with in-flight de-duplication (`lib/ttlCache.ts`); project name and releases for 5 min. Routes report `X-Cache` and `Server-Timing`.
+- `lib/milestone.ts` fetches from Jira; payloads are cached per Jira site + signed-in account + project (+ release) for 30 s with in-flight de-duplication (`lib/ttlCache.ts`); project name and releases for 5 min. Routes report `X-Cache` and `Server-Timing`.
 - Local dev only: `?fixture=multi` (5 teams, ~140 items) or `?fixture=large` (6 teams, ~340 items) on the API routes and pages serves synthetic data from `lib/milestoneFixture.ts`, built through the real analysis.
 - Pure, tested view logic lives in `lib/milestoneView.ts` (URL state, filters incl. `is:critical|ready|unassigned|cross`, keyboard neighbours, viewport culling).
 - The timeline culls to the viewport and drives hover/selection dimming through DOM data attributes (`data-focus`, `data-lit`) — never put hover state in React state there.
