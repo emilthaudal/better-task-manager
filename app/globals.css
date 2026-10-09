@@ -1103,6 +1103,11 @@ html.dark .ms {
 }
 .ms-card:focus-visible { outline-offset: 3px; border-radius: 12px; }
 .ms-edge, .ms-slack { transition: opacity 180ms var(--ms-ease); }
+.ms-card-compact { display: none; }
+.ms-canvas[data-compact] .ms-card-compact { display: -webkit-box; }
+.ms-canvas[data-compact] .ms-card-detail { display: none; }
+.ms-canvas[data-compact] .ms-card { justify-content: center; }
+.ms-canvas[data-compact] .ms-card[data-selected] { box-shadow: 0 0 0 4px var(--ms-accent), var(--ms-shadow-hover); }
 .ms-canvas[data-focus] .ms-card:not([data-lit]):not([data-selected]) { opacity: 0.28; }
 .ms-canvas[data-focus] .ms-slack:not([data-lit]) { opacity: 0.15; }
 .ms-canvas[data-focus] .ms-edge:not([data-lit]) { opacity: 0.07; }
