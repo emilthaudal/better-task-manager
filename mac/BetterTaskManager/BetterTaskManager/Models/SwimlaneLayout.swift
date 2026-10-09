@@ -15,7 +15,9 @@ nonisolated struct SwimlaneMetrics: Hashable, Sendable {
     var laneHeaderWidth: CGFloat = 176
     var columnHeaderHeight: CGFloat = 40
     var cardWidth: CGFloat = 228
-    var cardHeight: CGFloat = 82
+    /// Tall enough for a two-line summary between the key row and the footer —
+    /// Jira summaries often share a long prefix ("rma-integration-service: …").
+    var cardHeight: CGFloat = 94
     /// Wide enough for an edge to curve between columns without hugging the cards.
     var columnGap: CGFloat = 64
     var rowGap: CGFloat = 16

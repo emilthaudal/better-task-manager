@@ -155,7 +155,7 @@ private struct SkeletonCard: View {
             Text("Assignee").font(.caption)
         }
         .padding(10)
-        .frame(width: 228, height: 82, alignment: .leading)
+        .frame(width: 228, height: 94, alignment: .leading)
         .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(.separator.opacity(0.5), lineWidth: 0.5))
     }
