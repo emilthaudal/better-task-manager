@@ -212,6 +212,106 @@ const SlackLayer = memo(function SlackLayer({ cards }: { cards: LaidOutCard[] })
   );
 });
 
+// ── Minimap ─────────────────────────────────────────────────────────────────
+//
+// Overview of every card with the visible region outlined. The viewport box
+// follows scrolling through direct style writes, so scrolling never
+// re-renders the map (or the timeline).
+
+const MAP_W = 196;
+const MAP_MAX_H = 120;
+
+const Minimap = memo(function Minimap({
+  cards,
+  width,
+  height,
+  zoom,
+  scrollRef,
+}: {
+  cards: LaidOutCard[];
+  width: number;
+  height: number;
+  zoom: number;
+  scrollRef: React.RefObject<HTMLDivElement | null>;
+}) {
+  // Fixed footprint with independent axis scales: a tall program would
+  // otherwise shrink to an unreadable sliver.
+  const w = MAP_W;
+  const h = Math.min(MAP_MAX_H, Math.max(56, height * (MAP_W / width) * 2));
+  const sx = w / width;
+  const sy = h / height;
+  const boxRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    const box = boxRef.current;
+    if (!el || !box) return;
+    const sync = () => {
+      const vx = (el.scrollLeft / zoom) * sx;
+      const vy = (el.scrollTop / zoom) * sy;
+      const vw = ((el.clientWidth - LANE_W) / zoom) * sx;
+      const vh = ((el.clientHeight - HEADER_H) / zoom) * sy;
+      box.style.transform = `translate(${vx}px, ${vy}px)`;
+      box.style.width = `${Math.min(w, vw)}px`;
+      box.style.height = `${Math.min(h, vh)}px`;
+    };
+    sync();
+    el.addEventListener("scroll", sync, { passive: true });
+    const ro = new ResizeObserver(sync);
+    ro.observe(el);
+    return () => {
+      el.removeEventListener("scroll", sync);
+      ro.disconnect();
+    };
+  }, [scrollRef, zoom, sx, sy, w, h]);
+
+  const jump = (e: React.PointerEvent<HTMLDivElement>) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const r = e.currentTarget.getBoundingClientRect();
+    const x = (e.clientX - r.left) / sx;
+    const y = (e.clientY - r.top) / sy;
+    el.scrollTo({
+      left: x * zoom - (el.clientWidth - LANE_W) / 2,
+      top: y * zoom - (el.clientHeight - HEADER_H) / 2,
+    });
+  };
+
+  return (
+    <div className="ms-material absolute bottom-[60px] right-4 z-30 hidden rounded-xl p-2 lg:block" aria-hidden="true">
+      <div
+        className="relative cursor-pointer touch-none"
+        style={{ width: w, height: h }}
+        onPointerDown={(e) => {
+          e.currentTarget.setPointerCapture(e.pointerId);
+          jump(e);
+        }}
+        onPointerMove={(e) => {
+          if (e.buttons === 1) jump(e);
+        }}
+      >
+        <svg width={w} height={h} className="absolute inset-0">
+          {cards.map((c) => (
+            <rect
+              key={c.item.key}
+              x={(c.x - LANE_W) * sx}
+              y={c.y * sy}
+              width={Math.max(1.5, CARD_WIDTH * sx)}
+              height={Math.max(1.5, CARD_HEIGHT * sy)}
+              rx={1}
+              style={{ fill: c.item.schedule?.critical ? "var(--ms-critical)" : "var(--ms-label-3)", opacity: c.item.schedule?.critical ? 0.9 : 0.45 }}
+            />
+          ))}
+        </svg>
+        <div
+          ref={boxRef}
+          className="pointer-events-none absolute left-0 top-0 rounded-[3px] border-[1.5px] border-[var(--ms-accent)] bg-[color-mix(in_srgb,var(--ms-accent)_10%,transparent)]"
+        />
+      </div>
+    </div>
+  );
+});
+
 // ── Timeline ────────────────────────────────────────────────────────────────
 
 export default function CriticalPathTimeline({ detail, laneMode, selectedKey, onSelect, matches }: Props) {
@@ -578,11 +678,13 @@ export default function CriticalPathTimeline({ detail, laneMode, selectedKey, on
                 <div
                   key={lane.id}
                   className={cn(
-                    "absolute left-0 flex w-full flex-col justify-center overflow-hidden border-t px-4",
+                    // Top-aligned with the lane's first row of cards, not floating mid-lane.
+                    "absolute left-0 flex w-full flex-col overflow-hidden border-t px-4",
+                    zoom < 0.65 ? "justify-center" : "justify-start",
                     i % 2 === 1 && "bg-[var(--ms-lane)]",
                     lane.newTeam ? "border-[var(--ms-sep-strong)]" : "border-[var(--ms-sep)]",
                   )}
-                  style={{ top: lane.y * zoom, height: lane.height * zoom }}
+                  style={{ top: lane.y * zoom, height: lane.height * zoom, paddingTop: zoom < 0.65 ? undefined : 16 * zoom }}
                   title={`${lane.title}\n${lane.subtitle}`}
                 >
                   {laneMode === "epic" && (i === 0 || lane.newTeam) && zoom >= 0.65 && (
@@ -640,6 +742,10 @@ export default function CriticalPathTimeline({ detail, laneMode, selectedKey, on
         <span className="flex items-center gap-1.5"><span className="flex w-4 items-center"><span className="h-[2px] flex-1 bg-[repeating-linear-gradient(90deg,var(--ms-sep-strong)_0_3px,transparent_3px_5px)]" /><span className="h-[6px] w-[2px] rounded-full bg-[var(--ms-sep-strong)]" /></span>Slack</span>
         <span className="flex items-center gap-1.5"><span className="rounded-full bg-[var(--ms-cross-fill)] px-1 text-[10px] font-semibold text-[var(--ms-cross-text)]">⇄</span>Blocks other teams</span>
       </div>
+
+      {layout.cards.length > 24 && (
+        <Minimap cards={layout.cards} width={canvasW} height={canvasH} zoom={zoom} scrollRef={scrollRef} />
+      )}
 
       {/* Zoom — floating material, bottom right */}
       <div

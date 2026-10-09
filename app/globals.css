@@ -995,8 +995,10 @@ body {
   --ms-surface-raised: #ffffff;
   --ms-lane: rgba(0, 0, 0, 0.022);
   --ms-label: #1d1d1f;
-  --ms-label-2: rgba(60, 60, 67, 0.78);
-  --ms-label-3: rgba(60, 60, 67, 0.56);
+  /* Secondary/tertiary labels sit near WCAG AA (≈ 6:1 / 4.5:1 on --ms-bg),
+     darker than Apple's stock values because this UI is dense 11–12 px text. */
+  --ms-label-2: rgba(60, 60, 67, 0.86);
+  --ms-label-3: rgba(60, 60, 67, 0.7);
   --ms-sep: rgba(60, 60, 67, 0.13);
   --ms-sep-strong: rgba(60, 60, 67, 0.24);
   --ms-fill: rgba(120, 120, 128, 0.12);
@@ -1038,8 +1040,8 @@ html.dark .ms {
   --ms-surface-raised: #2a2a2d;
   --ms-lane: rgba(255, 255, 255, 0.025);
   --ms-label: #f5f5f7;
-  --ms-label-2: rgba(235, 235, 245, 0.72);
-  --ms-label-3: rgba(235, 235, 245, 0.5);
+  --ms-label-2: rgba(235, 235, 245, 0.76);
+  --ms-label-3: rgba(235, 235, 245, 0.56);
   --ms-sep: rgba(255, 255, 255, 0.09);
   --ms-sep-strong: rgba(255, 255, 255, 0.17);
   --ms-fill: rgba(120, 120, 128, 0.26);

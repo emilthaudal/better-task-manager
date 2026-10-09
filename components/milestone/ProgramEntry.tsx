@@ -35,11 +35,20 @@ export default function ProgramEntry() {
   return (
     <form
       onSubmit={open}
-      className="mt-4 flex items-center gap-3 rounded-xl border border-border bg-muted px-4 py-3"
+      className="mt-4 flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 shadow-sm transition-shadow focus-within:shadow-md"
     >
-      <div className="flex-1">
+      <div
+        aria-hidden="true"
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-gradient-to-b from-indigo-500 to-indigo-600 text-white shadow-sm"
+      >
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+          <path d="M3 15h3.5l3-5 3 3L17 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          <circle cx="17" cy="5" r="1.6" fill="currentColor" />
+        </svg>
+      </div>
+      <div className="min-w-0 flex-1">
         <div className="text-sm font-semibold text-foreground">Delivery milestones</div>
-        <div className="text-xs text-muted-foreground">Critical path, blocker epics and team load per release</div>
+        <div className="truncate text-xs text-muted-foreground">Critical path, blocker epics and team load per release</div>
       </div>
       <input
         value={project}
@@ -47,11 +56,11 @@ export default function ProgramEntry() {
         aria-label="Delivery project key"
         // The saved key is only known client-side.
         suppressHydrationWarning
-        className="w-20 rounded-lg border border-border bg-background px-2 py-1.5 text-center font-mono text-sm uppercase text-foreground"
+        className="w-20 rounded-lg border border-border bg-background px-2 py-1.5 text-center font-mono text-sm uppercase text-foreground outline-none transition-shadow focus:ring-2 focus:ring-primary/40"
       />
       <button
         type="submit"
-        className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+        className="rounded-full bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2"
       >
         Open
       </button>
