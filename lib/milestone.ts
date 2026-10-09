@@ -1,5 +1,7 @@
 import { jiraFetch, searchIssues } from "@/lib/jira";
 import type { JiraIssue, JiraIssueLink, JiraStatus } from "@/lib/jira";
+import { createHash } from "node:crypto";
+import { getAccessToken } from "@/lib/session";
 import type { SessionData } from "@/lib/session";
 import { TtlCache } from "@/lib/ttlCache";
 import { analyzeMilestone, progressOf } from "@/lib/milestoneAnalysis";
@@ -170,8 +172,9 @@ async function searchByKeys(
 
 // ── Caching ─────────────────────────────────────────────────────────────────
 //
-// Keyed by Jira site so two sites never share data. Project name and release
-// list barely change, so they live longer than the analysed payloads.
+// Partitioned by Jira site *and* signed-in account, so one user never sees
+// data cached under another user's permissions. Project name and release list
+// barely change, so they live longer than the analysed payloads.
 
 const META_TTL_MS = 5 * 60_000;
 export const PAYLOAD_TTL_MS = 30_000;
@@ -181,13 +184,36 @@ const releasesCache = new TtlCache<Release[]>({ ttlMs: META_TTL_MS });
 const detailCache = new TtlCache<MilestoneDetail>({ ttlMs: PAYLOAD_TTL_MS, maxEntries: 50 });
 const overviewCache = new TtlCache<ProgramOverview>({ ttlMs: PAYLOAD_TTL_MS, maxEntries: 50 });
 
-/** Which Jira site a request reads from — the cache partition. */
-export function siteKey(session?: SessionData): string {
-  return process.env.JIRA_BYPASS === "true" ? `bypass:${process.env.JIRA_BASE_URL ?? ""}` : `cloud:${session?.cloudId ?? "none"}`;
+/** The `sub` claim (Atlassian account id) of a JWT access token, or null. */
+export function jwtSubject(token: string): string | null {
+  const payload = token.split(".")[1];
+  if (!payload) return null;
+  try {
+    const json = JSON.parse(Buffer.from(payload.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8")) as { sub?: unknown };
+    return typeof json.sub === "string" && json.sub ? json.sub : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Cache partition for a request: the Jira site plus, with OAuth, the account
+ * behind the access token (falling back to a hash of the token itself).
+ */
+export async function cachePartition(session?: SessionData): Promise<string> {
+  if (process.env.JIRA_BYPASS === "true") return `bypass:${process.env.JIRA_BASE_URL ?? ""}`;
+  if (!session?.refreshToken || !session.cloudId) {
+    throw new Error("Not authenticated. Please sign in to continue.");
+  }
+  const { accessToken, refreshToken } = await getAccessToken(session.refreshToken);
+  // Same contract as jiraFetch: keep the rotated token for persistRotatedToken().
+  session.refreshToken = refreshToken;
+  const who = jwtSubject(accessToken) ?? createHash("sha256").update(accessToken).digest("hex").slice(0, 32);
+  return `cloud:${session.cloudId}:${who}`;
 }
 
 async function getReleases(projectKey: string, session?: SessionData): Promise<Release[]> {
-  const { value } = await releasesCache.getOrLoad(`${siteKey(session)}|${projectKey}`, async () => {
+  const { value } = await releasesCache.getOrLoad(`${await cachePartition(session)}|${projectKey}`, async () => {
     const versions = await jiraFetch<JiraVersion[]>(
       `/project/${encodeURIComponent(projectKey)}/versions`,
       session,
@@ -198,7 +224,7 @@ async function getReleases(projectKey: string, session?: SessionData): Promise<R
 }
 
 async function getProjectName(projectKey: string, session?: SessionData): Promise<string> {
-  const { value } = await projectNameCache.getOrLoad(`${siteKey(session)}|${projectKey}`, async () => {
+  const { value } = await projectNameCache.getOrLoad(`${await cachePartition(session)}|${projectKey}`, async () => {
     const p = await jiraFetch<{ key: string; name: string }>(
       `/project/${encodeURIComponent(projectKey)}`,
       session,
@@ -209,13 +235,15 @@ async function getProjectName(projectKey: string, session?: SessionData): Promis
 }
 
 /** Cached program overview — see {@link getProgramOverview}. */
-export function getProgramOverviewCached(projectKey: string, session?: SessionData) {
-  return overviewCache.getOrLoad(`${siteKey(session)}|${projectKey}`, () => getProgramOverview(projectKey, session));
+export async function getProgramOverviewCached(projectKey: string, session?: SessionData) {
+  const partition = await cachePartition(session);
+  return overviewCache.getOrLoad(`${partition}|${projectKey}`, () => getProgramOverview(projectKey, session));
 }
 
 /** Cached milestone detail — see {@link getMilestoneDetail}. */
-export function getMilestoneDetailCached(projectKey: string, versionId: string, session?: SessionData) {
-  return detailCache.getOrLoad(`${siteKey(session)}|${projectKey}|${versionId}`, () =>
+export async function getMilestoneDetailCached(projectKey: string, versionId: string, session?: SessionData) {
+  const partition = await cachePartition(session);
+  return detailCache.getOrLoad(`${partition}|${projectKey}|${versionId}`, () =>
     getMilestoneDetail(projectKey, versionId, session),
   );
 }
