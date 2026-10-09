@@ -728,7 +728,7 @@ function CriticalPathTimeline({ detail, laneMode, selectedKey, onSelect, matches
           {/* Column headers — sticky to the top */}
           <div className="ms-chrome sticky top-0 z-20 flex border-b border-[var(--ms-sep)]" style={{ height: HEADER_H, width: totalW }}>
             <div
-              className="ms-chrome sticky left-0 z-10 flex items-center border-r border-[var(--ms-sep)] px-4 text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--ms-label-3)]"
+              className="sticky left-0 z-10 flex items-center border-r bg-[var(--ms-bg)] border-[var(--ms-sep)] px-4 text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--ms-label-3)]"
               style={{ width: LANE_W }}
             >
               {laneMode === "team" ? "Team" : "Epic"}
