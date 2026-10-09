@@ -278,21 +278,27 @@ struct StatTile: View {
     var tint: Color = .accentColor
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Label(title, systemImage: systemImage)
-                .font(.caption.weight(.medium))
-                .foregroundStyle(tint)
+        VStack(alignment: .leading, spacing: 2) {
+            // Only the symbol carries the tint — a row of coloured labels reads as noise.
+            Label {
+                Text(title).foregroundStyle(.secondary)
+            } icon: {
+                Image(systemName: systemImage).foregroundStyle(tint)
+            }
+            .font(.caption.weight(.medium))
             Text(value)
                 .font(.title2.weight(.semibold).monospacedDigit())
                 .contentTransition(.numericText())
+                .lineLimit(1)
             if let detail {
-                Text(detail).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                Text(detail).font(.caption).foregroundStyle(.tertiary).lineLimit(1)
             }
         }
         .frame(minWidth: 96, alignment: .leading)
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
         .background(.fill.quinary, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .accessibilityElement(children: .combine)
     }
 }
 

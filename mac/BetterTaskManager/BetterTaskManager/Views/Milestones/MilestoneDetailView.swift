@@ -77,14 +77,6 @@ struct MilestoneDetailView: View {
                 }
             }
         }
-        .background {
-            // Hidden buttons give each tab a ⌘-number shortcut, like Xcode's navigators.
-            ForEach(Array(MilestoneTab.allCases.enumerated()), id: \.element) { index, value in
-                Button(value.title) { tab = value }
-                    .keyboardShortcut(KeyEquivalent(Character("\(index + 1)")), modifiers: .command)
-                    .hidden()
-            }
-        }
     }
 }
 
