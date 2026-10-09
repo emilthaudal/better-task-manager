@@ -1,10 +1,10 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useRef } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import CriticalPathTimeline from "@/components/milestone/CriticalPathTimeline";
 import MilestoneInspector from "@/components/milestone/MilestoneInspector";
-import { ErrorState, MilestoneSkeleton, Toolbar } from "@/components/milestone/MilestoneChrome";
+import { ErrorState, MilestoneSkeleton, ShortcutsSheet, Toolbar } from "@/components/milestone/MilestoneChrome";
 import {
   BlockerEpicsPanel,
   CriticalChainPanel,
@@ -172,6 +172,7 @@ function MilestoneView() {
   const { data, loading, refreshing, error, lastUpdated, refresh, retry } = usePolledJson<MilestoneDetail>(apiUrl);
   const [view, setView] = useMilestoneViewState();
   const searchRef = useRef<HTMLInputElement>(null);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const programHref = `/program/${encodeURIComponent(projectKey)}${fixture ? `?fixture=${encodeURIComponent(fixture)}` : ""}`;
 
   const select = useCallback((key: string | null) => setView({ item: key }), [setView]);
@@ -203,13 +204,18 @@ function MilestoneView() {
         setView({ tab: "path" });
         requestAnimationFrame(() => searchRef.current?.focus());
         searchRef.current?.select();
+      } else if (e.key === "?" && !typing) {
+        e.preventDefault();
+        setShortcutsOpen((open) => !open);
       } else if (e.key === "Escape" && !typing) {
-        setView({ item: null });
+        // Esc closes the sheet first, then clears the selection.
+        if (shortcutsOpen) setShortcutsOpen(false);
+        else setView({ item: null });
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [setView]);
+  }, [setView, shortcutsOpen]);
 
   useEffect(() => {
     document.title = data ? `${data.release.name} · Critical path` : "Milestone";
@@ -266,6 +272,15 @@ function MilestoneView() {
               <span className="ml-auto hidden shrink-0 text-[11.5px] text-[var(--ms-label-3)] min-[1600px]:inline">
                 Hover to trace a chain · arrow keys to move · Esc to clear
               </span>
+              <button
+                type="button"
+                onClick={() => setShortcutsOpen(true)}
+                aria-label="Keyboard shortcuts"
+                title="Keyboard shortcuts (?)"
+                className="ml-auto flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--ms-fill-2)] text-[13px] font-semibold text-[var(--ms-label-2)] transition-colors hover:bg-[var(--ms-fill)] hover:text-[var(--ms-label)] min-[1600px]:ml-0"
+              >
+                ?
+              </button>
             </div>
           )}
           <main className="relative min-h-0 flex-1">
@@ -305,6 +320,7 @@ function MilestoneView() {
           </main>
         </>
       ) : null}
+      {shortcutsOpen && <ShortcutsSheet onClose={() => setShortcutsOpen(false)} />}
     </div>
   );
 }
