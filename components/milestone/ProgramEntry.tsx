@@ -29,7 +29,8 @@ export default function ProgramEntry() {
     } catch {
       // Not worth surfacing.
     }
-    router.push(`/program/${encodeURIComponent(key)}`);
+    // The program page resolves this to the last milestone viewed, or the next to ship.
+    router.push(`/program/${encodeURIComponent(key)}?land=1`);
   }
 
   return (

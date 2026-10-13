@@ -62,7 +62,18 @@ export function ProgressBar({ progress, className }: { progress: Progress; class
 }
 
 /** Circular progress, the way Apple shows completion at a glance. Fills in on mount. */
-export function ProgressRing({ progress, size = 44, stroke = 4.5 }: { progress: Progress; size?: number; stroke?: number }) {
+export function ProgressRing({
+  progress,
+  size = 44,
+  stroke = 4.5,
+  tint = "var(--ms-ready)",
+}: {
+  progress: Progress;
+  size?: number;
+  stroke?: number;
+  /** Colour of the done arc — orange for an overdue milestone, like the mac sidebar. */
+  tint?: string;
+}) {
   const [shown, setShown] = useState(false);
   useEffect(() => {
     const id = requestAnimationFrame(() => setShown(true));
@@ -81,7 +92,7 @@ export function ProgressRing({ progress, size = 44, stroke = 4.5 }: { progress: 
         style={{ transition: "stroke-dasharray 900ms cubic-bezier(0.2, 0.8, 0.2, 1)" }}
       />
       <circle
-        cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--ms-ready)" strokeWidth={stroke} strokeLinecap="round"
+        cx={size / 2} cy={size / 2} r={r} fill="none" stroke={tint} strokeWidth={stroke} strokeLinecap="round"
         strokeDasharray={`${c * done} ${c}`}
         style={{ transition: "stroke-dasharray 900ms cubic-bezier(0.2, 0.8, 0.2, 1) 80ms" }}
       />
@@ -191,7 +202,7 @@ export function Segmented<T extends string>({
   label,
 }: {
   value: T;
-  options: Array<{ value: T; label: string }>;
+  options: Array<{ value: T; label: React.ReactNode }>;
   onChange: (v: T) => void;
   label: string;
 }) {
@@ -261,5 +272,120 @@ export function Surface({ className, children }: { className?: string; children:
     <div className={cn("overflow-hidden rounded-xl bg-[var(--ms-surface)] shadow-[var(--ms-shadow-card)]", className)}>
       {children}
     </div>
+  );
+}
+
+/** A content card (not a control): the surface every tab's sections sit on. */
+export function Card({ className, children }: { className?: string; children: React.ReactNode }) {
+  return <div className={cn("rounded-2xl bg-[var(--ms-surface)] p-4 shadow-[var(--ms-shadow-card)]", className)}>{children}</div>;
+}
+
+/** Section heading with an optional symbol and a count capsule, as in the mac app. */
+export function SectionHeader({ title, icon, count, hint }: { title: string; icon?: React.ReactNode; count?: number; hint?: string }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      {icon && <span className="flex text-[var(--ms-label-3)]" aria-hidden="true">{icon}</span>}
+      <h2 className="text-[14px] font-semibold text-[var(--ms-label)]">{title}</h2>
+      {count !== undefined && (
+        <span className="rounded-full bg-[var(--ms-fill)] px-1.5 text-[11px] font-semibold tabular-nums text-[var(--ms-label-2)]">{count}</span>
+      )}
+      {hint && <span className="ml-1 truncate text-[12px] text-[var(--ms-label-3)]">{hint}</span>}
+    </div>
+  );
+}
+
+/** "Nothing here" with a reason — the web's ContentUnavailableView. */
+export function EmptyState({
+  icon,
+  title,
+  message,
+  action,
+  className,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  message?: React.ReactNode;
+  action?: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={cn("ms-fade-up flex flex-col items-center justify-center px-6 py-16 text-center", className)}>
+      <span className="mb-3 text-[var(--ms-label-3)]" aria-hidden="true">{icon}</span>
+      <h2 className="text-[17px] font-semibold text-[var(--ms-label)]">{title}</h2>
+      {message && <p className="mt-1 max-w-sm text-[13px] leading-relaxed text-[var(--ms-label-2)]">{message}</p>}
+      {action && <div className="mt-4">{action}</div>}
+    </div>
+  );
+}
+
+/**
+ * Header statistic. Only the symbol carries the tint — a row of coloured
+ * numbers reads as noise. Pass `onClick` to make it jump somewhere.
+ */
+export function StatTile({
+  title,
+  value,
+  detail,
+  icon,
+  tint,
+  onClick,
+  hint,
+}: {
+  title: string;
+  value: React.ReactNode;
+  detail?: string;
+  icon: React.ReactNode;
+  tint: string;
+  onClick?: () => void;
+  hint?: string;
+}) {
+  const body = (
+    <>
+      <span className="flex items-center gap-1.5 text-[11.5px] font-medium text-[var(--ms-label-2)]">
+        <span className="flex" style={{ color: tint }} aria-hidden="true">{icon}</span>
+        {title}
+      </span>
+      <span className="mt-0.5 block truncate text-[20px] font-semibold leading-tight tracking-tight tabular-nums text-[var(--ms-label)]">{value}</span>
+      {detail && <span className="ms-tile-detail block truncate text-[11.5px] text-[var(--ms-label-3)]">{detail}</span>}
+    </>
+  );
+  const className = "ms-tile flex min-w-[104px] max-w-[200px] flex-col rounded-xl bg-[var(--ms-fill-2)] px-3.5 py-2.5 text-left";
+  return onClick ? (
+    <button type="button" onClick={onClick} title={hint} className={cn(className, "ms-tile-button")}>
+      {body}
+    </button>
+  ) : (
+    <div className={className} title={hint}>
+      {body}
+    </div>
+  );
+}
+
+/** Team identity: its colour as a dot on a faint wash of the same colour. */
+export function TeamBadge({ team, color, className }: { team: string; color: string | undefined; className?: string }) {
+  const c = color ?? "var(--ms-label-3)";
+  return (
+    <span
+      className={cn("inline-flex max-w-[160px] shrink-0 items-center gap-1 rounded-full px-1.5 py-[2px] text-[11px] font-medium text-[var(--ms-label)]", className)}
+      style={{ background: `color-mix(in srgb, ${c} 14%, transparent)` }}
+      title={team}
+    >
+      <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: c }} aria-hidden="true" />
+      <span className="truncate">{team}</span>
+    </span>
+  );
+}
+
+export function AssigneeLabel({ name }: { name: string | null }) {
+  return name ? (
+    <span className="inline-flex min-w-0 items-center gap-1.5 text-[12px] text-[var(--ms-label-2)]" title={name}>
+      <Avatar name={name} size={17} />
+      <span className="truncate">{name.split(/\s+/)[0]}</span>
+    </span>
+  ) : (
+    <span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-[var(--ms-warn-text)]">
+      <Avatar name={null} size={17} />
+      Unassigned
+    </span>
   );
 }

@@ -1,32 +1,49 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
-import { useSecondsTick } from "@/hooks/useSecondsTick";
+import { useRouter } from "next/navigation";
+import { CloudAlert, PanelLeft, RotateCw } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 import { cn } from "@/lib/utils";
+import { useProgram } from "./ProgramShell";
 
 // Window chrome for the delivery pages: a translucent toolbar, loading
 // skeletons and the error state. Kept apart from the data components so the
 // program and milestone pages share one look.
 
-function Updated({ lastUpdated, refreshing, onRefresh }: { lastUpdated: Date | null; refreshing: boolean; onRefresh?: () => void }) {
-  const seconds = useSecondsTick(lastUpdated?.getTime() ?? null);
-  if (!lastUpdated) return null;
-  const label = seconds < 10 ? "Updated just now" : seconds < 60 ? `Updated ${seconds}s ago` : `Updated ${Math.floor(seconds / 60)} min ago`;
+/** A borderless toolbar button, the way macOS draws them: icon only, a wash on hover. */
+export function ToolButton({
+  label,
+  shortcut,
+  onClick,
+  pressed,
+  disabled,
+  children,
+  className,
+}: {
+  label: string;
+  shortcut?: string;
+  onClick: () => void;
+  pressed?: boolean;
+  disabled?: boolean;
+  children: React.ReactNode;
+  className?: string;
+}) {
   return (
     <button
       type="button"
-      onClick={onRefresh}
-      disabled={!onRefresh || refreshing}
-      title="Refreshes automatically every minute. Click to refresh now."
-      className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11.5px] font-medium text-[var(--ms-label-3)] transition-colors hover:bg-[var(--ms-fill)] hover:text-[var(--ms-label-2)]"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+      aria-pressed={pressed}
+      title={shortcut ? `${label} (${shortcut})` : label}
+      className={cn(
+        "flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[var(--ms-label-2)] transition-colors hover:bg-[var(--ms-fill)] hover:text-[var(--ms-label)] disabled:opacity-60 disabled:hover:bg-transparent",
+        pressed && "bg-[var(--ms-fill)] text-[var(--ms-label)]",
+        className,
+      )}
     >
-      <span
-        aria-hidden="true"
-        className={cn("h-1.5 w-1.5 rounded-full bg-[var(--ms-ready)]", refreshing && "animate-pulse bg-[var(--ms-accent)]")}
-      />
-      <span aria-live="polite">{refreshing ? "Refreshing…" : label}</span>
+      {children}
     </button>
   );
 }
@@ -46,57 +63,69 @@ function CopyLink() {
         void navigator.clipboard?.writeText(window.location.href).then(() => setCopied(true), () => {});
       }}
       title="Copy a link to this exact view"
-      className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-medium text-[var(--ms-accent-text)] transition-colors hover:bg-[var(--ms-fill-2)]"
+      className="flex h-7 shrink-0 items-center gap-1.5 rounded-md px-1.5 text-[12px] font-medium text-[var(--ms-accent-text)] transition-colors hover:bg-[var(--ms-fill-2)] 2xl:px-2"
     >
-      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
         {copied ? (
           <path d="m3.5 8.5 3 3 6-7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
         ) : (
           <path d="M6.5 9.5 9.5 6.5M7 4.5l1.3-1.3a2.6 2.6 0 0 1 3.7 3.7L10.7 8.2M9 11.5l-1.3 1.3a2.6 2.6 0 0 1-3.7-3.7L5.3 7.8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
         )}
       </svg>
-      <span aria-live="polite">{copied ? "Copied" : "Copy link"}</span>
+      <span aria-live="polite" className={cn(!copied && "sr-only 2xl:not-sr-only")}>{copied ? "Copied" : "Copy link"}</span>
     </button>
   );
 }
 
+/**
+ * The content column's toolbar: sidebar toggle and title on the leading edge,
+ * the page's primary control (tabs) centred, actions trailing. Refresh lives
+ * here like the mac app's; "Updated x ago" lives in the sidebar.
+ */
 export function Toolbar({
-  backHref,
-  backLabel,
   title,
+  subtitle,
   center,
-  lastUpdated,
-  refreshing = false,
-  onRefresh,
+  trailing,
   shareable = false,
 }: {
-  shareable?: boolean;
-  backHref: string;
-  backLabel: string;
   title?: React.ReactNode;
+  subtitle?: React.ReactNode;
   center?: React.ReactNode;
-  lastUpdated: Date | null;
-  refreshing?: boolean;
-  onRefresh?: () => void;
+  trailing?: React.ReactNode;
+  shareable?: boolean;
 }) {
+  const { toggleSidebar, sidebarVisible, refresh, refreshing, backgroundError } = useProgram();
   return (
-    <header className="ms-chrome sticky top-0 z-40 grid h-[52px] shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-3 border-b border-[var(--ms-sep)] pl-3 pr-16">
-      <div className="flex min-w-0 items-center gap-1">
-        <Link
-          href={backHref}
-          className="group flex shrink-0 items-center gap-0.5 rounded-lg py-1 pl-1 pr-2 text-[13px] font-medium text-[var(--ms-accent-text)] transition-colors hover:bg-[var(--ms-fill-2)]"
-        >
-          <svg width="18" height="18" viewBox="0 0 16 16" fill="none" aria-hidden="true" className="transition-transform group-hover:-translate-x-0.5">
-            <path d="M10 12.5 5.5 8 10 3.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          {backLabel}
-        </Link>
-        {title && <div className="min-w-0 truncate text-[13px] font-semibold text-[var(--ms-label)]">{title}</div>}
+    <header className="ms-chrome sticky top-0 z-40 grid h-[52px] shrink-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 border-b border-[var(--ms-sep)] pl-3 pr-16">
+      <div className="flex min-w-0 items-center gap-2">
+        <ToolButton label={sidebarVisible ? "Hide sidebar" : "Show sidebar"} onClick={toggleSidebar}>
+          <PanelLeft size={17} strokeWidth={1.75} aria-hidden="true" />
+        </ToolButton>
+        {title && (
+          <div className="min-w-0 leading-tight">
+            <div className="truncate text-[13px] font-semibold text-[var(--ms-label)]">{title}</div>
+            {subtitle && <div className="truncate text-[11px] text-[var(--ms-label-3)]">{subtitle}</div>}
+          </div>
+        )}
       </div>
       <div className="flex justify-center">{center}</div>
-      <div className="flex items-center justify-end gap-1">
+      <div className="flex items-center justify-end gap-0.5">
+        {backgroundError && (
+          <span
+            className="flex h-7 w-7 items-center justify-center text-[var(--ms-warn)] lg:hidden"
+            title={`Last refresh failed: ${backgroundError}. Showing the previous data.`}
+            role="img"
+            aria-label="Last refresh failed — showing the previous data"
+          >
+            <CloudAlert size={16} aria-hidden="true" />
+          </span>
+        )}
+        {trailing}
         {shareable && <CopyLink />}
-        <Updated lastUpdated={lastUpdated} refreshing={refreshing} onRefresh={onRefresh} />
+        <ToolButton label="Refresh from Jira" shortcut="⌘R" onClick={refresh} disabled={refreshing}>
+          <RotateCw size={15} strokeWidth={1.9} aria-hidden="true" className={cn(refreshing && "ms-spin")} />
+        </ToolButton>
         <ThemeToggle />
       </div>
     </header>
@@ -147,15 +176,46 @@ export function MilestoneSkeleton() {
   );
 }
 
-const SHORTCUTS: Array<[string, string]> = [
-  ["← → ↑ ↓", "Move between work items"],
-  ["Esc", "Clear the selection"],
-  ["⌘K  or  /", "Filter"],
-  ["Enter / ⇧Enter", "Next / previous match (in the filter)"],
-  ["+  −", "Zoom in / out"],
-  ["0", "Fit to screen"],
-  ["⌘ scroll / pinch", "Zoom around the pointer"],
-  ["?", "Show these shortcuts"],
+// Browsers keep ⌘1–⌘9 for switching tabs, so on the web the view tabs answer
+// to the bare digits (⌘-digits still work where the browser passes them on,
+// as in the desktop shell).
+const SHORTCUTS: Array<{ group: string; keys: Array<[string, string]> }> = [
+  {
+    group: "Views",
+    keys: [
+      ["1 – 5", "Critical path, Blockers, Team load, Increments, Ready & warnings"],
+      ["⌥⌘1 – ⌥⌘9", "Go to milestone 1–9"],
+      ["⌥⌘0", "Program overview"],
+      ["⌘R", "Refresh from Jira"],
+    ],
+  },
+  {
+    group: "Filter",
+    keys: [
+      ["⌘F  ⌘K  /", "Filter"],
+      ["Return", "Go to the best match — again for the next"],
+      ["⇧Return", "Previous match"],
+    ],
+  },
+  {
+    group: "Selection",
+    keys: [
+      ["← → ↑ ↓", "Move between work items"],
+      ["Return  or double-click", "Show in the inspector"],
+      ["⌥⌘I", "Show or hide the inspector"],
+      ["⇧⌘O", "Open the selection in Jira"],
+      ["Esc", "Clear the selection"],
+    ],
+  },
+  {
+    group: "Timeline",
+    keys: [
+      ["⇧⌘D", "Show done items"],
+      ["+  −", "Zoom in / out"],
+      ["0", "Fit to screen"],
+      ["⌘ scroll / pinch", "Zoom around the pointer"],
+    ],
+  },
 ];
 
 /** Keyboard shortcut reference, opened with "?". */
@@ -166,8 +226,14 @@ export function ShortcutsSheet({ onClose }: { onClose: () => void }) {
         role="dialog"
         aria-modal="true"
         aria-label="Keyboard shortcuts"
-        className="ms-material ms-fade-quick w-full max-w-sm rounded-2xl p-5"
+        className="ms-material ms-fade-quick max-h-full w-full max-w-md overflow-y-auto rounded-2xl p-5"
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") {
+            e.stopPropagation();
+            onClose();
+          }
+        }}
       >
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-[15px] font-semibold text-[var(--ms-label)]">Keyboard shortcuts</h2>
@@ -180,23 +246,40 @@ export function ShortcutsSheet({ onClose }: { onClose: () => void }) {
             Done
           </button>
         </div>
-        <dl className="divide-y divide-[var(--ms-sep)]">
-          {SHORTCUTS.map(([keys, what]) => (
-            <div key={keys} className="flex items-center justify-between gap-4 py-2 text-[13px]">
-              <dt className="text-[var(--ms-label-2)]">{what}</dt>
-              <dd>
-                <kbd className="rounded-md bg-[var(--ms-fill)] px-1.5 py-0.5 font-sans text-[12px] font-medium text-[var(--ms-label)]">{keys}</kbd>
-              </dd>
-            </div>
+        <div className="flex flex-col gap-4">
+          {SHORTCUTS.map(({ group, keys }) => (
+            <section key={group}>
+              <h3 className="mb-1 text-[11px] font-semibold text-[var(--ms-label-3)]">{group}</h3>
+              <dl className="divide-y divide-[var(--ms-sep)]">
+                {keys.map(([combo, what]) => (
+                  <div key={combo} className="flex items-center justify-between gap-4 py-1.5 text-[13px]">
+                    <dt className="text-[var(--ms-label-2)]">{what}</dt>
+                    <dd className="shrink-0">
+                      <kbd className="whitespace-pre rounded-md bg-[var(--ms-fill)] px-1.5 py-0.5 font-sans text-[12px] font-medium text-[var(--ms-label)]">{combo}</kbd>
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
           ))}
-        </dl>
+          <p className="text-[11.5px] leading-snug text-[var(--ms-label-3)]">
+            Browsers keep ⌘1–⌘9 for their own tabs, so views use the bare digits here. ⇧⌘D, ⌘R and ⌘F act on this page while it has focus.
+          </p>
+        </div>
       </div>
     </div>
   );
 }
 
-export function ErrorState({ message, onRetry, backHref }: { message: string; onRetry: () => void; backHref: string }) {
+/**
+ * Load failure with nothing to show. Says which delivery space was asked for —
+ * the commonest cause is a wrong key — and lets it be changed in place.
+ */
+export function ErrorState({ message, onRetry, what, projectKey }: { message: string; onRetry: () => void; what: string; projectKey: string }) {
   const auth = /auth|sign in/i.test(message);
+  const router = useRouter();
+  const [editing, setEditing] = useState(false);
+  const [key, setKey] = useState(projectKey);
   return (
     <div role="alert" className="flex flex-1 items-center justify-center p-8">
       <div className="ms-fade-up flex max-w-sm flex-col items-center text-center">
@@ -205,8 +288,45 @@ export function ErrorState({ message, onRetry, backHref }: { message: string; on
             <path d="M12 8v5m0 3.5v.01M10.3 3.9 2.4 17.6A2 2 0 0 0 4.1 20.6h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </div>
-        <h2 className="text-[17px] font-semibold text-[var(--ms-label)]">{auth ? "Sign in to Jira again" : "Couldn’t load this milestone"}</h2>
+        <h2 className="text-[17px] font-semibold text-[var(--ms-label)]">{auth ? "Sign in to Jira again" : `Couldn’t load ${what}`}</h2>
         <p className="mt-1.5 text-[13px] leading-relaxed text-[var(--ms-label-2)]">{message}</p>
+        {editing ? (
+          <form
+            className="mt-3 flex items-center gap-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const next = key.trim().toUpperCase();
+              if (!next) return;
+              try {
+                localStorage.setItem("btm:deliveryProject", next);
+              } catch {
+                // Not worth surfacing.
+              }
+              router.push(`/program/${encodeURIComponent(next)}`);
+            }}
+          >
+            <label htmlFor="ms-space" className="text-[12px] text-[var(--ms-label-3)]">
+              Delivery space
+            </label>
+            <input
+              id="ms-space"
+              autoFocus
+              value={key}
+              onChange={(e) => setKey(e.target.value)}
+              className="h-7 w-20 rounded-md bg-[var(--ms-fill)] px-2 text-center font-mono text-[13px] uppercase text-[var(--ms-label)] outline-none focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--ms-accent)_35%,transparent)]"
+            />
+            <button type="submit" className="rounded-full bg-[var(--ms-accent)] px-3 py-1 text-[12px] font-medium text-white hover:opacity-90">
+              Open
+            </button>
+          </form>
+        ) : (
+          <p className="mt-2 text-[12px] text-[var(--ms-label-3)]">
+            Delivery space <span className="font-mono font-medium text-[var(--ms-label-2)]">{projectKey}</span> ·{" "}
+            <button type="button" onClick={() => setEditing(true)} className="font-medium text-[var(--ms-accent-text)] hover:underline">
+              Change…
+            </button>
+          </p>
+        )}
         <div className="mt-5 flex gap-2">
           {auth ? (
             <a href="/api/auth/login" className="rounded-full bg-[var(--ms-accent)] px-4 py-1.5 text-[13px] font-medium text-white hover:opacity-90">
@@ -217,9 +337,6 @@ export function ErrorState({ message, onRetry, backHref }: { message: string; on
               Try again
             </button>
           )}
-          <Link href={backHref} className="rounded-full bg-[var(--ms-fill)] px-4 py-1.5 text-[13px] font-medium text-[var(--ms-label)] hover:bg-[var(--ms-sep-strong)]">
-            Go back
-          </Link>
         </div>
       </div>
     </div>
