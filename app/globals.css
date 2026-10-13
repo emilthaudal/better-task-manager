@@ -1228,3 +1228,73 @@ html.dark .ms { --ms-lane-tint: 8%; --ms-lane-tint-ext: 3%; }
 .ms-edge[data-kind="done"] { opacity: 0.55; }
 .ms-canvas[data-focus] .ms-edge[data-kind="done"][data-lit] { opacity: 0.9; stroke-width: 1.5; }
 .ms-canvas[data-focus] .ms-edge[data-kind="crit"][data-lit] { stroke-width: 2.75; }
+
+/* ── Program shell, tabs and inspector (web/parity-shell) ────────────────── */
+
+.ms { --ms-sidebar: rgba(236, 236, 240, 0.72); --ms-sidebar-selected: rgba(0, 0, 0, 0.075); }
+html.dark .ms { --ms-sidebar: rgba(34, 34, 37, 0.78); --ms-sidebar-selected: rgba(255, 255, 255, 0.1); }
+
+/* The sidebar is a translucent material over the window, like a macOS source list. */
+.ms-sidebar {
+  background: var(--ms-sidebar);
+  -webkit-backdrop-filter: saturate(180%) blur(24px);
+  backdrop-filter: saturate(180%) blur(24px);
+}
+.ms-sidebar-sheet { animation: ms-sidebar-in 260ms var(--ms-ease) both; box-shadow: var(--ms-shadow-float); background: var(--ms-bg); }
+.ms-scrim { background: rgba(0, 0, 0, 0.18); animation: ms-scrim-in 200ms var(--ms-ease) both; }
+@keyframes ms-sidebar-in { from { transform: translateX(-24px); opacity: 0; } }
+@keyframes ms-scrim-in { from { opacity: 0; } }
+
+@keyframes ms-spin { to { transform: rotate(360deg); } }
+.ms-spin { animation: ms-spin 0.9s linear infinite; }
+.ms-spinner {
+  width: 11px;
+  height: 11px;
+  border-radius: 999px;
+  border: 1.5px solid var(--ms-fill);
+  border-top-color: var(--ms-label-2);
+  animation: ms-spin 0.8s linear infinite;
+}
+
+/* Header tiles that jump somewhere: a hover wash and a press dip, so they read
+   as controls without dressing up as buttons. */
+.ms-tile-button { transition: background-color 120ms ease-out, transform 120ms ease-out; }
+.ms-tile-button:hover { background-color: var(--ms-fill); }
+.ms-tile-button:active { transform: scale(0.98); }
+.ms-tile-button:hover .ms-tile { background-color: var(--ms-fill); }
+
+.ms-hover-card {
+  outline: 2px solid transparent;
+  outline-offset: -2px;
+  transition: box-shadow 200ms var(--ms-ease), outline-color 150ms ease-out, transform 200ms var(--ms-ease);
+}
+.ms-hover-card:hover { box-shadow: var(--ms-shadow-hover); }
+.ms-hover-card.ms-selected-card { outline-color: var(--ms-accent); }
+.ms-late { box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--ms-critical) 60%, transparent), var(--ms-shadow-card); }
+.ms-late:hover { box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--ms-critical) 70%, transparent), var(--ms-shadow-hover); }
+
+.ms-scroll-x { scrollbar-width: none; }
+.ms-scroll-x::-webkit-scrollbar { display: none; }
+
+/* Menus portal out of the page, so they carry .ms themselves and are styled
+   as macOS menus: material, accent highlight, inset rows. */
+.ms-menu.ms {
+  background: var(--ms-material);
+  -webkit-backdrop-filter: saturate(180%) blur(30px);
+  backdrop-filter: saturate(180%) blur(30px);
+  border: 0;
+  border-radius: 10px;
+  padding: 5px;
+  box-shadow: var(--ms-shadow-float);
+  color: var(--ms-label);
+}
+.ms-menu [data-slot="dropdown-menu-label"] { font-size: 11px; font-weight: 600; color: var(--ms-label-3); padding: 4px 8px 2px; }
+.ms-menu [role="menuitemradio"],
+.ms-menu [role="menuitemcheckbox"],
+.ms-menu [role="menuitem"] { font-size: 13px; border-radius: 5px; padding-top: 4px; padding-bottom: 4px; }
+.ms-menu [role="menuitemradio"]:focus,
+.ms-menu [role="menuitemcheckbox"]:focus,
+.ms-menu [role="menuitem"]:focus { background: var(--ms-accent); color: white; }
+.ms-menu [role="menuitemcheckbox"]:focus [data-slot="dropdown-menu-shortcut"] { color: rgba(255, 255, 255, 0.8); }
+.ms-menu [data-slot="dropdown-menu-separator"] { background: var(--ms-sep); margin: 4px 6px; }
+.ms-menu [data-slot="dropdown-menu-shortcut"] { color: var(--ms-label-3); letter-spacing: 0.04em; }
