@@ -12,11 +12,13 @@ import {
   matchItems,
   neighbor,
   parseViewState,
+  readViewPrefs,
   samePayload,
   serializeViewState,
   teamMatrix,
   teamToken,
   visibleCards,
+  viewPrefs,
   visibleEdges,
 } from "@/lib/milestoneView";
 import type { Dependency, WorkItem } from "@/lib/milestoneTypes";
@@ -25,21 +27,56 @@ const card = (key: string, x: number, y: number): LaidOutCard => ({ item: { key 
 
 describe("view state in the URL", () => {
   it("round-trips non-default state and keeps unrelated params", () => {
-    const params = serializeViewState(
-      { tab: "insights", lanes: "team", item: "AS-12", query: "pricing api" },
-      new URLSearchParams("fixture=multi"),
-    );
+    const state = { tab: "teams", lanes: "epic", showDone: true, showOutside: false, item: "AS-12", query: "pricing api" } as const;
+    const params = serializeViewState(state, new URLSearchParams("fixture=multi"));
     expect(params.get("fixture")).toBe("multi");
-    expect(parseViewState(params)).toEqual({ tab: "insights", lanes: "team", item: "AS-12", query: "pricing api" });
+    expect(params.get("done")).toBe("1");
+    expect(params.get("outside")).toBe("0");
+    expect(parseViewState(params)).toEqual(state);
   });
 
   it("omits defaults so links stay short", () => {
     expect(serializeViewState(DEFAULT_VIEW).toString()).toBe("");
   });
 
+  it("defaults to lanes by team, hiding done work and showing outside work", () => {
+    expect(DEFAULT_VIEW).toMatchObject({ lanes: "team", showDone: false, showOutside: true });
+  });
+
   it("ignores junk", () => {
-    expect(parseViewState(new URLSearchParams("tab=x&lanes=y&item=<script>"))).toEqual(DEFAULT_VIEW);
+    expect(parseViewState(new URLSearchParams("tab=x&lanes=y&item=<script>&done=yes"))).toEqual(DEFAULT_VIEW);
     expect(parseViewState(new URLSearchParams("item=as-12")).item).toBe("AS-12");
+  });
+
+  it("reads the old combined insights tab as Blockers", () => {
+    expect(parseViewState(new URLSearchParams("tab=insights")).tab).toBe("blockers");
+  });
+
+  it("writes only the parts a page owns", () => {
+    const params = serializeViewState({ ...DEFAULT_VIEW, tab: "ready", item: "AS-1" }, new URLSearchParams("tab=teams"), ["item", "query"]);
+    expect(params.toString()).toBe("tab=teams&item=AS-1");
+  });
+});
+
+describe("persisted view options", () => {
+  it("fill in what the URL doesn't say", () => {
+    const saved = readViewPrefs(JSON.stringify({ tab: "increments", lanes: "epic", showDone: true, showOutside: false }));
+    expect(parseViewState(new URLSearchParams(""), saved)).toEqual({ ...DEFAULT_VIEW, tab: "increments", lanes: "epic", showDone: true, showOutside: false });
+  });
+
+  it("lose to the URL, so a shared link opens as sent", () => {
+    const saved = readViewPrefs(JSON.stringify({ tab: "increments", lanes: "epic", showDone: true }));
+    expect(parseViewState(new URLSearchParams("tab=path&lanes=team&done=0"), saved)).toMatchObject({ tab: "path", lanes: "team", showDone: false });
+  });
+
+  it("drop anything malformed", () => {
+    expect(readViewPrefs("{not json")).toEqual({});
+    expect(readViewPrefs(JSON.stringify({ tab: "nope", lanes: 3, showDone: "yes" }))).toEqual({});
+    expect(readViewPrefs(null)).toEqual({});
+  });
+
+  it("are just the carry-over options", () => {
+    expect(viewPrefs({ ...DEFAULT_VIEW, item: "AS-1", query: "x" })).toEqual({ tab: "path", lanes: "team", showDone: false, showOutside: true });
   });
 });
 
