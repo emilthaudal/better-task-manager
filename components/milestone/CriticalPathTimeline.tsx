@@ -2,11 +2,22 @@
 
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
-import { CARD_HEIGHT, CARD_WIDTH, COLUMN_GAP, LANE_HEADER_WIDTH, columnX, layoutTimeline } from "@/lib/milestoneLayout";
-import type { LaidOutCard, LaidOutEdge, Lane, LaneMode } from "@/lib/milestoneLayout";
-import { chainIndex, cullWindow, neighbor, visibleCards, visibleEdges } from "@/lib/milestoneView";
+import {
+  CARD_HEIGHT,
+  CARD_WIDTH,
+  CELL_LIMIT,
+  COLUMN_GAP,
+  LANE_HEADER_WIDTH,
+  OVERFLOW_HEIGHT,
+  ROW_GAP,
+  columnX,
+  layoutTimeline,
+} from "@/lib/milestoneLayout";
+import type { LaidOutCard, LaidOutEdge, Lane, LaneMode, Overflow } from "@/lib/milestoneLayout";
+import { chainHasEdge, chainIndex, cullWindow, neighbor, visibleCards, visibleEdges } from "@/lib/milestoneView";
 import type { Direction, Rect } from "@/lib/milestoneView";
 import type { MilestoneDetail, WorkItem } from "@/lib/milestoneTypes";
+import { teamColors } from "@/lib/teamColor";
 import { Avatar, StatusDot } from "./MilestoneBits";
 
 interface Props {
@@ -16,22 +27,53 @@ interface Props {
   onSelect: (key: string | null) => void;
   /** Keys matching the filter, or null when no filter is active. */
   matches: Set<string> | null;
+  /** Done items in a leading "Done" column. */
+  showDone?: boolean;
+  /** Items outside the milestone pulled in by a link. */
+  showOutside?: boolean;
+  /** Lane header click in team mode. */
+  onOpenTeam?: (team: string) => void;
+  /** Return or double-click: open the inspector for a card. */
+  onInspect?: (key: string) => void;
 }
 
 const HEADER_H = 40;
 const LANE_W = LANE_HEADER_WIDTH;
 const MIN_ZOOM = 0.4;
-const MAX_ZOOM = 1.5;
-const ZOOM_STEPS = [0.4, 0.5, 0.65, 0.8, 1, 1.25, 1.5];
+const MAX_ZOOM = 1.8;
+const ZOOM_STEPS = [0.4, 0.5, 0.65, 0.8, 1, 1.25, 1.5, 1.8];
 const HOVER_CLEAR_MS = 90;
 /** Width of the floating inspector plus its margin. */
 const INSPECTOR_W = 396;
 
 const clampZoom = (z: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z));
+const EMPTY_SET: ReadonlySet<string> = new Set();
 
 function edgePath(e: LaidOutEdge): string {
   const dx = Math.max(28, (e.x2 - e.x1) / 2);
   return `M ${e.x1} ${e.y1} C ${e.x1 + dx} ${e.y1}, ${e.x2 - dx} ${e.y2}, ${e.x2 - 2} ${e.y2}`;
+}
+
+const steps = (n: number) => `${n} step${n === 1 ? "" : "s"}`;
+
+function columnTitle(level: number | null): string {
+  if (level === null) return "Done";
+  return level === 0 ? "Now" : `Step ${level + 1}`;
+}
+
+function columnHelp(level: number | null): string {
+  if (level === null) return "Already done";
+  if (level === 0) return "Work with no remaining blockers — can start now";
+  return `Can start once ${steps(level)} of blocking work is done`;
+}
+
+/** Later in the list draws on top: the critical path must never sink under a same-team link. */
+function edgeRank(e: LaidOutEdge): number {
+  const d = e.dependency;
+  if (d.satisfied) return 0;
+  if (d.critical) return 3;
+  if (d.crossTeam) return 2;
+  return 1;
 }
 
 /** Tooltip lines for a card: summary, owner, and what its timing means. */
@@ -41,7 +83,10 @@ function tooltipLines(item: WorkItem): { title: string; meta: string; schedule: 
   if (s) {
     schedule = s.critical ? "On the critical path — any delay moves the milestone" : `Can slip ${s.slack} step${s.slack === 1 ? "" : "s"} without delaying the milestone`;
     if (s.downstream > 0) schedule += ` · unblocks ${s.downstream}${s.downstreamTeams.length ? ` in ${s.downstreamTeams.join(", ")}` : ""}`;
+  } else if (item.status.category === "done") {
+    schedule = "Done";
   }
+  if (item.placeholder) schedule = `Team epic not broken down into items yet${schedule ? ` · ${schedule}` : ""}`;
   return {
     title: item.summary,
     meta: `${item.key} · ${item.team} · ${item.assignee ?? "Unassigned"}${item.external ? " · outside this milestone" : ""}`,
@@ -70,6 +115,8 @@ const Card = memo(function Card({
 }) {
   const s = item.schedule;
   const critical = !!s?.critical;
+  const ready = !!s?.ready;
+  const done = item.status.category === "done";
   const crossTeams = s?.downstreamTeams.length ?? 0;
   return (
     <button
@@ -77,16 +124,24 @@ const Card = memo(function Card({
       data-k={item.key}
       data-selected={selected ? "" : undefined}
       data-match={match ? "" : undefined}
+      data-critical={critical ? "" : undefined}
+      data-done={done ? "" : undefined}
       tabIndex={focusable ? 0 : -1}
       aria-pressed={selected}
-      aria-label={`${item.key}: ${item.summary}${critical ? ", critical" : ""}${s?.ready ? ", ready" : ""}${item.external ? ", outside this milestone" : ""}${item.assignee ? `, ${item.assignee}` : ", unassigned"}`}
+      aria-label={`${item.key}: ${item.summary}${done ? ", done" : ""}${critical ? ", critical" : ""}${ready ? ", ready" : ""}${item.placeholder ? ", not broken down" : ""}${item.external ? ", outside this milestone" : ""}${item.assignee ? `, ${item.assignee}` : ", unassigned"}`}
       className={cn(
         "ms-card absolute flex flex-col justify-between overflow-hidden rounded-xl bg-[var(--ms-surface)] py-2 pl-3 pr-2.5 text-left",
         item.external && "bg-[var(--ms-warn-fill)] outline-1 outline-dashed -outline-offset-1 outline-[var(--ms-warn)]",
       )}
       style={{ left: x, top: y, width: CARD_WIDTH, height: CARD_HEIGHT }}
     >
-      {critical && <span aria-hidden="true" className="absolute inset-y-0 left-0 w-[3px] bg-[var(--ms-critical)]" />}
+      {/* Ready wins the edge: "start this now" is the more actionable signal, and critical keeps its red ring. */}
+      {(ready || critical) && (
+        <span
+          aria-hidden="true"
+          className={cn("absolute inset-y-0 left-0 w-[3px]", ready ? "bg-[var(--ms-ready)]" : "bg-[var(--ms-critical)]")}
+        />
+      )}
       {/* Zoomed out, the detail rows would render at ~6 px; a large summary stays legible. */}
       <div aria-hidden="true" className="ms-card-compact line-clamp-2 text-[25px] font-semibold leading-[1.12] tracking-[-0.02em] text-[var(--ms-label)]">
         {item.summary}
@@ -120,15 +175,26 @@ const Card = memo(function Card({
       </div>
       <div className="ms-card-detail line-clamp-2 text-[12.5px] font-medium leading-[1.25] tracking-[-0.01em] text-[var(--ms-label)]">{item.summary}</div>
       <div className="ms-card-detail flex items-center gap-1.5 text-[11px] text-[var(--ms-label-3)]">
-        <Avatar name={item.assignee} size={14} />
-        <span
-          className={cn(
-            "min-w-0 flex-1 truncate",
-            !item.assignee && critical && "font-semibold text-[var(--ms-warn-text)]",
-          )}
-        >
-          {item.assignee ?? "Unassigned"}
-        </span>
+        {item.placeholder ? (
+          <span className="min-w-0 flex-1">
+            <span className="inline-flex max-w-full items-center gap-1 truncate rounded-full bg-[var(--ms-warn-fill)] px-1.5 py-[1px] text-[10px] font-semibold text-[var(--ms-warn-text)]">
+              <span aria-hidden="true" className="h-[7px] w-[7px] shrink-0 rounded-[2px] border border-dashed border-current" />
+              Not broken down
+            </span>
+          </span>
+        ) : (
+          <>
+            <Avatar name={item.assignee} size={14} />
+            <span
+              className={cn(
+                "min-w-0 flex-1 truncate",
+                !item.assignee && critical && "font-semibold text-[var(--ms-warn-text)]",
+              )}
+            >
+              {item.assignee ?? "Unassigned"}
+            </span>
+          </>
+        )}
         {s && s.downstream > 0 && <span className="shrink-0 tabular-nums">→ {s.downstream}</span>}
       </div>
     </button>
@@ -137,87 +203,133 @@ const Card = memo(function Card({
 
 // ── Static layers (memoised: they only change with layout / culling) ───────
 
-type LaneView = Lane & { newTeam: boolean };
+type LaneView = Lane & { newTeam: boolean; color: string };
 
 const LaneBands = memo(function LaneBands({ lanes, width }: { lanes: LaneView[]; width: number }) {
+  // Starts at the lane header's edge: the header carries the same tint and
+  // rounded left corners, so header + band read as one lane.
   return (
     <>
-      {lanes.map((lane, i) => (
+      {lanes.map((lane) => (
         <div
           key={lane.id}
           aria-hidden="true"
-          className={cn("absolute left-0 border-t", i % 2 === 1 && "bg-[var(--ms-lane)]", lane.newTeam ? "border-[var(--ms-sep-strong)]" : "border-[var(--ms-sep)]")}
-          style={{ top: lane.y, height: lane.height, width }}
+          data-external={lane.external ? "" : undefined}
+          className="ms-lane-band absolute"
+          style={{ top: lane.y, height: lane.height, left: LANE_W, width: width - LANE_W - 8, "--tint": lane.color } as React.CSSProperties}
         />
       ))}
     </>
   );
 });
 
-const EdgeLayer = memo(function EdgeLayer({ edges, width, height }: { edges: LaidOutEdge[]; width: number; height: number }) {
+type EdgeKind = "crit" | "cross" | "norm" | "done";
+
+const EDGE_COLOR: Record<EdgeKind, string> = {
+  crit: "var(--ms-critical)",
+  cross: "var(--ms-cross)",
+  norm: "var(--ms-edge)",
+  done: "var(--ms-label-3)",
+};
+
+const EdgeLayer = memo(function EdgeLayer({
+  edges,
+  width,
+  height,
+  chainRef,
+}: {
+  edges: LaidOutEdge[];
+  width: number;
+  height: number;
+  /** Filled imperatively with copies of the lit chain, so it draws above everything else. */
+  chainRef: React.RefObject<SVGGElement | null>;
+}) {
+  const ordered = useMemo(() => [...edges].sort((a, b) => edgeRank(a) - edgeRank(b)), [edges]);
   return (
     <svg className="pointer-events-none absolute left-0 top-0 overflow-visible" width={width} height={height} aria-hidden="true">
       <defs>
-        {(["crit", "cross", "norm"] as const).map((id) => (
+        {(Object.keys(EDGE_COLOR) as EdgeKind[]).map((id) => (
           <marker key={id} id={`ms-arrow-${id}`} viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto-start-reverse">
-            <path
-              d="M 1 1 L 9 5 L 1 9 z"
-              style={{ fill: id === "crit" ? "var(--ms-critical)" : id === "cross" ? "var(--ms-cross)" : "var(--ms-edge)" }}
-            />
+            <path d="M 1 1 L 9 5 L 1 9 z" style={{ fill: EDGE_COLOR[id] }} />
           </marker>
         ))}
       </defs>
-      {edges.map((e) => {
+      {ordered.map((e) => {
         const d = e.dependency;
-        const kind = d.critical ? "crit" : d.crossTeam ? "cross" : "norm";
+        const kind: EdgeKind = d.satisfied ? "done" : d.critical ? "crit" : d.crossTeam ? "cross" : "norm";
+        const path = edgePath(e);
         return (
-          <path
-            key={`${d.from}>${d.to}`}
-            data-from={d.from}
-            data-to={d.to}
-            className="ms-edge"
-            d={edgePath(e)}
-            fill="none"
-            markerEnd={`url(#ms-arrow-${kind})`}
-            strokeDasharray={d.kind === "epic" ? "5 4" : undefined}
-            strokeLinecap="round"
-            style={{
-              stroke: kind === "crit" ? "var(--ms-critical)" : kind === "cross" ? "var(--ms-cross)" : "var(--ms-edge)",
-              strokeWidth: d.critical ? 2 : 1.4,
-            }}
-          />
+          <g key={`${d.from}>${d.to}`}>
+            {/* A soft halo instead of a blur filter, which would force an offscreen pass per edge. */}
+            {kind === "crit" && (
+              <path data-from={d.from} data-to={d.to} className="ms-edge ms-edge-halo" d={path} fill="none" strokeLinecap="round" />
+            )}
+            <path
+              data-from={d.from}
+              data-to={d.to}
+              data-kind={kind}
+              className="ms-edge"
+              d={path}
+              fill="none"
+              markerEnd={`url(#ms-arrow-${kind})`}
+              strokeDasharray={kind === "done" ? "3 3" : d.kind === "epic" ? "5 4" : undefined}
+              strokeLinecap="round"
+              style={{ stroke: EDGE_COLOR[kind], strokeWidth: kind === "crit" ? 2 : kind === "done" ? 1 : 1.4 }}
+            />
+          </g>
         );
       })}
+      <g ref={chainRef} />
     </svg>
   );
 });
 
+/**
+ * Slack only shows for the chain being explored (CSS reveals the lit bars):
+ * drawn for every card at once, the bars turn a large milestone into a wall of
+ * stripes.
+ */
 const SlackLayer = memo(function SlackLayer({ cards }: { cards: LaidOutCard[] }) {
   return (
     <>
       {cards.map((c) => {
         const slack = c.item.schedule?.slack ?? 0;
-        if (slack <= 0 || c.item.external) return null;
-        // A slim track under the card: how far it could slide right
-        // without moving the milestone. Ends in a tick at the latest start.
+        if (slack <= 0 || !c.slackX2) return null;
+        // Sits in the row gap under the card, reaching to the right edge of the
+        // latest column it can start in without moving the milestone.
         return (
           <div
             key={c.item.key}
             data-k={c.item.key}
-            aria-hidden="true"
-            className="ms-slack absolute flex items-center"
-            style={{
-              left: c.x + 14,
-              top: c.y + CARD_HEIGHT + 2,
-              height: 6,
-              width: slack * (CARD_WIDTH + COLUMN_GAP) - 14,
-            }}
-          >
-            <div className="h-[2px] flex-1 rounded-full bg-[repeating-linear-gradient(90deg,var(--ms-sep)_0_4px,transparent_4px_7px)]" />
-            <div className="h-[6px] w-[2px] rounded-full bg-[var(--ms-sep-strong)]" />
-          </div>
+            className="ms-slack absolute"
+            title={`${c.item.key} can slip ${steps(slack)} without delaying the milestone`}
+            style={{ left: c.x + 10, top: c.y + CARD_HEIGHT + (ROW_GAP - 4) / 2, height: 4, width: c.slackX2 - c.x - 10 }}
+          />
         );
       })}
+    </>
+  );
+});
+
+const OverflowLayer = memo(function OverflowLayer({ overflows }: { overflows: Overflow[] }) {
+  return (
+    <>
+      {overflows.map((o) => (
+        <button
+          key={`${o.laneId}#${o.column}`}
+          type="button"
+          data-more={o.laneId}
+          tabIndex={-1}
+          title={`Show all ${o.hidden + CELL_LIMIT} cards in this step`}
+          className="ms-more absolute flex items-center justify-center gap-1.5 rounded-xl text-[12.5px] font-medium text-[var(--ms-label-2)]"
+          style={{ left: o.x, top: o.y, width: CARD_WIDTH, height: OVERFLOW_HEIGHT }}
+        >
+          {o.hidden} more
+          <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
+            <path d="M2 3.5 5 6.5 8 3.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+      ))}
     </>
   );
 });
@@ -330,32 +442,83 @@ const Minimap = memo(function Minimap({
  */
 export default memo(CriticalPathTimeline);
 
-function CriticalPathTimeline({ detail, laneMode, selectedKey, onSelect, matches }: Props) {
+function CriticalPathTimeline({
+  detail,
+  laneMode,
+  selectedKey,
+  onSelect,
+  matches,
+  showDone = false,
+  showOutside = true,
+  onOpenTeam,
+  onInspect,
+}: Props) {
+  // Unfolded lanes are per-milestone view state: tagged with the release so
+  // switching milestones starts folded again without an effect.
+  const releaseId = detail.release.id;
+  const [fold, setFold] = useState<{ release: string; lanes: ReadonlySet<string>; pin: string | null }>({
+    release: releaseId,
+    lanes: new Set(),
+    pin: null,
+  });
+  const expandedLanes = fold.release === releaseId ? fold.lanes : EMPTY_SET;
+  const pin = fold.release === releaseId ? fold.pin : null;
+
   // Filtering hides lanes without a match; columns stay put so the schedule
   // still reads the same, and non-matching cards in kept lanes are dimmed.
   const base = useMemo(
-    () => layoutTimeline(detail, laneMode, matches ? { includeLane: (members) => members.some((m) => matches.has(m.key)) } : {}),
-    [detail, laneMode, matches],
+    () =>
+      layoutTimeline(detail, laneMode, {
+        showDone,
+        showOutside,
+        expandedLanes,
+        pinnedKey: pin,
+        prefer: matches,
+        includeLane: matches ? (members) => members.some((m) => matches.has(m.key)) : undefined,
+      }),
+    [detail, laneMode, matches, showDone, showOutside, expandedLanes, pin],
+  );
+
+  const setLaneExpanded = useCallback(
+    (lane: string, expanded: boolean) => {
+      setFold((prev) => {
+        const lanes = new Set(prev.release === releaseId ? prev.lanes : []);
+        if (expanded) lanes.add(lane);
+        else lanes.delete(lane);
+        // Folding back keeps the selection on screen (see layoutTimeline's pinnedKey).
+        return { release: releaseId, lanes, pin: selectedKey };
+      });
+    },
+    [releaseId, selectedKey],
+  );
+
+  // Selecting a folded card (filter, inspector, panels) unfolds its lane so the
+  // card has somewhere to be. Adjusted during render, not in an effect, so the
+  // reveal below already sees the unfolded layout.
+  const [seenSelection, setSeenSelection] = useState<string | null>(null);
+  if (selectedKey !== seenSelection) {
+    setSeenSelection(selectedKey);
+    const lane = selectedKey ? base.hiddenLane?.get(selectedKey) : undefined;
+    if (lane) setLaneExpanded(lane, true);
+  }
+
+  const colors = useMemo(
+    () => teamColors([...detail.teams.map((t) => t.name), ...detail.items.map((i) => i.team)]),
+    [detail.teams, detail.items],
   );
   const layout = useMemo(() => {
     // Mark the first lane of each team so team boundaries read as groups.
-    const lanes: LaneView[] = base.lanes.map((l, i) => ({ ...l, newTeam: i > 0 && base.lanes[i - 1]?.team !== l.team }));
+    const lanes: LaneView[] = base.lanes.map((l, i) => ({
+      ...l,
+      newTeam: i > 0 && base.lanes[i - 1]?.team !== l.team,
+      color: colors.get(l.team) ?? "#8e8e93",
+    }));
     return { ...base, lanes };
-  }, [base]);
-  const chainOf = useMemo(() => chainIndex(detail.dependencies), [detail.dependencies]);
+  }, [base, colors]);
+  const chainOf = useMemo(() => chainIndex(detail.dependencies, showDone), [detail.dependencies, showDone]);
   const teamByName = useMemo(() => new Map(detail.teams.map((t) => [t.name, t])), [detail.teams]);
   const cardByKey = useMemo(() => new Map(layout.cards.map((c) => [c.item.key, c])), [layout.cards]);
-  const columnCounts = useMemo(() => {
-    const counts = Array.from({ length: layout.columns }, () => ({ total: 0, critical: 0 }));
-    for (const c of layout.cards) {
-      const s = c.item.schedule;
-      const slot = counts[s?.earliestStart ?? 0];
-      if (!slot) continue;
-      slot.total++;
-      if (s?.critical) slot.critical++;
-    }
-    return counts;
-  }, [layout]);
+  const columnCounts = layout.columnStats ?? [];
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -423,28 +586,43 @@ function CriticalPathTimeline({ detail, laneMode, selectedKey, onSelect, matches
 
   // ── Focus highlighting (DOM-driven: no React render on hover) ──
   const focusSet = useCallback(
-    (key: string | null): Set<string> | null => {
+    (key: string | null): { members: Set<string>; hasEdge: (from: string, to: string) => boolean } | null => {
       if (!key) return null;
-      if (cardByKey.has(key)) return chainOf(key);
+      if (cardByKey.has(key)) {
+        const chain = chainOf(key);
+        return { members: chain.members, hasEdge: (from, to) => chainHasEdge(chain, from, to) };
+      }
+      const group = (keys: string[]) => {
+        const members = new Set(keys.filter((k) => cardByKey.has(k)));
+        return members.size ? { members, hasEdge: (from: string, to: string) => members.has(from) && members.has(to) } : null;
+      };
       const epic = detail.epics.find((e) => e.key === key);
-      if (epic) return new Set(epic.itemKeys.filter((k) => cardByKey.has(k)));
-      const inIncrement = detail.items.filter((i) => i.incrementKey === key && cardByKey.has(i.key)).map((i) => i.key);
-      return inIncrement.length ? new Set(inIncrement) : null;
+      if (epic) return group(epic.itemKeys);
+      return group(detail.items.filter((i) => i.incrementKey === key).map((i) => i.key));
     },
     [cardByKey, chainOf, detail.epics, detail.items],
   );
 
+  const chainRef = useRef<SVGGElement>(null);
   const applyFocus = useCallback(() => {
     const root = canvasRef.current;
     if (!root) return;
     const chain = focusSet(hoverRef.current ?? selectedRef.current);
+    const overlay = chainRef.current;
+    overlay?.replaceChildren();
     root.toggleAttribute("data-focus", !!chain);
     root.querySelectorAll<HTMLElement>("[data-k]").forEach((el) => {
-      el.toggleAttribute("data-lit", !!chain && chain.has(el.dataset.k ?? ""));
+      el.toggleAttribute("data-lit", !!chain && chain.members.has(el.dataset.k ?? ""));
     });
-    root.querySelectorAll<SVGPathElement>("[data-from]").forEach((el) => {
-      el.toggleAttribute("data-lit", !!chain && chain.has(el.dataset.from ?? "") && chain.has(el.dataset.to ?? ""));
+    const lit: Node[] = [];
+    root.querySelectorAll<SVGPathElement>("path[data-from]").forEach((el) => {
+      const on = !!chain && chain.hasEdge(el.dataset.from ?? "", el.dataset.to ?? "");
+      el.toggleAttribute("data-lit", on);
+      if (on && el.dataset.kind) lit.push(el.cloneNode(false));
     });
+    // The chain draws above every other edge. Copies go into a group React
+    // renders empty (and so never reconciles), leaving React's own nodes in place.
+    if (lit.length) overlay?.append(...lit);
   }, [focusSet]);
 
   // Newly mounted (un-culled) nodes need the current highlight too.
@@ -520,6 +698,9 @@ function CriticalPathTimeline({ detail, laneMode, selectedKey, onSelect, matches
         return;
       }
       hideTip();
+      // A lit slack bar belongs to the chain being explored; pointing at it to
+      // read its tooltip mustn't make it vanish.
+      if ((e.target as HTMLElement).closest(".ms-slack")) return;
       // Crossing the gap between two cards shouldn't flash the whole graph.
       hoverTimer.current = window.setTimeout(() => {
         if (hoverRef.current !== null) {
@@ -548,10 +729,24 @@ function CriticalPathTimeline({ detail, laneMode, selectedKey, onSelect, matches
   const onClick = useCallback(
     (e: React.MouseEvent) => {
       hideTip();
-      const card = (e.target as HTMLElement).closest<HTMLElement>(".ms-card");
-      onSelect(card?.dataset.k ?? null);
+      const target = e.target as HTMLElement;
+      const more = target.closest<HTMLElement>("[data-more]")?.dataset.more;
+      if (more) {
+        setLaneExpanded(more, true);
+        return;
+      }
+      if (target.closest(".ms-slack")) return;
+      onSelect(target.closest<HTMLElement>(".ms-card")?.dataset.k ?? null);
     },
-    [onSelect, hideTip],
+    [onSelect, hideTip, setLaneExpanded],
+  );
+
+  const onDoubleClick = useCallback(
+    (e: React.MouseEvent) => {
+      const key = (e.target as HTMLElement).closest<HTMLElement>(".ms-card")?.dataset.k;
+      if (key && onInspect) onInspect(key);
+    },
+    [onInspect],
   );
 
   // ── Scrolling a card into view (works for culled cards: uses layout) ──
@@ -682,11 +877,17 @@ function CriticalPathTimeline({ detail, laneMode, selectedKey, onSelect, matches
         }
         return;
       }
+      if (e.key === "Enter" && onInspect && selectedKey && cardByKey.has(selectedKey)) {
+        // Also stops the focused card's own button activation re-selecting it.
+        e.preventDefault();
+        onInspect(selectedKey);
+        return;
+      }
       if (e.key === "+" || e.key === "=") step(1);
       else if (e.key === "-") step(-1);
       else if (e.key === "0") fit();
     },
-    [cardByKey, focusCard, layout.cards, onSelect, selectedKey, step, fit],
+    [cardByKey, focusCard, layout.cards, onSelect, onInspect, selectedKey, step, fit],
   );
 
   if (layout.cards.length === 0 && matches) {
@@ -708,11 +909,17 @@ function CriticalPathTimeline({ detail, laneMode, selectedKey, onSelect, matches
         </div>
         <div className="text-[17px] font-semibold text-[var(--ms-label)]">Nothing left on the critical path</div>
         <p className="max-w-sm text-[13px] text-[var(--ms-label-2)]">
-          Every work item in this milestone is done. Blockers and team progress are still under Blockers &amp; teams.
+          {showDone
+            ? "This milestone has no work items yet."
+            : "Every work item in this milestone is done. Show done items to see what was delivered."}
         </p>
       </div>
     );
   }
+
+  const shownOverflows = (layout.overflows ?? []).filter(
+    (o) => !win || (o.x < win.x + win.width && o.x + CARD_WIDTH > win.x && o.y < win.y + win.height && o.y + OVERFLOW_HEIGHT > win.y),
+  );
 
   const activeKey = selectedKey && cardByKey.has(selectedKey) ? selectedKey : (layout.cards[0]?.item.key ?? null);
   const totalW = canvasW * zoom + LANE_W;
@@ -730,7 +937,7 @@ function CriticalPathTimeline({ detail, laneMode, selectedKey, onSelect, matches
         ref={scrollRef}
         role="application"
         aria-roledescription="critical path timeline"
-        aria-label="Critical path timeline. Use arrow keys to move between work items, Escape to clear the selection, plus and minus to zoom."
+        aria-label={`Critical path timeline. Use arrow keys to move between work items${onInspect ? ", Return to open the selected item" : ""}, Escape to clear the selection, plus and minus to zoom.`}
         onKeyDown={onKeyDown}
         // Focusable itself so arrow keys work even when the active card is culled.
         tabIndex={0}
@@ -746,14 +953,21 @@ function CriticalPathTimeline({ detail, laneMode, selectedKey, onSelect, matches
               {laneMode === "team" ? "Team" : "Epic"}
             </div>
             <div className="relative" style={{ width: canvasW * zoom }}>
-              {columnCounts.map((count, level) => (
+              {columnCounts.map((count, column) => (
                 <div
-                  key={level}
+                  key={column}
+                  role="columnheader"
+                  title={columnHelp(count.level)}
                   className="absolute top-0 flex h-full flex-col items-center justify-center leading-tight"
-                  style={{ left: (columnX(level) - COLUMN_GAP / 2 - LANE_W) * zoom, width: (CARD_WIDTH + COLUMN_GAP) * zoom }}
+                  style={{ left: (columnX(column) - COLUMN_GAP / 2 - LANE_W) * zoom, width: (CARD_WIDTH + COLUMN_GAP) * zoom }}
                 >
-                  <span className={cn("text-[12px] font-semibold", level === 0 ? "text-[var(--ms-accent-text)]" : "text-[var(--ms-label)]")}>
-                    {level === 0 ? "Now" : `Step ${level + 1}`}
+                  <span
+                    className={cn(
+                      "text-[12px] font-semibold",
+                      count.level === 0 ? "text-[var(--ms-ready-text)]" : count.level === null ? "text-[var(--ms-label-3)]" : "text-[var(--ms-label)]",
+                    )}
+                  >
+                    {columnTitle(count.level)}
                   </span>
                   {zoom >= 0.65 && (
                     <span className="text-[10.5px] tabular-nums text-[var(--ms-label-3)]">
@@ -768,49 +982,85 @@ function CriticalPathTimeline({ detail, laneMode, selectedKey, onSelect, matches
 
           <div className="flex">
             {/* Lane headers — sticky to the left */}
-            <div
-              className="sticky left-0 z-10 shrink-0 border-r border-[var(--ms-sep)] bg-[var(--ms-bg)]"
-              style={{ width: LANE_W, height: canvasH * zoom }}
-            >
-              {layout.lanes.map((lane, i) => (
-                <div
-                  key={lane.id}
-                  className={cn(
-                    // Top-aligned with the lane's first row of cards, not floating mid-lane.
-                    // overflow-clip (not hidden) keeps the sticky title below working.
-                    "absolute left-0 flex w-full flex-col overflow-clip border-t px-4",
-                    zoom < 0.65 ? "justify-center" : "justify-start",
-                    i % 2 === 1 && "bg-[var(--ms-lane)]",
-                    lane.newTeam ? "border-[var(--ms-sep-strong)]" : "border-[var(--ms-sep)]",
-                  )}
-                  style={{ top: lane.y * zoom, height: lane.height * zoom, paddingTop: zoom < 0.65 ? undefined : 16 * zoom }}
-                  title={`${lane.title}\n${lane.subtitle}`}
-                >
-                  {/* Sticks under the column header while a tall lane scrolls past. */}
-                  <div className="sticky flex flex-col" style={{ top: HEADER_H + 12 }}>
-                  {laneMode === "epic" && (i === 0 || lane.newTeam) && zoom >= 0.65 && (
-                    <div className="mb-0.5 truncate text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--ms-label-3)]">{lane.team}</div>
-                  )}
-                  <div className={cn("font-semibold leading-tight text-[var(--ms-label)]", zoom >= 0.65 ? "line-clamp-2 text-[13px]" : "truncate text-[12px]")}>
-                    {lane.title}
-                  </div>
-                  {zoom >= 0.65 && <div className="mt-0.5 truncate text-[11px] text-[var(--ms-label-3)]">{lane.subtitle}</div>}
-                  {laneMode === "team" && zoom >= 0.65 && teamByName.get(lane.team) && (
-                    <div className="mt-1 text-[11px] leading-snug text-[var(--ms-label-3)]">
-                      {teamByName.get(lane.team)?.readyNow ?? 0} ready · {teamByName.get(lane.team)?.unassignedRemaining ?? 0} unassigned
-                      {(teamByName.get(lane.team)?.waitingOnOtherTeams ?? 0) > 0 && (
-                        <div>waits on others for {teamByName.get(lane.team)?.waitingOnOtherTeams}</div>
+            <div className="sticky left-0 z-10 shrink-0 bg-[var(--ms-bg)]" style={{ width: LANE_W, height: canvasH * zoom }}>
+              {layout.lanes.map((lane, i) => {
+                const team = laneMode === "team" && !lane.external ? teamByName.get(lane.team) : undefined;
+                const openTeam = laneMode === "team" && onOpenTeam ? () => onOpenTeam(lane.team) : undefined;
+                const roomy = zoom >= 0.65;
+                return (
+                  <div
+                    key={lane.id}
+                    data-external={lane.external ? "" : undefined}
+                    data-clickable={openTeam ? "" : undefined}
+                    onClick={openTeam}
+                    className={cn(
+                      // Top-aligned with the lane's first row of cards, not floating mid-lane.
+                      // overflow-clip (not hidden) keeps the sticky title below working.
+                      "ms-lane-head absolute left-2 right-0 flex flex-col overflow-clip pl-3 pr-3",
+                      roomy ? "justify-start" : "justify-center",
+                    )}
+                    style={{ top: lane.y * zoom, height: lane.height * zoom, paddingTop: roomy ? 14 * zoom : undefined, "--tint": lane.color } as React.CSSProperties}
+                    title={openTeam ? `Show ${lane.team}` : `${lane.title}\n${lane.subtitle}`}
+                  >
+                    {/* Sticks under the column header while a tall lane scrolls past. */}
+                    <div className="sticky flex min-w-0 flex-col" style={{ top: HEADER_H + 12 }}>
+                      {laneMode === "epic" && (i === 0 || lane.newTeam) && roomy && !lane.external && (
+                        <div className="mb-1 truncate pl-[14px] text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--ms-label-3)]">
+                          {lane.team}
+                        </div>
+                      )}
+                      <div className="flex min-w-0 items-start gap-1.5">
+                        <span aria-hidden="true" className={cn("shrink-0 rounded-full", roomy ? "mt-[4px] h-2 w-2" : "mt-[3px] h-[7px] w-[7px]")} style={{ background: lane.color }} />
+                        {openTeam ? (
+                          <button
+                            type="button"
+                            className={cn("ms-lane-title min-w-0 text-left font-semibold leading-tight text-[var(--ms-label)]", roomy ? "line-clamp-2 text-[13px]" : "truncate text-[12px]")}
+                          >
+                            {lane.title}
+                          </button>
+                        ) : (
+                          <div className={cn("min-w-0 font-semibold leading-tight text-[var(--ms-label)]", roomy ? "line-clamp-2 text-[13px]" : "truncate text-[12px]")}>
+                            {lane.title}
+                          </div>
+                        )}
+                      </div>
+                      {roomy && <div className="mt-0.5 truncate text-[11px] text-[var(--ms-label-3)]">{lane.subtitle}</div>}
+                      {roomy && lane.external && (
+                        <div className="mt-1.5 inline-flex w-fit items-center gap-1 rounded-full bg-[var(--ms-fill)] px-1.5 py-[2px] text-[10px] font-semibold text-[var(--ms-label-2)]">
+                          <svg width="9" height="9" viewBox="0 0 10 10" aria-hidden="true">
+                            <path d="M4 1.5H1.5v7h7V6M6 1.5h2.5V4M8.5 1.5 4.5 5.5" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                          Outside milestone
+                        </div>
+                      )}
+                      {team && roomy && (
+                        <div className="mt-1 text-[11px] leading-snug text-[var(--ms-label-3)]">
+                          {team.readyNow} ready · {team.unassignedRemaining} unassigned
+                          {team.waitingOnOtherTeams > 0 && <div>waits on others for {team.waitingOnOtherTeams}</div>}
+                        </div>
+                      )}
+                      {lane.critical > 0 && zoom >= 0.8 && (
+                        <div className="mt-1.5 inline-flex w-fit items-center gap-1 rounded-full bg-[var(--ms-critical-fill)] px-1.5 py-[2px] text-[10px] font-semibold text-[var(--ms-critical-text)]">
+                          {lane.critical} critical
+                        </div>
+                      )}
+                      {lane.collapsible && roomy && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setLaneExpanded(lane.id, !lane.expanded);
+                          }}
+                          title={lane.expanded ? "Fold crowded steps back to their most important cards" : "Show every card in this lane"}
+                          className="mt-1.5 w-fit rounded text-[11px] font-medium text-[var(--ms-accent-text)] hover:underline"
+                        >
+                          {lane.expanded ? "Show fewer" : "Show all"}
+                        </button>
                       )}
                     </div>
-                  )}
-                  {lane.critical > 0 && zoom >= 0.8 && (
-                    <div className="mt-1.5 inline-flex w-fit items-center gap-1 rounded-full bg-[var(--ms-critical-fill)] px-1.5 py-[2px] text-[10px] font-semibold text-[var(--ms-critical-text)]">
-                      {lane.critical} critical
-                    </div>
-                  )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Canvas — scaled as one layer so zoom is a single compositor transform */}
@@ -824,10 +1074,12 @@ function CriticalPathTimeline({ detail, laneMode, selectedKey, onSelect, matches
                 onPointerOver={onPointerOver}
                 onPointerLeave={onPointerLeave}
                 onClick={onClick}
+                onDoubleClick={onDoubleClick}
               >
                 <LaneBands lanes={layout.lanes} width={layout.width} />
                 <SlackLayer cards={shownCards} />
-                <EdgeLayer edges={shownEdges} width={layout.width} height={canvasH} />
+                <EdgeLayer edges={shownEdges} width={layout.width} height={canvasH} chainRef={chainRef} />
+                <OverflowLayer overflows={shownOverflows} />
                 {shownCards.map((c) => (
                   <Card
                     key={c.item.key}
@@ -850,7 +1102,13 @@ function CriticalPathTimeline({ detail, laneMode, selectedKey, onSelect, matches
         <span className="flex items-center gap-1.5"><span className="h-[2px] w-4 rounded bg-[var(--ms-critical)]" />Critical</span>
         <span className="flex items-center gap-1.5"><span className="h-[2px] w-4 rounded bg-[var(--ms-cross)]" />Cross-team</span>
         <span className="flex items-center gap-1.5"><span className="w-4 border-t-[1.5px] border-dashed border-[var(--ms-edge)]" />Epic link</span>
-        <span className="flex items-center gap-1.5"><span className="flex w-4 items-center"><span className="h-[2px] flex-1 bg-[repeating-linear-gradient(90deg,var(--ms-sep-strong)_0_3px,transparent_3px_5px)]" /><span className="h-[6px] w-[2px] rounded-full bg-[var(--ms-sep-strong)]" /></span>Slack</span>
+        {layout.doneColumn && (
+          <span className="flex items-center gap-1.5"><span className="w-4 border-t border-dashed border-[var(--ms-label-3)]" />Done</span>
+        )}
+        <span className="flex items-center gap-1.5">
+          <span className="h-1 w-5 rounded-full bg-[linear-gradient(90deg,color-mix(in_srgb,var(--ms-accent)_50%,transparent),color-mix(in_srgb,var(--ms-accent)_6%,transparent))]" />
+          Slack
+        </span>
         <span className="flex items-center gap-1.5"><span className="rounded-full bg-[var(--ms-cross-fill)] px-1 text-[10px] font-semibold text-[var(--ms-cross-text)]">⇄</span>Blocks other teams</span>
       </div>
 

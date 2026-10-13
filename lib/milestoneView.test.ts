@@ -4,6 +4,7 @@ import type { LaidOutCard, LaidOutEdge } from "@/lib/milestoneLayout";
 import { fixtureDetail } from "@/lib/milestoneFixture";
 import {
   DEFAULT_VIEW,
+  chainHasEdge,
   chainIndex,
   cullWindow,
   hasQuickFilter,
@@ -104,8 +105,25 @@ describe("chainIndex", () => {
 
   it("collects everything upstream and downstream over open links", () => {
     const chain = chainIndex([dep("A", "B"), dep("B", "C"), dep("X", "B"), dep("C", "D", true)]);
-    expect([...chain("B")].sort()).toEqual(["A", "B", "C", "X"]);
-    expect([...chain("A")].sort()).toEqual(["A", "B", "C"]);
+    expect([...chain("B").members].sort()).toEqual(["A", "B", "C", "X"]);
+    expect([...chain("A").members].sort()).toEqual(["A", "B", "C"]);
+  });
+
+  it("follows done links too when asked", () => {
+    const chain = chainIndex([dep("A", "B"), dep("B", "C", true)], true);
+    expect([...chain("A").members].sort()).toEqual(["A", "B", "C"]);
+  });
+
+  it("leaves out shortcut edges that bypass the focus", () => {
+    const chain = chainIndex([dep("A", "B"), dep("B", "C"), dep("A", "C")])("B");
+    expect(chainHasEdge(chain, "A", "B")).toBe(true);
+    expect(chainHasEdge(chain, "B", "C")).toBe(true);
+    expect(chainHasEdge(chain, "A", "C")).toBe(false);
+  });
+
+  it("tolerates cycles", () => {
+    const chain = chainIndex([dep("A", "B"), dep("B", "A")])("A");
+    expect([...chain.members].sort()).toEqual(["A", "B"]);
   });
 });
 
@@ -114,6 +132,15 @@ describe("neighbor", () => {
 
   it("starts top-left when nothing is selected", () => {
     expect(neighbor(cards, null, "right")).toBe("A");
+  });
+
+  it("starts at the first critical card when there is one", () => {
+    const critical = (key: string, x: number, y: number): LaidOutCard => ({
+      item: { key, schedule: { critical: true } } as WorkItem,
+      x,
+      y,
+    });
+    expect(neighbor([...cards, critical("K", 600, 200), critical("J", 300, 500)], null, "down")).toBe("J");
   });
 
   it("steps to the nearest column, closest row", () => {

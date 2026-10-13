@@ -1162,3 +1162,69 @@ html.dark .ms {
   }
   .ms-card:hover { transform: none; }
 }
+
+/* ── Critical-path timeline: lanes, folding, edges (mac parity) ──────────── */
+
+/* Lanes carry their team's colour as a faint wash (--tint is set inline), so a
+   team reads as one band across header and canvas. */
+.ms { --ms-lane-tint: 5%; --ms-lane-tint-ext: 2%; }
+html.dark .ms { --ms-lane-tint: 8%; --ms-lane-tint-ext: 3%; }
+.ms-lane-band {
+  background: color-mix(in srgb, var(--tint) var(--ms-lane-tint), transparent);
+  border-radius: 0 16px 16px 0;
+}
+.ms-lane-head {
+  /* Opaque: cards scroll underneath the sticky header. */
+  background: linear-gradient(color-mix(in srgb, var(--tint) var(--ms-lane-tint), transparent), color-mix(in srgb, var(--tint) var(--ms-lane-tint), transparent)), var(--ms-bg);
+  border-radius: 16px 0 0 16px;
+  transition: background-color 160ms var(--ms-ease);
+}
+.ms-lane-band[data-external] {
+  background: color-mix(in srgb, var(--tint) var(--ms-lane-tint-ext), transparent);
+  border: 1px dashed var(--ms-sep-strong);
+  border-left: 0;
+}
+.ms-lane-head[data-external] {
+  background: linear-gradient(color-mix(in srgb, var(--tint) var(--ms-lane-tint-ext), transparent), color-mix(in srgb, var(--tint) var(--ms-lane-tint-ext), transparent)), var(--ms-bg);
+  border: 1px dashed var(--ms-sep-strong);
+  border-right: 0;
+}
+.ms-lane-head[data-clickable] { cursor: pointer; }
+.ms-lane-head[data-clickable]:hover .ms-lane-title { color: var(--ms-accent-text); }
+.ms-lane-title:focus-visible { outline-offset: 1px; border-radius: 4px; }
+
+.ms-card[data-critical]:not([data-selected]) {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ms-critical) 55%, transparent), var(--ms-shadow-card);
+}
+.ms-card[data-critical]:not([data-selected]):hover {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ms-critical) 70%, transparent), var(--ms-shadow-hover);
+}
+.ms-card[data-done] { opacity: 0.6; }
+.ms-canvas[data-focus] .ms-card[data-done][data-lit] { opacity: 0.6; }
+
+/* "N more" pill standing in for folded cards. */
+.ms-more {
+  border: 1px dashed var(--ms-sep-strong);
+  transition: background-color 140ms var(--ms-ease), color 140ms var(--ms-ease), border-color 140ms var(--ms-ease);
+}
+.ms-more:hover { background: var(--ms-fill-2); color: var(--ms-label); border-color: var(--ms-label-3); }
+.ms-canvas[data-focus] .ms-more, .ms-canvas[data-filter] .ms-more { opacity: 0.5; }
+.ms-canvas[data-compact] .ms-more { font-size: 22px; font-weight: 600; }
+.ms-canvas[data-compact] .ms-more svg { width: 18px; height: 18px; }
+
+/* Slack: hidden until its card's chain is explored. */
+.ms-slack {
+  opacity: 0;
+  pointer-events: none;
+  border-radius: 999px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--ms-accent) 50%, transparent), color-mix(in srgb, var(--ms-accent) 6%, transparent));
+}
+.ms-canvas[data-focus] .ms-slack:not([data-lit]) { opacity: 0; }
+.ms-canvas[data-focus] .ms-slack[data-lit] { opacity: 1; pointer-events: auto; cursor: help; }
+
+/* Edges: halo under the critical path; done links faint and dashed. */
+.ms-edge-halo { stroke: var(--ms-critical); stroke-opacity: 0.14; stroke-width: 7; }
+.ms-canvas[data-focus] .ms-edge-halo[data-lit] { stroke-width: 7; }
+.ms-edge[data-kind="done"] { opacity: 0.55; }
+.ms-canvas[data-focus] .ms-edge[data-kind="done"][data-lit] { opacity: 0.9; stroke-width: 1.5; }
+.ms-canvas[data-focus] .ms-edge[data-kind="crit"][data-lit] { stroke-width: 2.75; }
