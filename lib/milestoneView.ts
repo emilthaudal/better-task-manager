@@ -117,35 +117,60 @@ export function matchItems(detail: MilestoneDetail, query: string): Set<string> 
 
 // ── Dependency chains ───────────────────────────────────────────────────────
 
-/** Adjacency over unsatisfied links, built once per payload. */
-export function chainIndex(dependencies: Dependency[]): (key: string) => Set<string> {
+export interface DependencyChain {
+  focus: string;
+  upstream: Set<string>;
+  downstream: Set<string>;
+  /** The focus plus everything up- and downstream of it. */
+  members: Set<string>;
+}
+
+/**
+ * Adjacency over unsatisfied links (or all links, when done work is on show),
+ * built once per payload.
+ */
+export function chainIndex(dependencies: Dependency[], includeSatisfied = false): (key: string) => DependencyChain {
   const up = new Map<string, string[]>();
   const down = new Map<string, string[]>();
   for (const d of dependencies) {
-    if (d.satisfied) continue;
+    if ((d.satisfied && !includeSatisfied) || d.from === d.to) continue;
     (down.get(d.from) ?? down.set(d.from, []).get(d.from))?.push(d.to);
     (up.get(d.to) ?? up.set(d.to, []).get(d.to))?.push(d.from);
   }
-  const memo = new Map<string, Set<string>>();
+  const closure = (key: string, graph: Map<string, string[]>) => {
+    const seen = new Set<string>();
+    const stack = [...(graph.get(key) ?? [])];
+    while (stack.length) {
+      const k = stack.pop() as string;
+      // Cycles are reported as warnings but their links still arrive.
+      if (k === key || seen.has(k)) continue;
+      seen.add(k);
+      stack.push(...(graph.get(k) ?? []));
+    }
+    return seen;
+  };
+  const memo = new Map<string, DependencyChain>();
   return (key) => {
     const hit = memo.get(key);
     if (hit) return hit;
-    const seen = new Set<string>([key]);
-    for (const graph of [up, down]) {
-      const stack = [key];
-      while (stack.length) {
-        const k = stack.pop() as string;
-        for (const next of graph.get(k) ?? []) {
-          if (!seen.has(next)) {
-            seen.add(next);
-            stack.push(next);
-          }
-        }
-      }
-    }
-    memo.set(key, seen);
-    return seen;
+    const upstream = closure(key, up);
+    const downstream = closure(key, down);
+    const chain = { focus: key, upstream, downstream, members: new Set([key, ...upstream, ...downstream]) };
+    memo.set(key, chain);
+    return chain;
   };
+}
+
+/**
+ * An edge belongs to the chain only when it runs along the focus's side of the
+ * graph — an upstream item that also links straight to a downstream one
+ * bypasses the focus, so that shortcut isn't part of its path even though both
+ * ends are.
+ */
+export function chainHasEdge(chain: DependencyChain, from: string, to: string): boolean {
+  const before = (k: string) => k === chain.focus || chain.upstream.has(k);
+  const after = (k: string) => k === chain.focus || chain.downstream.has(k);
+  return (before(from) && before(to)) || (after(from) && after(to));
 }
 
 // ── Keyboard navigation ─────────────────────────────────────────────────────
@@ -161,9 +186,10 @@ export function neighbor(cards: LaidOutCard[], fromKey: string | null, dir: Dire
   if (cards.length === 0) return null;
   const from = fromKey ? cards.find((c) => c.item.key === fromKey) : undefined;
   if (!from) {
-    // Nothing selected yet: start at the top-left card.
-    const first = [...cards].sort((a, b) => a.x - b.x || a.y - b.y)[0];
-    return first?.item.key ?? null;
+    // Nothing selected yet: start where the milestone is decided — the first
+    // critical card — else the top-left card.
+    const ordered = [...cards].sort((a, b) => a.x - b.x || a.y - b.y);
+    return (ordered.find((c) => c.item.schedule?.critical) ?? ordered[0])?.item.key ?? null;
   }
   let best: LaidOutCard | null = null;
   let bestScore = Infinity;
