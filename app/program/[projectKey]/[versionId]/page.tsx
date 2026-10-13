@@ -1,290 +1,251 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { CirclePlay, CircleDashed, Flame, PanelRight, TriangleAlert, Users } from "lucide-react";
 import CriticalPathTimeline from "@/components/milestone/CriticalPathTimeline";
 import MilestoneInspector from "@/components/milestone/MilestoneInspector";
-import { ErrorState, MilestoneSkeleton, ShortcutsSheet, Toolbar } from "@/components/milestone/MilestoneChrome";
-import {
-  BlockerEpicsPanel,
-  CriticalChainPanel,
-  IncrementsPanel,
-  ReadyNowPanel,
-  TeamDependencyPanel,
-  TeamLoadPanel,
-  WarningsPanel,
-} from "@/components/milestone/InsightPanels";
-import { KeyChip, ProgressRing, Segmented, Stat, percentDone } from "@/components/milestone/MilestoneBits";
-import { useJiraBaseUrl } from "@/hooks/useJiraBaseUrl";
+import { ErrorState, MilestoneSkeleton, ShortcutsSheet, ToolButton, Toolbar } from "@/components/milestone/MilestoneChrome";
+import { MilestoneProvider } from "@/components/milestone/MilestoneContext";
+import { BlockersTab, IncrementsTab, NoMatches, ReadyTab } from "@/components/milestone/MilestoneTabs";
+import { TeamLoadTab } from "@/components/milestone/TeamLoad";
+import { FilterBar, useInspector, useWorkspaceKeys } from "@/components/milestone/MilestoneWorkspace";
+import { KeyChip, ProgressRing, Segmented, StatTile, percentDone } from "@/components/milestone/MilestoneBits";
+import { useProgram } from "@/components/milestone/ProgramShell";
 import { useMilestoneViewState } from "@/hooks/useMilestoneViewState";
-import { usePolledJson } from "@/hooks/usePolledJson";
-import { QUICK_FILTERS, hasQuickFilter, matchItems, teamToken, toggleQuickFilter } from "@/lib/milestoneView";
-import type { MilestoneTab, QuickFilter } from "@/lib/milestoneView";
-import { cn } from "@/lib/utils";
-import type { LaneMode } from "@/lib/milestoneLayout";
+import { plural, rankMatches, releaseState, releaseStateLabel, steps, warningsDetail } from "@/lib/milestoneInsights";
+import { MILESTONE_TABS, matchItems } from "@/lib/milestoneView";
+import type { MilestoneTab, MilestoneViewState } from "@/lib/milestoneView";
 import type { MilestoneDetail } from "@/lib/milestoneTypes";
+import { cn } from "@/lib/utils";
 
-const TABS: Array<{ value: MilestoneTab; label: string }> = [
-  { value: "path", label: "Critical path" },
-  { value: "insights", label: "Blockers & teams" },
+const TABS: Array<{ value: MilestoneTab; label: React.ReactNode }> = [
+  { value: "path", label: <><span className="hidden xl:inline">Critical path</span><span className="xl:hidden">Path</span></> },
+  { value: "blockers", label: "Blockers" },
+  { value: "teams", label: <><span className="hidden xl:inline">Team load</span><span className="xl:hidden">Load</span></> },
+  { value: "increments", label: "Increments" },
+  { value: "ready", label: <><span className="hidden xl:inline">Ready & warnings</span><span className="xl:hidden">Ready</span></> },
 ];
 
-const LANES: Array<{ value: LaneMode; label: string }> = [
-  { value: "epic", label: "By epic" },
-  { value: "team", label: "By team" },
-];
+const TAB_TITLE: Record<MilestoneTab, string> = {
+  path: "Critical path",
+  blockers: "Blockers",
+  teams: "Team load",
+  increments: "Increments",
+  ready: "Ready & warnings",
+};
 
-const CHIPS: QuickFilter[] = ["critical", "ready", "unassigned", "cross"];
+const STATE_STYLE = {
+  released: "bg-[var(--ms-ready-fill)] text-[var(--ms-ready-text)]",
+  overdue: "bg-[var(--ms-critical-fill)] text-[var(--ms-critical-text)]",
+  due: "bg-[color-mix(in_srgb,var(--ms-accent)_14%,transparent)] text-[var(--ms-accent-text)]",
+  undated: "bg-[var(--ms-fill)] text-[var(--ms-label-2)]",
+} as const;
 
-function formatDate(iso: string | null): string | null {
-  if (!iso) return null;
-  return new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
-}
-
-function Summary({ detail, onSelect }: { detail: MilestoneDetail; onSelect: (k: string) => void }) {
-  const remaining = detail.progress.total - detail.progress.done;
+function Header({ detail, setTab, inspect }: { detail: MilestoneDetail; setTab: (tab: MilestoneTab) => void; inspect: (key: string) => void }) {
+  const state = releaseState(detail.release);
+  const remaining = detail.items.filter((i) => !i.external && i.status.category !== "done").length;
+  const crossTeam = detail.items.filter((i) => (i.schedule?.downstreamTeams.length ?? 0) > 0).length;
   const top = detail.blockerEpics[0];
   const topEpic = top ? detail.epics.find((e) => e.key === top.epicKey) : undefined;
-  const teams = detail.teams.filter((t) => t.remaining > 0).length;
-  const crossTeam = detail.items.filter((i) => (i.schedule?.downstreamTeams.length ?? 0) > 0).length;
-  const date = formatDate(detail.release.releaseDate);
+  const pct = percentDone(detail.progress);
   return (
-    <section aria-label="Milestone summary" className="flex flex-wrap items-center gap-x-10 gap-y-4 border-b border-[var(--ms-sep)] px-8 pb-5 pt-6">
-      <div className="flex min-w-0 items-center gap-4">
-        <div className="relative shrink-0" title={`${percentDone(detail.progress)}% of items done`}>
-          <ProgressRing progress={detail.progress} size={56} stroke={5} />
-          <span className="absolute inset-0 flex items-center justify-center text-[13px] font-semibold tabular-nums text-[var(--ms-label)]">
-            {percentDone(detail.progress)}%
+    <section aria-label="Milestone summary" className="@container border-b border-[var(--ms-sep)] px-6 pb-4 pt-4">
+      <div className="flex items-center gap-x-6 gap-y-3">
+        <div className="flex min-w-0 flex-1 items-center gap-4">
+          <div className="relative shrink-0" title={`${pct}% of items done`}>
+            <ProgressRing progress={detail.progress} size={54} stroke={6} />
+            <span className="absolute inset-0 flex items-center justify-center text-[12px] font-bold tabular-nums text-[var(--ms-label)]">{pct}%</span>
+          </div>
+          <div className="min-w-0">
+            <h1 className="truncate text-[24px] font-bold leading-tight tracking-[-0.02em] text-[var(--ms-label)]">{detail.release.name}</h1>
+            <div className="mt-0.5 flex min-w-0 items-center gap-2">
+              <span className={cn("shrink-0 rounded-full px-2 py-[2px] text-[11px] font-semibold", STATE_STYLE[state.kind])}>{releaseStateLabel(state)}</span>
+              <span className="truncate text-[12.5px] text-[var(--ms-label-2)]">
+                Milestone {detail.release.sequence + 1} · {plural(detail.increments.length, "increment")} · {plural(detail.teams.length, "team")}
+              </span>
+            </div>
+            {detail.release.description && (
+              <p className="mt-0.5 truncate text-[12.5px] text-[var(--ms-label-3)]" title={detail.release.description}>
+                {detail.release.description}
+              </p>
+            )}
+          </div>
+        </div>
+        {/* Tiles shrink, then drop out, as the column narrows — never the title. */}
+        <div className="ms-tiles hidden shrink-0 items-stretch gap-2 @3xl:flex">
+          <StatTile
+            title="Critical path"
+            value={steps(detail.criticalPath.length)}
+            detail={`${detail.criticalPath.criticalKeys.length} items with no slack`}
+            icon={<Flame size={13} className="fill-current" />}
+            tint="var(--ms-critical)"
+            onClick={() => setTab("path")}
+            hint="The longest chain of remaining work, one step per item"
+          />
+          <StatTile title="Remaining" value={remaining} detail={`of ${detail.progress.total} items`} icon={<CircleDashed size={13} />} tint="var(--ms-accent)" />
+          <StatTile
+            title="Ready now"
+            value={detail.readyNow.length}
+            detail="unblocked, not started"
+            icon={<CirclePlay size={13} />}
+            tint="var(--ms-ready)"
+            onClick={() => setTab("ready")}
+            hint="Remaining items whose blockers are all done"
+          />
+          <StatTile
+            title="Warnings"
+            value={detail.warnings.length}
+            detail={warningsDetail(detail.warnings)}
+            icon={<TriangleAlert size={13} />}
+            tint={detail.warnings.length ? "var(--ms-warn)" : "var(--ms-label-3)"}
+            onClick={() => setTab("ready")}
+            hint="Sequencing problems found in Jira links"
+          />
+          <span className="hidden @5xl:flex">
+            <StatTile
+              title="Blocks other teams"
+              value={crossTeam}
+              detail="remaining items"
+              icon={<Users size={13} />}
+              tint="var(--ms-cross)"
+              onClick={() => setTab("teams")}
+              hint="Remaining items that other teams' work waits on"
+            />
           </span>
         </div>
-        <div className="min-w-0">
-          <div className="text-[12px] font-medium text-[var(--ms-label-3)]">
-            Milestone {detail.release.sequence + 1}
-            {date && <> · {detail.release.released ? "Released" : "Due"} {date}</>}
-            {detail.release.overdue && <span className="font-semibold text-[var(--ms-critical-text)]"> · Overdue</span>}
-          </div>
-          <h1 className="truncate text-[26px] font-semibold leading-tight tracking-[-0.022em] text-[var(--ms-label)]">{detail.release.name}</h1>
-          <div className="text-[12.5px] text-[var(--ms-label-2)]">
-            {remaining} of {detail.progress.total} items remaining · {teams} team{teams === 1 ? "" : "s"} · {detail.increments.length} increment
-            {detail.increments.length === 1 ? "" : "s"}
-          </div>
-        </div>
-      </div>
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-3 xl:gap-x-8">
-        <Stat label="Critical path" value={detail.criticalPath.length} unit={detail.criticalPath.length === 1 ? "step" : "steps"} tone="critical" hint="Length of the longest remaining chain of blocked work" />
-        <Stat label="Ready now" value={detail.readyNow.length} tone={detail.readyNow.length ? "ready" : undefined} hint="Remaining items whose blockers are all done" />
-        <Stat label="Blocks other teams" value={crossTeam} tone={crossTeam ? "cross" : undefined} hint="Remaining items that other teams' work waits on" />
-        <Stat label="Needs attention" value={detail.warnings.length} tone={detail.warnings.length ? "warn" : undefined} hint="Sequencing problems found in Jira links" />
         {top && (
           <button
             type="button"
-            onClick={() => onSelect(top.epicKey)}
-            title={`${topEpic?.summary ?? top.epicKey} — gates ${top.downstreamItems} items`}
-            className="flex flex-col gap-1 rounded-lg text-left min-[1400px]:hidden"
+            onClick={() => {
+              setTab("blockers");
+              inspect(top.epicKey);
+            }}
+            className="ms-tile-button hidden w-[300px] shrink-0 flex-col gap-1 rounded-xl bg-[var(--ms-fill-2)] px-3.5 py-2.5 text-left @7xl:flex"
           >
-            <span className="text-[11px] font-medium text-[var(--ms-label-3)]">Biggest blocker</span>
-            <span className="flex items-center gap-1.5 text-[12.5px] text-[var(--ms-label-2)]">
+            <span className="flex items-center gap-1.5 text-[11.5px] font-medium text-[var(--ms-label-2)]">
+              Biggest blocker
+              {top.onCriticalPath && <span className="font-semibold text-[var(--ms-critical-text)]">· on critical path</span>}
+            </span>
+            <span className="flex min-w-0 items-center gap-2">
               <KeyChip issueKey={top.epicKey} critical={top.onCriticalPath} />
-              gates {top.downstreamItems}
+              <span className="truncate text-[13px] font-semibold text-[var(--ms-label)]">{topEpic?.summary ?? top.epicKey}</span>
+            </span>
+            <span className="truncate text-[11.5px] text-[var(--ms-label-3)]">
+              {top.team} · gates {plural(top.downstreamItems, "item")}
+              {top.blockedTeams.length > 0 && <> in {top.blockedTeams.join(", ")}</>}
             </span>
           </button>
         )}
       </div>
-      {top && (
-        <button
-          type="button"
-          onClick={() => onSelect(top.epicKey)}
-          className="group ml-auto hidden max-w-[340px] min-w-[240px] flex-col gap-1 min-[1400px]:flex rounded-xl bg-[var(--ms-surface)] px-3.5 py-2.5 text-left shadow-[var(--ms-shadow-card)] transition-shadow hover:shadow-[var(--ms-shadow-hover)]"
-        >
-          <span className="flex items-center gap-2 text-[11px] font-medium text-[var(--ms-label-3)]">
-            Biggest blocker
-            {top.onCriticalPath && <span className="font-semibold text-[var(--ms-critical-text)]">· on critical path</span>}
-          </span>
-          <span className="flex min-w-0 items-center gap-2">
-            <KeyChip issueKey={top.epicKey} critical={top.onCriticalPath} />
-            <span className="truncate text-[13px] font-semibold text-[var(--ms-label)]">{topEpic?.summary ?? top.epicKey}</span>
-          </span>
-          <span className="text-[12px] text-[var(--ms-label-2)]">
-            {top.team} · gates {top.downstreamItems} item{top.downstreamItems === 1 ? "" : "s"}
-            {top.blockedTeams.length > 0 && <> in <span className="font-medium text-[var(--ms-cross-text)]">{top.blockedTeams.join(", ")}</span></>}
-          </span>
-        </button>
-      )}
     </section>
   );
 }
 
-function SearchField({
-  value,
-  onChange,
-  onSubmit,
-  count,
-  inputRef,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  onSubmit: (backwards: boolean) => void;
-  count: number | null;
-  inputRef: React.RefObject<HTMLInputElement | null>;
-}) {
-  return (
-    <div className="relative flex w-full min-w-[220px] max-w-[340px] items-center">
-      <svg className="pointer-events-none absolute left-2.5 text-[var(--ms-label-3)]" width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-        <circle cx="7" cy="7" r="4.75" stroke="currentColor" strokeWidth="1.6" />
-        <path d="m10.5 10.5 3 3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-      </svg>
-      <input
-        ref={inputRef}
-        type="search"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            onSubmit(e.shiftKey);
-          } else if (e.key === "Escape") {
-            e.stopPropagation();
-            if (value) onChange("");
-            else e.currentTarget.blur();
-          }
-        }}
-        placeholder="Filter by key, summary, person or team"
-        aria-label="Filter work items"
-        aria-describedby="ms-filter-count"
-        className="h-8 w-full rounded-lg border-0 bg-[var(--ms-fill)] pl-8 pr-16 text-[13px] text-[var(--ms-label)] outline-none transition-shadow placeholder:text-[var(--ms-label-3)] focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--ms-accent)_35%,transparent)] [&::-webkit-search-cancel-button]:hidden"
-      />
-      <span id="ms-filter-count" className="pointer-events-none absolute right-2.5 text-[11px] font-medium tabular-nums text-[var(--ms-label-3)]">
-        {count !== null ? (
-          <span aria-live="polite">{count} match{count === 1 ? "" : "es"}</span>
-        ) : (
-          <kbd className="rounded bg-[var(--ms-fill-2)] px-1.5 py-[1px] font-sans text-[10.5px]">⌘K</kbd>
-        )}
-      </span>
-    </div>
-  );
-}
-
 function MilestoneView() {
-  const { projectKey, versionId } = useParams<{ projectKey: string; versionId: string }>();
-  const searchParams = useSearchParams();
-  const fixture = searchParams.get("fixture");
-  const jiraBaseUrl = useJiraBaseUrl();
-  const apiUrl = `/api/jira/milestones/${encodeURIComponent(versionId)}?project=${encodeURIComponent(projectKey)}${fixture ? `&fixture=${encodeURIComponent(fixture)}` : ""}`;
-  const { data, loading, refreshing, error, lastUpdated, refresh, retry } = usePolledJson<MilestoneDetail>(apiUrl);
+  const program = useProgram();
+  const { milestone, projectKey, versionId, href, jiraBaseUrl } = program;
+  const { data, loading, error, retry } = milestone;
+  const router = useRouter();
   const [view, setView] = useMilestoneViewState();
   const searchRef = useRef<HTMLInputElement>(null);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
-  const programHref = `/program/${encodeURIComponent(projectKey)}${fixture ? `?fixture=${encodeURIComponent(fixture)}` : ""}`;
+  const inspector = useInspector(view, setView);
+  const { select, inspect, setOpen } = inspector;
 
-  const select = useCallback((key: string | null) => setView({ item: key }), [setView]);
   const matches = useMemo(() => (data ? matchItems(data, view.query) : null), [data, view.query]);
-  const remainingMatches = useMemo(() => {
-    if (!data || !matches) return null;
-    return data.items.filter((i) => i.schedule && matches.has(i.key)).map((i) => i.key);
-  }, [data, matches]);
-
-  // Enter in the filter steps through matches.
-  const stepMatch = useCallback(
-    (backwards: boolean) => {
-      if (!remainingMatches?.length) return;
-      const at = view.item ? remainingMatches.indexOf(view.item) : -1;
-      const n = remainingMatches.length;
-      const next = at === -1 ? (backwards ? n - 1 : 0) : (at + (backwards ? -1 : 1) + n) % n;
-      select(remainingMatches[next] ?? null);
-    },
-    [remainingMatches, select, view.item],
+  const ranked = useMemo(
+    () => (data ? rankMatches(data, matches, { showDone: view.showDone, showOutside: view.showOutside }) : []),
+    [data, matches, view.showDone, view.showOutside],
   );
 
-  // ⌘K or "/" focuses the filter; Esc clears the selection.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement | null;
-      const typing = !!target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable);
-      if ((e.key === "k" && (e.metaKey || e.ctrlKey)) || (e.key === "/" && !typing)) {
+  // Return in the filter goes to the best match (critical first, then the
+  // earliest to start); repeats step through the rest in that order.
+  const stepMatch = useCallback(
+    (backwards: boolean) => {
+      if (!ranked.length) return;
+      const at = view.item ? ranked.indexOf(view.item) : -1;
+      const n = ranked.length;
+      const next = at === -1 ? (backwards ? n - 1 : 0) : (at + (backwards ? -1 : 1) + n) % n;
+      const key = ranked[next];
+      if (key) inspect(key);
+    },
+    [ranked, inspect, view.item],
+  );
+
+  const setTab = useCallback((tab: MilestoneTab) => setView({ tab }), [setView]);
+  const showTeam = useCallback((team: string) => versionId && router.push(href.team(versionId, team)), [router, href, versionId]);
+  const clearSelection = useCallback(() => setView({ item: null }), [setView]);
+  const toggleInspector = useCallback(() => setOpen((o) => !o), [setOpen]);
+
+  // Browsers keep ⌘1–9 for their tabs, so the bare digits switch views too.
+  const extra = useCallback(
+    (e: KeyboardEvent, typing: boolean) => {
+      const digit = /^Digit[1-5]$/.test(e.code) ? Number(e.code.slice(5)) : 0;
+      if (digit && !e.altKey && !e.shiftKey && (e.metaKey || e.ctrlKey || !typing)) {
         e.preventDefault();
-        setView({ tab: "path" });
-        requestAnimationFrame(() => searchRef.current?.focus());
-        searchRef.current?.select();
-      } else if (e.key === "?" && !typing) {
-        e.preventDefault();
-        setShortcutsOpen((open) => !open);
-      } else if (e.key === "Escape" && !typing) {
-        // Esc closes the sheet first, then clears the selection.
-        if (shortcutsOpen) setShortcutsOpen(false);
-        else setView({ item: null });
+        setView({ tab: MILESTONE_TABS[digit - 1] });
+        return true;
       }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [setView, shortcutsOpen]);
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.code === "KeyD") {
+        e.preventDefault();
+        setView({ showDone: !view.showDone });
+        return true;
+      }
+      return false;
+    },
+    [setView, view.showDone],
+  );
+  useWorkspaceKeys({
+    searchRef,
+    shortcutsOpen,
+    setShortcutsOpen,
+    selectedKey: view.item,
+    clearSelection,
+    toggleInspector,
+    jiraBaseUrl,
+    extra,
+  });
 
   useEffect(() => {
-    document.title = data ? `${data.release.name} · Critical path` : "Milestone";
-  }, [data]);
+    document.title = data ? `${data.release.name} · ${TAB_TITLE[view.tab]}` : "Milestone";
+  }, [data, view.tab]);
+
+  const releaseName = data?.release.name ?? program.program.data?.releases.find((r) => r.id === versionId)?.name;
+  const onClearQuery = () => setView({ query: "" });
+  const patch = (p: Partial<MilestoneViewState>) => setView(p);
 
   return (
-    <div className="ms flex h-screen flex-col">
+    <>
       <Toolbar
-        backHref={programHref}
-        backLabel={data?.project.name ?? projectKey}
-        lastUpdated={lastUpdated}
-        refreshing={refreshing && !loading}
-        onRefresh={refresh}
+        title={releaseName ?? "Milestone"}
+        subtitle={data?.project.name ?? program.program.data?.project.name}
         shareable={!!data}
-        center={data ? <Segmented label="View" value={view.tab} onChange={(tab) => setView({ tab })} options={TABS} /> : null}
+        center={data ? <Segmented label="View" value={view.tab} onChange={setTab} options={TABS} /> : null}
+        trailing={
+          data && (
+            <ToolButton label={inspector.open ? "Hide inspector" : "Show inspector"} shortcut="⌥⌘I" onClick={toggleInspector} pressed={inspector.open} disabled={!view.item}>
+              <PanelRight size={17} strokeWidth={1.75} aria-hidden="true" />
+            </ToolButton>
+          )
+        }
       />
       {loading && !data ? (
         <MilestoneSkeleton />
       ) : error && !data ? (
-        <ErrorState message={error} onRetry={retry} backHref={programHref} />
+        <ErrorState message={error} onRetry={retry} what={releaseName ?? "this milestone"} projectKey={projectKey} />
       ) : data ? (
-        <>
-          <Summary detail={data} onSelect={select} />
-          {view.tab === "path" && (
-            <div className="flex items-center gap-3 border-b border-[var(--ms-sep)] px-8 py-2.5">
-              <Segmented label="Lanes" value={view.lanes} onChange={(lanes) => setView({ lanes })} options={LANES} />
-              <SearchField
-                value={view.query}
-                onChange={(query) => setView({ query })}
-                onSubmit={stepMatch}
-                count={remainingMatches ? remainingMatches.length : null}
-                inputRef={searchRef}
-              />
-              <div role="group" aria-label="Quick filters" className="flex min-w-0 items-center gap-1.5 overflow-x-auto">
-                {CHIPS.map((name) => {
-                  const on = hasQuickFilter(view.query, name);
-                  return (
-                    <button
-                      key={name}
-                      type="button"
-                      aria-pressed={on}
-                      onClick={() => setView({ query: toggleQuickFilter(view.query, name) })}
-                      className={cn(
-                        "shrink-0 whitespace-nowrap rounded-full px-3 py-[5px] text-[12px] font-medium transition-colors",
-                        on
-                          ? "bg-[var(--ms-accent)] text-white"
-                          : "bg-[var(--ms-fill-2)] text-[var(--ms-label-2)] hover:bg-[var(--ms-fill)] hover:text-[var(--ms-label)]",
-                      )}
-                    >
-                      {QUICK_FILTERS[name].label}
-                    </button>
-                  );
-                })}
-              </div>
-              <span className="ml-auto hidden shrink-0 text-[11.5px] text-[var(--ms-label-3)] min-[1600px]:inline">
-                Hover to trace a chain · arrow keys to move · Esc to clear
-              </span>
-              <button
-                type="button"
-                onClick={() => setShortcutsOpen(true)}
-                aria-label="Keyboard shortcuts"
-                title="Keyboard shortcuts (?)"
-                className="ml-auto flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--ms-fill-2)] text-[13px] font-semibold text-[var(--ms-label-2)] transition-colors hover:bg-[var(--ms-fill)] hover:text-[var(--ms-label)] min-[1600px]:ml-0"
-              >
-                ?
-              </button>
-            </div>
-          )}
+        <MilestoneProvider detail={data} selectedKey={view.item} inspect={inspect} showTeam={showTeam} jiraBaseUrl={jiraBaseUrl}>
+          <Header detail={data} setTab={setTab} inspect={inspect} />
+          <FilterBar
+            view={view}
+            setView={patch}
+            count={view.query.trim() ? ranked.length : null}
+            onSubmit={stepMatch}
+            inputRef={searchRef}
+            laneOptions={view.tab === "path"}
+            onShowShortcuts={() => setShortcutsOpen(true)}
+          />
           <main className="relative min-h-0 flex-1">
             {view.tab === "path" ? (
               <CriticalPathTimeline
@@ -292,48 +253,38 @@ function MilestoneView() {
                 laneMode={view.lanes}
                 selectedKey={view.item}
                 onSelect={select}
+                onInspect={inspect}
+                onOpenTeam={showTeam}
+                showDone={view.showDone}
+                showOutside={view.showOutside}
                 matches={matches}
               />
             ) : (
-              <div className="absolute inset-0 overflow-y-auto">
-                <div className="ms-fade-up mx-auto grid max-w-[1280px] gap-8 px-8 py-8 xl:grid-cols-[1.15fr_1fr]">
-                  <div className="flex min-w-0 flex-col gap-8">
-                    <BlockerEpicsPanel detail={data} onSelect={select} />
-                    <TeamDependencyPanel
-                      detail={data}
-                      onShowTeam={(team) => setView({ tab: "path", lanes: "team", item: null, query: `team:${teamToken(team)} is:cross` })}
-                    />
-                    <TeamLoadPanel detail={data} />
-                  </div>
-                  <div className="flex min-w-0 flex-col gap-8">
-                    <CriticalChainPanel detail={data} onSelect={select} />
-                    <WarningsPanel warnings={data.warnings} onSelect={select} />
-                    <ReadyNowPanel detail={data} onSelect={select} />
-                    <IncrementsPanel detail={data} onSelect={select} />
-                  </div>
-                </div>
+              <div key={view.tab} className="ms-fade-quick absolute inset-0 overflow-y-auto">
+                {view.tab === "blockers" && <BlockersTab query={view.query} onClearQuery={onClearQuery} />}
+                {view.tab === "teams" && <TeamLoadTab matches={matches} empty={<NoMatches query={view.query} onClear={onClearQuery} />} />}
+                {view.tab === "increments" && <IncrementsTab query={view.query} onClearQuery={onClearQuery} />}
+                {view.tab === "ready" && <ReadyTab query={view.query} matches={matches} />}
               </div>
             )}
-            {view.item && (
+            {inspector.open && view.item && (
               <MilestoneInspector
-                detail={data}
                 selectedKey={view.item}
-                jiraBaseUrl={jiraBaseUrl}
-                onSelect={select}
-                onShowInTimeline={view.tab === "insights" ? () => setView({ tab: "path" }) : undefined}
+                onClose={() => setOpen(false)}
+                onShowInTimeline={view.tab !== "path" ? () => setView({ tab: "path" }) : undefined}
               />
             )}
           </main>
-        </>
+        </MilestoneProvider>
       ) : null}
       {shortcutsOpen && <ShortcutsSheet onClose={() => setShortcutsOpen(false)} />}
-    </div>
+    </>
   );
 }
 
 export default function MilestonePage() {
   return (
-    <Suspense fallback={<div className="ms flex h-screen flex-col"><MilestoneSkeleton /></div>}>
+    <Suspense fallback={<MilestoneSkeleton />}>
       <MilestoneView />
     </Suspense>
   );
