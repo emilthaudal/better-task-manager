@@ -9,27 +9,48 @@ import type { Dependency, MilestoneDetail, WorkItem } from "@/lib/milestoneTypes
 
 // ── URL state ───────────────────────────────────────────────────────────────
 
-export type MilestoneTab = "path" | "insights";
+export const MILESTONE_TABS = ["path", "blockers", "teams", "increments", "ready"] as const;
+
+export type MilestoneTab = (typeof MILESTONE_TABS)[number];
 
 export interface MilestoneViewState {
   tab: MilestoneTab;
   lanes: LaneMode;
+  /** Timeline shows finished items too. */
+  showDone: boolean;
+  /** Timeline shows blockers and dependants pulled in from outside the milestone. */
+  showOutside: boolean;
   /** Selected issue key (item, epic or increment). */
   item: string | null;
   query: string;
 }
 
-export const DEFAULT_VIEW: MilestoneViewState = { tab: "path", lanes: "epic", item: null, query: "" };
+/** Lanes by team, like the mac app: a program reads team by team first. */
+export const DEFAULT_VIEW: MilestoneViewState = { tab: "path", lanes: "team", showDone: false, showOutside: true, item: null, query: "" };
+
+/** View options that carry over between milestones (and visits); selection and filter don't. */
+export type ViewPrefs = Pick<MilestoneViewState, "tab" | "lanes" | "showDone" | "showOutside">;
 
 const ISSUE_KEY = /^[A-Z][A-Z0-9_]*-\d+$/;
 
-export function parseViewState(params: URLSearchParams): MilestoneViewState {
+const isTab = (v: unknown): v is MilestoneTab => typeof v === "string" && (MILESTONE_TABS as readonly string[]).includes(v);
+
+/**
+ * URL first (a shared link must open exactly as sent), then the viewer's
+ * saved options, then defaults. `?tab=insights` predates the split tabs.
+ */
+export function parseViewState(params: URLSearchParams, saved: Partial<ViewPrefs> = {}): MilestoneViewState {
   const tab = params.get("tab");
   const lanes = params.get("lanes");
+  const done = params.get("done");
+  const outside = params.get("outside");
   const item = params.get("item")?.toUpperCase() ?? null;
+  const flag = (v: string | null, fallback: boolean) => (v === "1" ? true : v === "0" ? false : fallback);
   return {
-    tab: tab === "insights" ? "insights" : "path",
-    lanes: lanes === "team" ? "team" : "epic",
+    tab: tab === "insights" ? "blockers" : isTab(tab) ? tab : isTab(saved.tab) ? saved.tab : DEFAULT_VIEW.tab,
+    lanes: lanes === "team" || lanes === "epic" ? lanes : saved.lanes === "epic" || saved.lanes === "team" ? saved.lanes : DEFAULT_VIEW.lanes,
+    showDone: flag(done, typeof saved.showDone === "boolean" ? saved.showDone : DEFAULT_VIEW.showDone),
+    showOutside: flag(outside, typeof saved.showOutside === "boolean" ? saved.showOutside : DEFAULT_VIEW.showOutside),
     item: item && ISSUE_KEY.test(item) ? item : null,
     query: (params.get("q") ?? "").slice(0, 100),
   };
@@ -38,15 +59,48 @@ export function parseViewState(params: URLSearchParams): MilestoneViewState {
 /**
  * Writes the view state into `params`, leaving unrelated params (e.g.
  * `fixture`) alone and omitting defaults so shared links stay short.
+ * `only` limits which parts are written — a team page has no tabs or lanes.
  */
-export function serializeViewState(state: MilestoneViewState, params = new URLSearchParams()): URLSearchParams {
+export function serializeViewState(
+  state: MilestoneViewState,
+  params = new URLSearchParams(),
+  only?: ReadonlyArray<keyof MilestoneViewState>,
+): URLSearchParams {
   const next = new URLSearchParams(params);
-  const put = (key: string, value: string, fallback: string) => (value && value !== fallback ? next.set(key, value) : next.delete(key));
-  put("tab", state.tab, DEFAULT_VIEW.tab);
-  put("lanes", state.lanes, DEFAULT_VIEW.lanes);
-  put("item", state.item ?? "", "");
-  put("q", state.query.trim(), "");
+  const put = (part: keyof MilestoneViewState, key: string, value: string, fallback: string) => {
+    if (only && !only.includes(part)) return;
+    if (value && value !== fallback) next.set(key, value);
+    else next.delete(key);
+  };
+  const bit = (b: boolean) => (b ? "1" : "0");
+  put("tab", "tab", state.tab, DEFAULT_VIEW.tab);
+  put("lanes", "lanes", state.lanes, DEFAULT_VIEW.lanes);
+  put("showDone", "done", bit(state.showDone), bit(DEFAULT_VIEW.showDone));
+  put("showOutside", "outside", bit(state.showOutside), bit(DEFAULT_VIEW.showOutside));
+  put("item", "item", state.item ?? "", "");
+  put("query", "q", state.query.trim(), "");
   return next;
+}
+
+export function viewPrefs(state: MilestoneViewState): ViewPrefs {
+  return { tab: state.tab, lanes: state.lanes, showDone: state.showDone, showOutside: state.showOutside };
+}
+
+/** Saved prefs are user-editable storage: anything malformed is dropped, not trusted. */
+export function readViewPrefs(raw: string | null): Partial<ViewPrefs> {
+  if (!raw) return {};
+  try {
+    const v = JSON.parse(raw) as Record<string, unknown>;
+    if (!v || typeof v !== "object") return {};
+    const out: Partial<ViewPrefs> = {};
+    if (isTab(v.tab)) out.tab = v.tab;
+    if (v.lanes === "team" || v.lanes === "epic") out.lanes = v.lanes;
+    if (typeof v.showDone === "boolean") out.showDone = v.showDone;
+    if (typeof v.showOutside === "boolean") out.showOutside = v.showOutside;
+    return out;
+  } catch {
+    return {};
+  }
 }
 
 // ── Filtering ───────────────────────────────────────────────────────────────
