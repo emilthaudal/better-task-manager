@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { ArrowUpRight, CircleCheck, Lightbulb, SquareDashed } from "lucide-react";
+import { adfToHtml, type AdfNode } from "@/lib/adfToHtml";
 import { epicSpan, incrementLinks, levelTitle, plural, scheduleExplanation, scheduleSummary, steps } from "@/lib/milestoneInsights";
 import type { Increment, ItemSchedule, StatusRef, TeamEpic, WorkItem } from "@/lib/milestoneTypes";
 import { cn } from "@/lib/utils";
@@ -278,6 +280,60 @@ function EpicDetails({ epic }: { epic: TeamEpic }) {
   );
 }
 
+// The milestone payload leaves descriptions out (they'd bloat every poll), so the
+// inspector fetches one on demand and keeps it for the session.
+const descriptionCache = new Map<string, string | null>();
+
+function Description({ issueKey }: { issueKey: string }) {
+  const [loaded, setLoaded] = useState<{ key: string; html: string | null; failed?: boolean } | null>(() =>
+    descriptionCache.has(issueKey) ? { key: issueKey, html: descriptionCache.get(issueKey)! } : null,
+  );
+  const current = loaded?.key === issueKey ? loaded : null;
+
+  useEffect(() => {
+    if (descriptionCache.has(issueKey)) {
+      const html = descriptionCache.get(issueKey)!;
+      queueMicrotask(() => setLoaded({ key: issueKey, html }));
+      return;
+    }
+    const controller = new AbortController();
+    fetch(`/api/jira/issue/${encodeURIComponent(issueKey)}?fields=description`, { signal: controller.signal })
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error(String(res.status)))))
+      .then((data: { fields?: { description?: AdfNode | null } }) => {
+        const html = data.fields?.description ? adfToHtml(data.fields.description) : null;
+        descriptionCache.set(issueKey, html || null);
+        setLoaded({ key: issueKey, html: html || null });
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setLoaded({ key: issueKey, html: null, failed: true });
+      });
+    return () => controller.abort();
+  }, [issueKey]);
+
+  return (
+    <Section title="Description">
+      <div className="rounded-xl bg-[var(--ms-surface)] px-3.5 py-3 shadow-[var(--ms-shadow-card)]">
+        {!current ? (
+          <div className="flex flex-col gap-2" aria-busy="true" aria-label="Loading description">
+            <div className="skeleton h-3 w-11/12 rounded" />
+            <div className="skeleton h-3 w-9/12 rounded" />
+            <div className="skeleton h-3 w-10/12 rounded" />
+          </div>
+        ) : current.html ? (
+          <div
+            className="adf-content text-[13px] leading-relaxed text-[var(--ms-label)]"
+            dangerouslySetInnerHTML={{ __html: current.html }}
+          />
+        ) : (
+          <p className="text-[13px] text-[var(--ms-label-3)]">
+            {current.failed ? "Couldn't load the description." : "No description."}
+          </p>
+        )}
+      </div>
+    </Section>
+  );
+}
+
 function IncrementDetails({ increment }: { increment: Increment }) {
   const { jiraBaseUrl } = useMilestone();
   const links = [
@@ -287,6 +343,7 @@ function IncrementDetails({ increment }: { increment: Increment }) {
   return (
     <>
       <Header kind="Increment" title={increment.summary} status={increment.status} issueKey={increment.key} />
+      <Description issueKey={increment.key} />
       <Section title="Capabilities">
         {increment.capabilities.length === 0 ? (
           <p className="px-1 text-[13px] text-[var(--ms-label-3)]">Not linked to a capability.</p>
