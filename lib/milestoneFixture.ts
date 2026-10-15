@@ -98,6 +98,8 @@ export function buildFixtureDetail({ teams = 5, epicsPerTeam = 3, itemsPerEpic =
         assignee: rand() < 0.7 ? pick(team.people) : null,
         incrementKeys: [incrementKey],
         blocks: [],
+        // Not drawn from rand(), so the generated plan stays the same as before.
+        designApproved: t % 2 === 0,
       });
       const count = itemsPerEpic + Math.floor(rand() * 4) - 1;
       for (let i = 0; i < count; i++) {

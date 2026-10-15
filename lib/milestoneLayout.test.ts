@@ -27,8 +27,8 @@ function detail(extra: Extra[] = []): MilestoneDetail {
       { key: "LAD-1", summary: "", status: TODO, team: null, capabilities: [], teamEpics: [ref("A-E"), ref("B-E")], blocks: [], blockedBy: [] },
     ],
     epics: [
-      { key: "A-E", summary: "API", status: TODO, team: "Team A", projectKey: "A", assignee: null, incrementKeys: ["LAD-1"], blocks: [] },
-      { key: "B-E", summary: "UI", status: TODO, team: "Team B", projectKey: "B", assignee: null, incrementKeys: ["LAD-1"], blocks: [] },
+      { key: "A-E", summary: "API", status: TODO, team: "Team A", projectKey: "A", assignee: null, incrementKeys: ["LAD-1"], blocks: [], designApproved: false },
+      { key: "B-E", summary: "UI", status: TODO, team: "Team B", projectKey: "B", assignee: null, incrementKeys: ["LAD-1"], blocks: [], designApproved: false },
     ],
     items: [
       { key: "A-0", summary: "", type: "Story", status: DONE, assignee: null, epicKey: "A-E", team: "Team A", points: null, external: false, blocks: ["A-1"] },

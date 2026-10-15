@@ -28,6 +28,8 @@ export interface EpicInput {
   incrementKeys: string[];
   /** Epic keys this epic declares it blocks (epic-level "blocks" links). */
   blocks: string[];
+  /** Carries the design-approved label: its decision log is signed off. */
+  designApproved: boolean;
 }
 
 export interface ItemInput {
@@ -87,6 +89,60 @@ function placeholderKey(epicKey: string) {
   return epicKey;
 }
 
+/** Jira label on a team epic whose decision log is signed off. */
+export const DESIGN_APPROVED_LABEL = "design-approved";
+
+/** Team of a stand-in whose increment has no Team value set. */
+export const NO_TEAM = "No team yet";
+
+/**
+ * While an increment has no open team epics — it hasn't been split into team
+ * work yet, or only its earlier, finished team work is linked — it stands in
+ * for its own remaining work as one team epic, owned by the increment's Team
+ * value. Its declared increment links then sequence it, so the critical path
+ * and team load exist before any team space does.
+ */
+function incrementStandIns(input: AnalysisInput): EpicInput[] {
+  const epicByKey = new Map(input.epics.map((e) => [e.key, e]));
+  return input.increments
+    .filter((inc) => !isDone(inc.status))
+    .filter((inc) => {
+      const own = input.epics.filter((e) => e.incrementKeys.includes(inc.key));
+      return own.every((e) => isDone(e.status)) && inc.teamEpics.every((e) => isDone(epicByKey.get(e.key)?.status ?? e.status));
+    })
+    .map((inc) => ({
+      key: inc.key,
+      summary: inc.summary,
+      status: inc.status,
+      team: inc.team ?? NO_TEAM,
+      projectKey: inc.key.split("-")[0],
+      assignee: null,
+      incrementKeys: [inc.key],
+      blocks: [],
+      designApproved: false,
+    }));
+}
+
+/**
+ * Declared increment links become epic-level links wherever a stand-in is on
+ * either side: the blocking increment's epics block the blocked one's. Between
+ * two increments with real team epics the team-level links stay the truth.
+ * Finished team epics are left out: they no longer sequence anything.
+ */
+function linkStandIns(increments: IncrementSummary[], epics: EpicInput[], standIns: Set<string>) {
+  const epicsOf = (incKey: string) => epics.filter((e) => e.incrementKeys.includes(incKey) && !isDone(e.status));
+  const known = new Set(increments.map((i) => i.key));
+  for (const inc of increments) {
+    for (const target of inc.blocks) {
+      if (!known.has(target) || (!standIns.has(inc.key) && !standIns.has(target))) continue;
+      const to = epicsOf(target).map((e) => e.key);
+      for (const from of epicsOf(inc.key)) {
+        for (const t of to) if (!from.blocks.includes(t)) from.blocks.push(t);
+      }
+    }
+  }
+}
+
 interface Edge {
   from: string;
   to: string;
@@ -97,7 +153,11 @@ interface Edge {
 
 export function analyzeMilestone(input: AnalysisInput): AnalysisResult {
   const warnings: MilestoneWarning[] = [];
-  const epicByKey = new Map(input.epics.map((e) => [e.key, e]));
+  const standInEpics = incrementStandIns(input);
+  const standIns = new Set(standInEpics.map((e) => e.key));
+  const epicInputs: EpicInput[] = [...input.epics.map((e) => ({ ...e, blocks: [...e.blocks] })), ...standInEpics];
+  linkStandIns(input.increments, epicInputs, standIns);
+  const epicByKey = new Map(epicInputs.map((e) => [e.key, e]));
 
   // Every team epic needs at least one schedulable node; an epic whose team
   // hasn't broken it down yet stands in for its own work.
@@ -107,7 +167,7 @@ export function analyzeMilestone(input: AnalysisInput): AnalysisResult {
     if (item.epicKey && epicByKey.has(item.epicKey)) pushUnique(itemsByEpic, item.epicKey, item);
   }
   const placeholders = new Set<string>();
-  for (const epic of input.epics) {
+  for (const epic of epicInputs) {
     if (itemsByEpic.has(epic.key)) continue;
     const ph: ItemInput = {
       key: placeholderKey(epic.key),
@@ -157,7 +217,7 @@ export function analyzeMilestone(input: AnalysisInput): AnalysisResult {
     if (a && b && a !== b) itemLinkedEpicPairs.add(`${a}>${b}`);
   }
   const epicEdges: Array<{ from: string; to: string }> = [];
-  for (const epic of input.epics) {
+  for (const epic of epicInputs) {
     for (const target of epic.blocks) {
       if (!epicByKey.has(target) || target === epic.key) continue;
       epicEdges.push({ from: epic.key, to: target });
@@ -305,6 +365,7 @@ export function analyzeMilestone(input: AnalysisInput): AnalysisResult {
     points: i.points,
     external: i.external,
     placeholder: placeholders.has(i.key),
+    standIn: standIns.has(i.key),
     blockedBy: preds.get(i.key) ?? [],
     blocks: succs.get(i.key) ?? [],
     schedule: schedule.get(i.key) ?? null,
@@ -342,7 +403,7 @@ export function analyzeMilestone(input: AnalysisInput): AnalysisResult {
     pushUnique(blockedByEpics, b.epicKey, a.epicKey);
   }
 
-  const epics: TeamEpic[] = input.epics.map((epic) => {
+  const epics: TeamEpic[] = epicInputs.map((epic) => {
     const own = itemsByEpic.get(epic.key) ?? [];
     const sched = own.map((i) => schedule.get(i.key)).filter((s): s is ItemSchedule => !!s);
     const criticalItems = sched.filter((s) => s.critical).length;
@@ -362,6 +423,8 @@ export function analyzeMilestone(input: AnalysisInput): AnalysisResult {
       earliestFinish: sched.length ? Math.max(...sched.map((s) => s.earliestFinish)) : null,
       criticalItems,
       onCriticalPath: criticalItems > 0,
+      standIn: standIns.has(epic.key),
+      designApproved: epic.designApproved,
     };
   });
   const teamEpicByKey = new Map(epics.map((e) => [e.key, e]));
@@ -429,7 +492,7 @@ export function analyzeMilestone(input: AnalysisInput): AnalysisResult {
     }
     return {
       name,
-      epicKeys: input.epics.filter((e) => e.team === name).map((e) => e.key),
+      epicKeys: epicInputs.filter((e) => e.team === name).map((e) => e.key),
       progress: progressOf(own.filter((i) => !placeholders.has(i.key)).map((i) => i.status)),
       remaining: rem.length,
       criticalItems: rem.filter((i) => schedule.get(i.key)?.critical).length,
@@ -460,7 +523,7 @@ export function analyzeMilestone(input: AnalysisInput): AnalysisResult {
   }
 
   const increments: Increment[] = input.increments.map((inc) => {
-    const epicKeys = input.epics.filter((e) => e.incrementKeys.includes(inc.key)).map((e) => e.key);
+    const epicKeys = epicInputs.filter((e) => e.incrementKeys.includes(inc.key)).map((e) => e.key);
     const own = epicKeys.flatMap((k) => (itemsByEpic.get(k) ?? []).filter((i) => !placeholders.has(i.key)));
     const sched = epicKeys
       .flatMap((k) => itemsByEpic.get(k) ?? [])
@@ -477,10 +540,11 @@ export function analyzeMilestone(input: AnalysisInput): AnalysisResult {
   });
 
   for (const inc of increments) {
-    if (inc.teamEpics.length === 0) {
+    if (standIns.has(inc.key)) {
+      const owner = inc.team ? `for ${inc.team}` : "with no team planned";
       warnings.push({
         kind: "no-team-epics",
-        message: `${inc.key} has no team epics implementing it yet.`,
+        message: `${inc.key} has no open team epics yet, so it is scheduled as one step ${owner}.`,
         keys: [inc.key],
       });
     }
@@ -521,6 +585,19 @@ export function analyzeMilestone(input: AnalysisInput): AnalysisResult {
       kind: "unassigned-critical",
       message: `${unassignedCritical.length} critical-path items have no assignee.`,
       keys: unassignedCritical.map((i) => i.key),
+    });
+  }
+
+  // Building on the critical path without a signed-off decision log is where
+  // a design mistake costs the milestone date.
+  const unapproved = epics.filter(
+    (e) => !e.standIn && e.onCriticalPath && e.status.category === "indeterminate" && !e.designApproved,
+  );
+  if (unapproved.length > 0) {
+    warnings.push({
+      kind: "unapproved-design",
+      message: `${unapproved.length} critical-path team epics are in progress without an approved decision log (label ${DESIGN_APPROVED_LABEL}).`,
+      keys: unapproved.map((e) => e.key),
     });
   }
 

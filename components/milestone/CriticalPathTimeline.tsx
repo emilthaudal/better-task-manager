@@ -86,7 +86,10 @@ function tooltipLines(item: WorkItem): { title: string; meta: string; schedule: 
   } else if (item.status.category === "done") {
     schedule = "Done";
   }
-  if (item.placeholder) schedule = `Team epic not broken down into items yet${schedule ? ` · ${schedule}` : ""}`;
+  if (item.placeholder) {
+    const what = item.standIn ? "Increment not split into team epics yet" : "Team epic not broken down into items yet";
+    schedule = `${what}${schedule ? ` · ${schedule}` : ""}`;
+  }
   return {
     title: item.summary,
     meta: `${item.key} · ${item.team} · ${item.assignee ?? "Unassigned"}${item.external ? " · outside this milestone" : ""}`,
@@ -128,7 +131,7 @@ const Card = memo(function Card({
       data-done={done ? "" : undefined}
       tabIndex={focusable ? 0 : -1}
       aria-pressed={selected}
-      aria-label={`${item.key}: ${item.summary}${done ? ", done" : ""}${critical ? ", critical" : ""}${ready ? ", ready" : ""}${item.placeholder ? ", not broken down" : ""}${item.external ? ", outside this milestone" : ""}${item.assignee ? `, ${item.assignee}` : ", unassigned"}`}
+      aria-label={`${item.key}: ${item.summary}${done ? ", done" : ""}${critical ? ", critical" : ""}${ready ? ", ready" : ""}${item.standIn ? ", no team epics yet" : item.placeholder ? ", not broken down" : ""}${item.external ? ", outside this milestone" : ""}${item.assignee ? `, ${item.assignee}` : ", unassigned"}`}
       className={cn(
         "ms-card absolute flex flex-col justify-between overflow-hidden rounded-xl bg-[var(--ms-surface)] py-2 pl-3 pr-2.5 text-left",
         item.external && "bg-[var(--ms-warn-fill)] outline-1 outline-dashed -outline-offset-1 outline-[var(--ms-warn)]",
@@ -179,7 +182,7 @@ const Card = memo(function Card({
           <span className="min-w-0 flex-1">
             <span className="inline-flex max-w-full items-center gap-1 truncate rounded-full bg-[var(--ms-warn-fill)] px-1.5 py-[1px] text-[10px] font-semibold text-[var(--ms-warn-text)]">
               <span aria-hidden="true" className="h-[7px] w-[7px] shrink-0 rounded-[2px] border border-dashed border-current" />
-              Not broken down
+              {item.standIn ? "No team epics" : "Not broken down"}
             </span>
           </span>
         ) : (

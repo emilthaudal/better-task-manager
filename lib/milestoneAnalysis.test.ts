@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { analyzeMilestone } from "@/lib/milestoneAnalysis";
+import { NO_TEAM, analyzeMilestone } from "@/lib/milestoneAnalysis";
 import type { AnalysisInput, EpicInput, ItemInput } from "@/lib/milestoneAnalysis";
 import type { IncrementSummary, StatusRef } from "@/lib/milestoneTypes";
 
@@ -7,8 +7,8 @@ const TODO: StatusRef = { name: "To Do", category: "new" };
 const DOING: StatusRef = { name: "In Progress", category: "indeterminate" };
 const DONE: StatusRef = { name: "Done", category: "done" };
 
-function epic(key: string, team: string, increment: string, blocks: string[] = []): EpicInput {
-  return { key, summary: key, status: DOING, team, projectKey: key.split("-")[0], assignee: null, incrementKeys: [increment], blocks };
+function epic(key: string, team: string, increment: string, blocks: string[] = [], designApproved = false): EpicInput {
+  return { key, summary: key, status: DOING, team, projectKey: key.split("-")[0], assignee: null, incrementKeys: [increment], blocks, designApproved };
 }
 
 function item(key: string, epicKey: string | null, team: string, blocks: string[] = [], status = TODO, assignee: string | null = "dev"): ItemInput {
@@ -104,6 +104,44 @@ describe("analyzeMilestone", () => {
     const r = analyzeMilestone(input);
     expect(r.items.find((i) => i.key === "A-E")?.placeholder).toBe(true);
     expect(r.criticalPath.keys).toEqual(["A-E", "B-1"]);
+  });
+
+  it("schedules increments without open team epics as stand-ins, sequenced by their declared links", () => {
+    // LAD-19 → LAD-13 are only planned; LAD-14's earlier team work is done; LAD-15 has real team work.
+    const input: AnalysisInput = {
+      increments: [
+        { ...increment("LAD-19", [], ["LAD-13"]), team: "Customers" },
+        increment("LAD-13", [], ["LAD-14"]),
+        { ...increment("LAD-14", ["OLD-E"], ["LAD-15"]), team: "Payments" },
+        increment("LAD-15", ["F-E"]),
+      ],
+      epics: [{ ...epic("OLD-E", "Old team", "LAD-14"), status: DONE }, epic("F-E", "Team F", "LAD-15")],
+      items: [item("OLD-1", "OLD-E", "Old team", [], DONE), item("F-1", "F-E", "Team F", ["F-2"]), item("F-2", "F-E", "Team F")],
+    };
+    const r = analyzeMilestone(input);
+    expect(r.criticalPath.keys).toEqual(["LAD-19", "LAD-13", "LAD-14", "F-1", "F-2"]);
+    expect(r.items.find((i) => i.key === "LAD-13")).toMatchObject({ placeholder: true, standIn: true, team: NO_TEAM, incrementKey: "LAD-13" });
+    expect(r.epics.find((e) => e.key === "LAD-14")).toMatchObject({ standIn: true, team: "Payments" });
+    expect(r.epics.find((e) => e.key === "F-E")?.standIn).toBe(false);
+    expect(r.teams.find((t) => t.name === "Customers")?.loadByLevel).toEqual([1, 0, 0, 0, 0]);
+    expect(r.warnings.filter((w) => w.kind === "no-team-epics").map((w) => w.keys[0])).toEqual(["LAD-19", "LAD-13", "LAD-14"]);
+    expect(r.warnings.some((w) => w.kind === "unbacked-dependency")).toBe(false);
+    expect(r.items.find((i) => i.key === "LAD-13")?.blocks).toEqual(["LAD-14"]);
+  });
+
+  it("does not stand in for a done increment", () => {
+    const input: AnalysisInput = { increments: [{ ...increment("LAD-1", []), status: DONE }], epics: [], items: [] };
+    const r = analyzeMilestone(input);
+    expect(r.epics).toEqual([]);
+    expect(r.warnings).toEqual([]);
+  });
+
+  it("flags critical-path epics in progress without an approved decision log", () => {
+    const input = crossTeamInput();
+    input.epics[0] = { ...input.epics[0], designApproved: true };
+    const r = analyzeMilestone(input);
+    expect(r.epics.find((e) => e.key === "A-E")?.designApproved).toBe(true);
+    expect(r.warnings.find((w) => w.kind === "unapproved-design")?.keys).toEqual(["B-E"]);
   });
 
   it("surfaces external blockers and unassigned critical items", () => {
