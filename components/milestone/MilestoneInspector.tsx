@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowUpRight, CircleCheck, Lightbulb, SquareDashed } from "lucide-react";
+import { ArrowUpRight, CircleCheck, Lightbulb, ShieldAlert, ShieldCheck, SquareDashed } from "lucide-react";
 import { adfToHtml, type AdfNode } from "@/lib/adfToHtml";
 import { epicSpan, incrementLinks, levelTitle, plural, scheduleExplanation, scheduleSummary, steps } from "@/lib/milestoneInsights";
 import type { Increment, ItemSchedule, StatusRef, TeamEpic, WorkItem } from "@/lib/milestoneTypes";
@@ -152,12 +152,19 @@ function ItemDetails({ item }: { item: WorkItem }) {
   const step = detail.criticalPath.keys.indexOf(item.key);
   return (
     <>
-      <Header kind={item.placeholder ? "Epic (not broken down)" : item.type} title={item.summary} status={item.status} issueKey={item.key} />
+      <Header
+        kind={item.standIn ? "Increment (no team epics yet)" : item.placeholder ? "Epic (not broken down)" : item.type}
+        title={item.summary}
+        status={item.status}
+        issueKey={item.key}
+      />
       <Badges>
         {s?.critical && <CriticalBadge />}
         {s?.ready && <Tag tone="ready">Ready</Tag>}
         {item.external && <Tag tone="neutral" icon={<ArrowUpRight size={10} aria-hidden="true" />}>Outside milestone</Tag>}
-        {item.placeholder && <Tag tone="warn" icon={<SquareDashed size={10} aria-hidden="true" />}>No child items yet</Tag>}
+        {item.placeholder && (
+          <Tag tone="warn" icon={<SquareDashed size={10} aria-hidden="true" />}>{item.standIn ? "Not split into team epics" : "No child items yet"}</Tag>
+        )}
         <Team team={item.team} />
       </Badges>
       {s ? (
@@ -236,9 +243,15 @@ function EpicDetails({ epic }: { epic: TeamEpic }) {
   const remaining = epic.itemKeys.filter((k) => index.items.get(k)?.status.category !== "done" && index.items.has(k));
   return (
     <>
-      <Header kind="Team epic" title={epic.summary} status={epic.status} issueKey={epic.key} />
+      <Header kind={epic.standIn ? "Increment (no team epics yet)" : "Team epic"} title={epic.summary} status={epic.status} issueKey={epic.key} />
       <Badges>
         {epic.onCriticalPath && <CriticalBadge />}
+        {!epic.standIn &&
+          (epic.designApproved ? (
+            <Tag tone="ready" icon={<ShieldCheck size={10} aria-hidden="true" />}>Decision log approved</Tag>
+          ) : (
+            <Tag tone="neutral" icon={<ShieldAlert size={10} aria-hidden="true" />}>No approved decision log</Tag>
+          ))}
         <Team team={epic.team} />
       </Badges>
       <Section title="Progress">

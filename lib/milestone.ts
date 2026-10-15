@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 import { getAccessToken } from "@/lib/session";
 import type { SessionData } from "@/lib/session";
 import { TtlCache } from "@/lib/ttlCache";
-import { analyzeMilestone, progressOf } from "@/lib/milestoneAnalysis";
+import { DESIGN_APPROVED_LABEL, analyzeMilestone, progressOf } from "@/lib/milestoneAnalysis";
 import type { EpicInput, ItemInput } from "@/lib/milestoneAnalysis";
 import type {
   IncrementSummary,
@@ -139,7 +139,7 @@ function toIncrementSummary(issue: RawIssue): IncrementSummary {
 
 // Only what the normalisers read — issuelinks dominate the payload size.
 const INCREMENT_FIELDS = ["summary", "status", "issuelinks", "fixVersions", TEAM_FIELD];
-const EPIC_FIELDS = ["summary", "status", "issuelinks", "project", "assignee", TEAM_FIELD];
+const EPIC_FIELDS = ["summary", "status", "issuelinks", "project", "assignee", "labels", TEAM_FIELD];
 const ITEM_FIELDS = ["summary", "status", "issuetype", "issuelinks", "project", "assignee", "parent", TEAM_FIELD, ...POINT_FIELDS];
 
 /** Jira's `ORDER BY key` order: project key, then issue number. */
@@ -412,6 +412,7 @@ export async function getMilestoneDetail(
     assignee: issue.fields.assignee?.displayName ?? null,
     incrementKeys: incrementsOfEpic.get(issue.key) ?? [],
     blocks: blocksKeys(issue),
+    designApproved: Array.isArray(issue.fields.labels) && issue.fields.labels.includes(DESIGN_APPROVED_LABEL),
   }));
   const epicTeam = new Map(epics.map((e) => [e.key, e.team]));
 

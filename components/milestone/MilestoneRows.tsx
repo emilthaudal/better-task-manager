@@ -6,6 +6,8 @@ import {
   Flame,
   Link2,
   RefreshCcw,
+  ShieldAlert,
+  ShieldCheck,
   Shrink,
   TriangleAlert,
   Undo2,
@@ -165,6 +167,12 @@ export function EpicRow({ epic }: { epic: TeamEpic }) {
         <StatusDot status={epic.status} />
         <span className="w-[72px] shrink-0 truncate font-mono text-[11.5px] text-[var(--ms-label-3)]">{epic.key}</span>
         <span className="min-w-0 flex-1 truncate text-[13px] text-[var(--ms-label)]">{epic.summary}</span>
+        {epic.standIn && (
+          <span className="shrink-0 rounded-full bg-[var(--ms-warn-fill)] px-1.5 py-[1px] text-[10px] font-semibold text-[var(--ms-warn-text)]" title="The increment has no open team epics yet; it stands in for its own work">
+            No team epics
+          </span>
+        )}
+        {epic.designApproved && <ShieldCheck size={13} className="shrink-0 text-[var(--ms-ready)]" aria-label="Decision log approved" />}
         {epic.onCriticalPath && <Flame size={13} className="shrink-0 fill-current text-[var(--ms-critical)]" aria-label="On the critical path" />}
         {span && (
           <span className="hidden shrink-0 text-[11.5px] tabular-nums text-[var(--ms-label-3)] sm:inline" title="Remaining work spans these steps">
@@ -186,6 +194,7 @@ const WARNING_ICON: Record<string, React.ComponentType<{ size?: number; classNam
   "no-team-epics": UserX,
   unscheduled: CalendarX,
   "unassigned-critical": UserRoundX,
+  "unapproved-design": ShieldAlert,
 };
 
 /**

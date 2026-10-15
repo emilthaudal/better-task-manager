@@ -107,6 +107,8 @@ export interface WorkItem {
   external: boolean;
   /** Stands in for a team epic that has no child items. */
   placeholder: boolean;
+  /** Stands in for an increment with no open team epics (also a placeholder). */
+  standIn: boolean;
   blockedBy: string[];
   blocks: string[];
   /** null for done items — they no longer take part in scheduling. */
@@ -144,6 +146,10 @@ export interface TeamEpic {
   earliestFinish: number | null;
   criticalItems: number;
   onCriticalPath: boolean;
+  /** The increment itself, standing in until it has open team epics; its key is the increment's. */
+  standIn: boolean;
+  /** Carries the design-approved label: its decision log is signed off. */
+  designApproved: boolean;
 }
 
 export interface Increment extends IncrementSummary {
@@ -193,7 +199,8 @@ export type WarningKind =
   | "external-blocker"
   | "no-team-epics"
   | "unscheduled"
-  | "unassigned-critical";
+  | "unassigned-critical"
+  | "unapproved-design";
 
 export interface MilestoneWarning {
   kind: WarningKind;

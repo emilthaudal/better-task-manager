@@ -49,6 +49,7 @@ extension WarningKind {
         case .noTeamEpics: "No team epics"
         case .unscheduled: "Unscheduled"
         case .unassignedCritical: "Unassigned critical work"
+        case .unapprovedDesign: "Building without sign-off"
         case let .other(raw): raw.replacingOccurrences(of: "-", with: " ").capitalized
         }
     }
@@ -63,6 +64,7 @@ extension WarningKind {
         case .noTeamEpics: "person.2.slash"
         case .unscheduled: "calendar.badge.exclamationmark"
         case .unassignedCritical: "person.crop.circle.badge.questionmark"
+        case .unapprovedDesign: "exclamationmark.shield"
         case .other: "exclamationmark.triangle"
         }
     }
@@ -71,7 +73,7 @@ extension WarningKind {
     /// hygiene the user should know about but can schedule around.
     var isSevere: Bool {
         switch self {
-        case .cycle, .outOfOrderDependency, .externalBlocker, .unassignedCritical: true
+        case .cycle, .outOfOrderDependency, .externalBlocker, .unassignedCritical, .unapprovedDesign: true
         default: false
         }
     }

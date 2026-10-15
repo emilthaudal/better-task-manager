@@ -775,7 +775,7 @@ struct SwimlaneCard: View {
 
             HStack(spacing: 6) {
                 if item.placeholder {
-                    Badge(text: "Not broken down", systemImage: "square.dashed", tint: .orange)
+                    Badge(text: item.standIn == true ? "No team epics" : "Not broken down", systemImage: "square.dashed", tint: .orange)
                 } else {
                     AssigneeLabel(name: item.assignee)
                 }

@@ -54,6 +54,7 @@ const WARNING_TITLE: Record<WarningKind, string> = {
   "no-team-epics": "No team epics",
   unscheduled: "Unscheduled",
   "unassigned-critical": "Unassigned critical work",
+  "unapproved-design": "Building without sign-off",
 };
 
 /** Unknown kinds (a newer server) read as their slug, title-cased — never a blank row. */
@@ -72,7 +73,7 @@ export function warningTitle(kind: string): string {
  * outside or unowned critical work put the date at risk; the rest is hygiene
  * that can be scheduled around.
  */
-const SEVERE = new Set<string>(["cycle", "out-of-order-dependency", "external-blocker", "unassigned-critical"]);
+const SEVERE = new Set<string>(["cycle", "out-of-order-dependency", "external-blocker", "unassigned-critical", "unapproved-design"]);
 
 export const isSevere = (kind: string) => SEVERE.has(kind);
 

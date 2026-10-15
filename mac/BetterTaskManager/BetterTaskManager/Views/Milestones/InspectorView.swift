@@ -112,13 +112,20 @@ private struct ItemInspector: View {
     let loaded: LoadedMilestone
 
     var body: some View {
-        InspectorHeader(key: item.key, kind: item.placeholder ? "Epic (not broken down)" : item.type, title: item.summary, status: item.status)
+        InspectorHeader(
+            key: item.key,
+            kind: item.standIn == true ? "Increment (no team epics yet)" : item.placeholder ? "Epic (not broken down)" : item.type,
+            title: item.summary,
+            status: item.status
+        )
 
         FlowLayout(spacing: 6) {
             if item.schedule?.critical == true { CriticalBadge() }
             if item.schedule?.ready == true { Badge(text: "Ready", systemImage: "play.circle.fill", tint: .green) }
             if item.external { Badge(text: "Outside milestone", systemImage: "arrow.up.forward.square") }
-            if item.placeholder { Badge(text: "No child items yet", systemImage: "square.dashed", tint: .orange) }
+            if item.placeholder {
+                Badge(text: item.standIn == true ? "Not split into team epics" : "No child items yet", systemImage: "square.dashed", tint: .orange)
+            }
             TeamBadge(team: item.team)
         }
 
@@ -225,9 +232,16 @@ private struct EpicInspector: View {
 
     var body: some View {
         let blocker = loaded.detail.blockerEpics.first { $0.epicKey == epic.key }
-        InspectorHeader(key: epic.key, kind: "Team epic", title: epic.summary, status: epic.status)
+        InspectorHeader(key: epic.key, kind: epic.standIn == true ? "Increment (no team epics yet)" : "Team epic", title: epic.summary, status: epic.status)
         FlowLayout(spacing: 6) {
             if epic.onCriticalPath { CriticalBadge() }
+            if epic.standIn != true {
+                if epic.designApproved == true {
+                    Badge(text: "Decision log approved", systemImage: "checkmark.shield", tint: .green)
+                } else {
+                    Badge(text: "No approved decision log", systemImage: "exclamationmark.shield")
+                }
+            }
             TeamBadge(team: epic.team)
         }
         InspectorSection(title: "Progress") {

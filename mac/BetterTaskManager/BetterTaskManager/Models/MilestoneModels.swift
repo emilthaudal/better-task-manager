@@ -119,6 +119,8 @@ nonisolated struct WorkItem: Codable, Hashable, Identifiable, Sendable {
     let points: Double?
     let external: Bool
     let placeholder: Bool
+    /// Stands in for an increment with no open team epics. Optional so an older server's payload still decodes.
+    let standIn: Bool?
     let blockedBy: [String]
     let blocks: [String]
     let schedule: ItemSchedule?
@@ -156,6 +158,10 @@ nonisolated struct TeamEpic: Codable, Hashable, Identifiable, Sendable {
     let earliestFinish: Int?
     let criticalItems: Int
     let onCriticalPath: Bool
+    /// The increment itself, standing in until it has open team epics. Optional so an older server's payload still decodes.
+    let standIn: Bool?
+    /// Carries the design-approved label: its decision log is signed off.
+    let designApproved: Bool?
 
     var id: String { key }
 }
@@ -218,6 +224,7 @@ nonisolated enum WarningKind: Hashable, Sendable, Codable {
     case noTeamEpics
     case unscheduled
     case unassignedCritical
+    case unapprovedDesign
     case other(String)
 
     private static let known: [String: WarningKind] = [
@@ -229,6 +236,7 @@ nonisolated enum WarningKind: Hashable, Sendable, Codable {
         "no-team-epics": .noTeamEpics,
         "unscheduled": .unscheduled,
         "unassigned-critical": .unassignedCritical,
+        "unapproved-design": .unapprovedDesign,
     ]
 
     var rawValue: String {

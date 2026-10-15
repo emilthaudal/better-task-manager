@@ -21,7 +21,7 @@ private func item(
     return WorkItem(key: key, summary: "\(key) summary", type: "Story",
                     status: StatusRef(name: level == nil ? "Done" : "To Do", category: level == nil ? .done : .new),
                     assignee: nil, epicKey: epic, team: team, incrementKey: nil, points: nil, external: external,
-                    placeholder: false, blockedBy: blockedBy, blocks: [], schedule: schedule)
+                    placeholder: false, standIn: false, blockedBy: blockedBy, blocks: [], schedule: schedule)
 }
 
 private func dep(_ from: String, _ to: String, critical: Bool = false, crossTeam: Bool = false, satisfied: Bool = false) -> Dependency {
@@ -137,7 +137,8 @@ private func detail(items: [WorkItem], dependencies: [Dependency] = [], length: 
     @Test func epicGroupingMakesOneLanePerEpicTitledBySummary() throws {
         let epic = TeamEpic(key: "E-1", summary: "Checkout epic", status: StatusRef(name: "To Do", category: .new), team: "A",
                             projectKey: "E", assignee: nil, incrementKeys: [], itemKeys: [], progress: .empty, blocksEpics: [],
-                            blockedByEpics: [], earliestStart: 0, earliestFinish: 1, criticalItems: 1, onCriticalPath: true)
+                            blockedByEpics: [], earliestStart: 0, earliestFinish: 1, criticalItems: 1, onCriticalPath: true,
+                            standIn: false, designApproved: false)
         let items = [item("A-1"), item("A-2", epic: nil, slack: 1)]
         let layout = buildSwimlaneLayout(detail: detail(items: items, length: 2, epics: [epic]),
                                          options: SwimlaneOptions(grouping: .epic))

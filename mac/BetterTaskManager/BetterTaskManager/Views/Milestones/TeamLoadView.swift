@@ -305,6 +305,11 @@ struct EpicRow: View {
             Text(epic.key).font(.callout.monospaced()).foregroundStyle(.secondary)
             Text(epic.summary).lineLimit(1)
             Spacer(minLength: 8)
+            if epic.standIn == true {
+                Badge(text: "No team epics", systemImage: "square.dashed", tint: .orange)
+                    .help("The increment has no open team epics yet; it stands in for its own work")
+            }
+            if epic.designApproved == true { Image(systemName: "checkmark.shield.fill").foregroundStyle(.green).help("Decision log approved") }
             if epic.onCriticalPath { Image(systemName: "flame.fill").foregroundStyle(.red).help("On the critical path") }
             if let start = epic.earliestStart, let finish = epic.earliestFinish {
                 Text("\(levelTitle(start)) → \(levelTitle(finish - 1))")
