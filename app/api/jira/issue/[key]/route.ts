@@ -25,7 +25,7 @@ const FIELDS = [
 ].join(",");
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ key: string }> },
 ) {
   const { key } = await params;
@@ -33,10 +33,15 @@ export async function GET(
     return NextResponse.json({ error: "Missing issue key" }, { status: 400 });
   }
 
+  // Lets light callers (the milestone inspector's description) skip comments and
+  // the rest; limited to the default set so it can't be used to read arbitrary fields.
+  const requested = req.nextUrl.searchParams.get("fields")?.split(",").filter((f) => FIELDS.split(",").includes(f));
+  const fields = requested?.length ? requested.join(",") : FIELDS;
+
   const session = await getServerSession();
   const priorRefreshToken = session.refreshToken;
   try {
-    const data = await jiraFetch(`/issue/${encodeURIComponent(key)}?fields=${FIELDS}`, session);
+    const data = await jiraFetch(`/issue/${encodeURIComponent(key)}?fields=${fields}`, session);
     await persistRotatedToken(session, priorRefreshToken);
     return NextResponse.json(data);
   } catch (err) {
