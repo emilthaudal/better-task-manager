@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 import { getAccessToken } from "@/lib/session";
 import type { SessionData } from "@/lib/session";
 import { TtlCache } from "@/lib/ttlCache";
-import { DESIGN_APPROVED_LABEL, analyzeMilestone, progressOf } from "@/lib/milestoneAnalysis";
+import { DESIGN_APPROVED_LABEL, OUTSIDE_DECISION_LABEL, analyzeMilestone, progressOf } from "@/lib/milestoneAnalysis";
 import type { EpicInput, ItemInput } from "@/lib/milestoneAnalysis";
 import type {
   IncrementSummary,
@@ -140,7 +140,7 @@ function toIncrementSummary(issue: RawIssue): IncrementSummary {
 // Only what the normalisers read — issuelinks dominate the payload size.
 const INCREMENT_FIELDS = ["summary", "status", "issuelinks", "fixVersions", TEAM_FIELD];
 const EPIC_FIELDS = ["summary", "status", "issuelinks", "project", "assignee", "labels", TEAM_FIELD];
-const ITEM_FIELDS = ["summary", "status", "issuetype", "issuelinks", "project", "assignee", "parent", TEAM_FIELD, ...POINT_FIELDS];
+const ITEM_FIELDS = ["summary", "status", "issuetype", "issuelinks", "project", "assignee", "parent", "labels", "duedate", TEAM_FIELD, ...POINT_FIELDS];
 
 /** Jira's `ORDER BY key` order: project key, then issue number. */
 export function compareIssueKeys(a: string, b: string): number {
@@ -434,6 +434,8 @@ export async function getMilestoneDetail(
         issue.key.split("-")[0],
       points: points(issue),
       external,
+      outsideDecision: Array.isArray(issue.fields.labels) && issue.fields.labels.includes(OUTSIDE_DECISION_LABEL),
+      dueDate: issue.fields.duedate ?? null,
       blocks: blocksKeys(issue),
     };
   };

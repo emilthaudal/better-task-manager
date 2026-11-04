@@ -42,6 +42,10 @@ export interface ItemInput {
   team: string;
   points: number | null;
   external: boolean;
+  /** Carries the external label: a decision or change owned outside the program. */
+  outsideDecision?: boolean;
+  /** Jira due date, YYYY-MM-DD. */
+  dueDate?: string | null;
   /** Item keys this item blocks (outward "blocks" links). */
   blocks: string[];
 }
@@ -50,6 +54,8 @@ export interface AnalysisInput {
   increments: IncrementSummary[];
   epics: EpicInput[];
   items: ItemInput[];
+  /** Today as YYYY-MM-DD; defaults to the current date. */
+  today?: string;
 }
 
 export interface AnalysisResult {
@@ -61,6 +67,7 @@ export interface AnalysisResult {
   criticalPath: CriticalPath;
   blockerEpics: BlockerEpic[];
   readyNow: string[];
+  outsideDecisions: string[];
   progress: Progress;
   warnings: MilestoneWarning[];
 }
@@ -91,6 +98,12 @@ function placeholderKey(epicKey: string) {
 
 /** Jira label on a team epic whose decision log is signed off. */
 export const DESIGN_APPROVED_LABEL = "design-approved";
+
+/** Jira label on a work item that waits on a decision owned outside the program. */
+export const OUTSIDE_DECISION_LABEL = "external";
+
+/** An unowned outside decision due this soon needs someone chasing it. */
+const OUTSIDE_DECISION_HORIZON_DAYS = 14;
 
 /** Team of a stand-in whose increment has no Team value set. */
 export const NO_TEAM = "No team yet";
@@ -364,6 +377,8 @@ export function analyzeMilestone(input: AnalysisInput): AnalysisResult {
     incrementKey: i.external ? null : incrementOfEpic(i.epicKey),
     points: i.points,
     external: i.external,
+    outsideDecision: !!i.outsideDecision,
+    dueDate: i.dueDate ?? null,
     placeholder: placeholders.has(i.key),
     standIn: standIns.has(i.key),
     blockedBy: preds.get(i.key) ?? [],
@@ -496,7 +511,7 @@ export function analyzeMilestone(input: AnalysisInput): AnalysisResult {
       progress: progressOf(own.filter((i) => !placeholders.has(i.key)).map((i) => i.status)),
       remaining: rem.length,
       criticalItems: rem.filter((i) => schedule.get(i.key)?.critical).length,
-      readyNow: rem.filter((i) => schedule.get(i.key)?.ready).length,
+      readyNow: rem.filter((i) => !i.outsideDecision && schedule.get(i.key)?.ready).length,
       unassignedRemaining: rem.filter((i) => !i.assignee).length,
       waitingOnOtherTeams: waiting,
       blockingOtherTeams: blocking,
@@ -601,8 +616,28 @@ export function analyzeMilestone(input: AnalysisInput): AnalysisResult {
     });
   }
 
+  // Outside decisions aren't the team's to start; they're listed on their own,
+  // and one nobody chases is a warning when it gates work or is due soon.
+  const outsideDecisions = items
+    .filter((i) => i.outsideDecision && !isDone(i.status))
+    .sort((a, b) => (a.dueDate ?? "9999").localeCompare(b.dueDate ?? "9999") || a.key.localeCompare(b.key));
+  const today = input.today ?? new Date().toISOString().slice(0, 10);
+  const horizon = new Date(`${today}T00:00:00Z`);
+  horizon.setUTCDate(horizon.getUTCDate() + OUTSIDE_DECISION_HORIZON_DAYS);
+  const horizonDate = horizon.toISOString().slice(0, 10);
+  const unowned = outsideDecisions.filter(
+    (i) => !i.assignee && (i.blocks.some((k) => remainingSet.has(k)) || (i.dueDate !== null && i.dueDate <= horizonDate)),
+  );
+  if (unowned.length > 0) {
+    warnings.push({
+      kind: "unowned-outside-decision",
+      message: `${unowned.length} decisions owned outside the program gate work or are due within ${OUTSIDE_DECISION_HORIZON_DAYS} days, and nobody is chasing them.`,
+      keys: unowned.map((i) => i.key),
+    });
+  }
+
   const readyNow = items
-    .filter((i) => !i.external && i.schedule?.ready)
+    .filter((i) => !i.external && !i.outsideDecision && i.schedule?.ready)
     .sort(
       (a, b) =>
         Number(b.schedule?.critical) - Number(a.schedule?.critical) ||
@@ -624,6 +659,7 @@ export function analyzeMilestone(input: AnalysisInput): AnalysisResult {
     },
     blockerEpics,
     readyNow,
+    outsideDecisions: outsideDecisions.map((i) => i.key),
     progress: progressOf(
       itemInputs.filter((i) => !i.external && !placeholders.has(i.key)).map((i) => i.status),
     ),

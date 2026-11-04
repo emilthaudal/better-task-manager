@@ -11,6 +11,7 @@ import {
   Link2,
   Search,
   SquareStack,
+  Hourglass,
   TriangleAlert,
   UserX,
   Users,
@@ -307,6 +308,11 @@ export function ReadyTab({ query, matches }: { query: string; matches: Set<strin
   const { detail, index } = useMilestone();
   const ready = useMemo(() => detail.readyNow.map((k) => index.items.get(k)).filter((i): i is WorkItem => !!i), [detail, index]);
   const shownReady = filterItems(ready, matches);
+  const outside = useMemo(
+    () => (detail.outsideDecisions ?? []).map((k) => index.items.get(k)).filter((i): i is WorkItem => !!i),
+    [detail, index],
+  );
+  const shownOutside = filterItems(outside, matches);
   const warnings = useMemo(() => filterWarnings(detail, detail.warnings, query), [detail, query]);
   const filtering = !!query.trim();
   return (
@@ -322,6 +328,23 @@ export function ReadyTab({ query, matches }: { query: string; matches: Set<strin
               <WorkItemRow key={item.key} item={item} />
             ))}
           </ul>
+        )}
+        {outside.length > 0 && (
+          <>
+            <SectionHeader title="Waiting on outside decisions" icon={<Hourglass size={15} />} count={shownOutside.length} />
+            <p className="text-[12px] text-[var(--ms-label-3)]">
+              Owned outside the program (label external). The assignee chases the answer. Soonest due first.
+            </p>
+            {shownOutside.length === 0 ? (
+              <p className="py-2 text-[13px] text-[var(--ms-label-3)]">No matches.</p>
+            ) : (
+              <ul className="-mx-2 flex flex-col">
+                {shownOutside.map((item) => (
+                  <WorkItemRow key={item.key} item={item} />
+                ))}
+              </ul>
+            )}
+          </>
         )}
       </Card>
       <Card className="flex min-w-0 flex-col gap-2.5">
