@@ -509,6 +509,9 @@ export function analyzeMilestone(input: AnalysisInput): AnalysisResult {
 
   const derivedBlocks = new Map<string, string[]>();
   const derivedBlockedBy = new Map<string, string[]>();
+  // Only links where both ends are still open count as evidence for an
+  // undeclared dependency: a finished or cancelled item holds nothing up. All
+  // links still back a declared one, since finished work did satisfy it.
   const evidence = new Map<string, string[]>();
   for (const e of edges) {
     const a = itemByKey.get(e.from);
@@ -519,7 +522,7 @@ export function analyzeMilestone(input: AnalysisInput): AnalysisResult {
     if (!ia || !ib || ia === ib) continue;
     pushUnique(derivedBlocks, ia, ib);
     pushUnique(derivedBlockedBy, ib, ia);
-    pushUnique(evidence, `${ia}>${ib}`, `${e.from}→${e.to}`);
+    if (!isDone(a.status) && !isDone(b.status)) pushUnique(evidence, `${ia}>${ib}`, `${e.from}→${e.to}`);
   }
 
   const increments: Increment[] = input.increments.map((inc) => {
@@ -549,11 +552,12 @@ export function analyzeMilestone(input: AnalysisInput): AnalysisResult {
       });
     }
     for (const target of inc.derivedBlocks) {
-      if (inc.blocks.includes(target)) continue;
+      const open = evidence.get(`${inc.key}>${target}`);
+      if (inc.blocks.includes(target) || !open) continue;
       warnings.push({
         kind: "undeclared-dependency",
         message: `Team work makes ${inc.key} block ${target}, but the increments don't declare it.`,
-        keys: [inc.key, target, ...(evidence.get(`${inc.key}>${target}`) ?? []).flatMap((e) => e.split("→"))],
+        keys: [inc.key, target, ...open.flatMap((e) => e.split("→"))],
       });
     }
     for (const target of inc.blocks) {
