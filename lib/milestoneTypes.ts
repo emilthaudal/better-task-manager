@@ -105,6 +105,10 @@ export interface WorkItem {
   points: number | null;
   /** Outside this milestone (a blocker or dependant pulled in through a link). */
   external: boolean;
+  /** Carries the external label: a decision or change owned outside the program (Finance, a vendor). */
+  outsideDecision: boolean;
+  /** Jira due date, YYYY-MM-DD. */
+  dueDate: string | null;
   /** Stands in for a team epic that has no child items. */
   placeholder: boolean;
   /** Stands in for an increment with no open team epics (also a placeholder). */
@@ -200,7 +204,8 @@ export type WarningKind =
   | "no-team-epics"
   | "unscheduled"
   | "unassigned-critical"
-  | "unapproved-design";
+  | "unapproved-design"
+  | "unowned-outside-decision";
 
 export interface MilestoneWarning {
   kind: WarningKind;
@@ -229,6 +234,8 @@ export interface MilestoneDetail {
   blockerEpics: BlockerEpic[];
   /** Ready-to-start items, critical first, then by downstream impact. */
   readyNow: string[];
+  /** Open items waiting on a decision outside the program, soonest due first. */
+  outsideDecisions: string[];
   progress: Progress;
   warnings: MilestoneWarning[];
   generatedAt: string;

@@ -4,6 +4,7 @@ import {
   CalendarX,
   CornerDownRight,
   Flame,
+  Hourglass,
   Link2,
   RefreshCcw,
   ShieldAlert,
@@ -130,6 +131,7 @@ export function WorkItemRow({
         </span>
         <span className="w-[72px] shrink-0 truncate font-mono text-[11.5px] text-[var(--ms-label-3)]">{item.key}</span>
         <span className="min-w-0 flex-1 truncate text-[13px] text-[var(--ms-label)]">{item.summary}</span>
+        {item.outsideDecision && <OutsideDecisionBadge dueDate={item.dueDate} />}
         {crossTeams?.map((t) => <Team key={t} team={t} className="hidden md:inline-flex" />)}
         {showTeam && <Team team={item.team} className="hidden sm:inline-flex" />}
         {item.schedule && item.schedule.downstream > 0 && (
@@ -146,6 +148,25 @@ export function WorkItemRow({
         </span>
       </button>
     </li>
+  );
+}
+
+/** dd/mm/yyyy from Jira's YYYY-MM-DD. */
+function formatDueDate(iso: string) {
+  const [y, m, d] = iso.split("-");
+  return `${d}/${m}/${y}`;
+}
+
+/** Waits on a decision owned outside the program, with its due date. */
+export function OutsideDecisionBadge({ dueDate }: { dueDate: string | null }) {
+  return (
+    <span
+      title="Waits on a decision owned outside the program (label external). Someone in the program chases it."
+      className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[color-mix(in_srgb,var(--ms-warn)_12%,transparent)] px-1.5 py-[2px] text-[10.5px] font-semibold text-[var(--ms-warn-text)]"
+    >
+      <Hourglass size={10} aria-hidden="true" />
+      Outside decision{dueDate ? ` · due ${formatDueDate(dueDate)}` : ""}
+    </span>
   );
 }
 
@@ -195,6 +216,7 @@ const WARNING_ICON: Record<string, React.ComponentType<{ size?: number; classNam
   unscheduled: CalendarX,
   "unassigned-critical": UserRoundX,
   "unapproved-design": ShieldAlert,
+  "unowned-outside-decision": Hourglass,
 };
 
 /**

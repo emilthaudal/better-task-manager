@@ -194,6 +194,24 @@ describe("analyzeMilestone", () => {
     expect(r.items.find((i) => i.key === "A-4")?.schedule?.earliestStart).toBe(2);
   });
 
+  it("lists outside decisions apart from ready work and warns when nobody chases one", () => {
+    const input = crossTeamInput();
+    input.today = "2026-11-04";
+    input.items.push(
+      { ...item("A-8", "A-E", "Team A", ["A-1"], TODO, null), outsideDecision: true, dueDate: "2026-12-18" },
+      { ...item("C-8", "C-E", "Team C", [], TODO, null), outsideDecision: true, dueDate: "2026-11-13" },
+      { ...item("C-9", "C-E", "Team C", [], TODO, null), outsideDecision: true, dueDate: "2027-01-31" },
+      { ...item("C-7", "C-E", "Team C", [], TODO, "finance-chaser"), outsideDecision: true, dueDate: "2026-11-05" },
+    );
+    const r = analyzeMilestone(input);
+    expect(r.outsideDecisions).toEqual(["C-7", "C-8", "A-8", "C-9"]);
+    expect(r.readyNow).not.toEqual(expect.arrayContaining(["A-8", "C-7", "C-8", "C-9"]));
+    expect(r.teams.find((t) => t.name === "Team C")?.readyNow).toBe(1);
+    // A-8 gates work; C-8 is due within two weeks; C-9 is neither; C-7 has an owner.
+    expect(r.warnings.find((w) => w.kind === "unowned-outside-decision")?.keys).toEqual(["C-8", "A-8"]);
+    expect(r.items.find((i) => i.key === "C-8")).toMatchObject({ outsideDecision: true, dueDate: "2026-11-13" });
+  });
+
   it("orders ready work critical-first", () => {
     const r = analyzeMilestone(crossTeamInput());
     expect(r.readyNow).toEqual(["A-1", "C-1"]);
