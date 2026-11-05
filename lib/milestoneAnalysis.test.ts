@@ -77,6 +77,30 @@ describe("analyzeMilestone", () => {
     expect(r.warnings.map((w) => w.kind)).toContain("undeclared-dependency");
   });
 
+  it("doesn't flag an undeclared dependency backed only by finished or cancelled work", () => {
+    const input = crossTeamInput();
+    input.items[1].status = DONE;
+    const r = analyzeMilestone(input);
+    expect(r.increments.find((i) => i.key === "LAD-1")?.derivedBlocks).toEqual(["LAD-2"]);
+    expect(r.warnings.map((w) => w.kind)).not.toContain("undeclared-dependency");
+  });
+
+  it("cites only open links as evidence for an undeclared dependency", () => {
+    const input = crossTeamInput();
+    input.items.push(item("A-9", "A-E", "Team A", ["B-9"], DONE), item("B-9", "B-E", "Team B", [], DONE));
+    const r = analyzeMilestone(input);
+    const w = r.warnings.find((x) => x.kind === "undeclared-dependency");
+    expect(w?.keys).toEqual(["LAD-1", "LAD-2", "A-1", "B-1"]);
+  });
+
+  it("still counts finished work as backing a declared dependency", () => {
+    const input = crossTeamInput();
+    input.items[1].status = DONE;
+    input.increments[0].blocks = ["LAD-2"];
+    const r = analyzeMilestone(input);
+    expect(r.warnings.map((w) => w.kind)).not.toContain("unbacked-dependency");
+  });
+
   it("flags declared increment dependencies with nothing behind them", () => {
     const input = crossTeamInput();
     input.increments[1].blocks = ["LAD-1"];
